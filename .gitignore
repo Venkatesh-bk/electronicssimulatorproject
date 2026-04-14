@@ -1,0 +1,106 @@
+## .NET build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+## C/C++ build artifacts
+*.obj
+*.lib
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.idb
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+build/
+out/
+
+## Visual Studio
+.vs/
+*.vcxproj.user
+
+## Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+venv/
+.venv/
+env/
+.env/
+*.pyc
+
+## OS generated
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+## Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+## Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Logs
+*.log
+logs/
+
+## Simulation temp files
+*.sim
+*.raw
+*.sp
+*.net
+*.cir
+*.op
+
+## Large resource files (use Git LFS)
+*.lib
+*.mod
+*.step
+*.stp
+*.3ds
+*.gerber
+
+## Secrets — NEVER commit these
+.env
+*.env.local
+secrets.json
+appsettings.Development.json
+
+## Publishing
+publish/
