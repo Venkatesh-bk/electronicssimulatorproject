@@ -3,61 +3,64 @@ using System;
 namespace EdaSimulator.Engines.Core
 {
     /// <summary>
-    /// Represents an electrical connection point on a physical or logical component.
-    /// Acts as the interface between the internal physics of a component and the external circuit net.
+    /// Represents a single electrical terminal point on a component.
+    /// Acts as the interface between a component's internal physics and the external circuit net.
     /// </summary>
-    public class Pin
+    public sealed class Pin
     {
-        /// <summary>
-        /// Unique globally identifiable ID for this specific pin instance.
-        /// </summary>
+        /// <summary>Unique identity for this pin instance within the schematic graph.</summary>
         public Guid Id { get; } = Guid.NewGuid();
 
         /// <summary>
-        /// The textual designation/name of the pin as dictated by the component datasheet (e.g., "VCC", "GND", "In+", "1").
+        /// Textual pin name as per the component datasheet (e.g., "VCC", "GND", "IN+", "1").
+        /// Immutable — matches physical part definition.
         /// </summary>
         public string Name { get; }
 
         /// <summary>
-        /// The internal index or ordering of this pin for SPICE matrix generation (e.g., node 1, node 2 of a resistor).
+        /// Ordering sequence (1-indexed) used to correctly position this pin in a SPICE netlist line.
+        /// e.g., for a Resistor: Pin 1 = positive terminal, Pin 2 = negative terminal.
         /// </summary>
         public int SpiceNodeSequence { get; }
 
-        /// <summary>
-        /// The UUID of the component this pin belongs to.
-        /// </summary>
+        /// <summary>The Guid of the parent component that owns this pin.</summary>
         public Guid ComponentId { get; }
 
         /// <summary>
-        /// The UUID of the net this pin is physically connected to across the schematic canvas.
-        /// Will be null if the pin is floating (unconnected).
+        /// The Guid of the net this pin is connected to.
+        /// Null means the pin is electrically floating (unconnected).
         /// </summary>
         public Guid? ConnectedNetId { get; internal set; }
 
+        /// <summary>Returns true if this pin is not connected to any net.</summary>
+        public bool IsFloating => !ConnectedNetId.HasValue;
+
         /// <summary>
-        /// Initializes a new instance of the Pin class.
+        /// Initializes a new Pin.
         /// </summary>
-        /// <param name="componentId">The parent component ID.</param>
-        /// <param name="name">The name/designator of the pin.</param>
-        /// <param name="sequence">The structural sequence for simulation models.</param>
-        public Pin(Guid componentId, string name, int sequence)
+        /// <param name="componentId">The parent component's ID.</param>
+        /// <param name="name">Pin name (e.g., "VCC"). Must not be null or empty.</param>
+        /// <param name="spiceNodeSequence">1-indexed SPICE ordering position.</param>
+        /// <exception cref="ArgumentException">Thrown when name is null or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when sequence is less than 1.</exception>
+        public Pin(Guid componentId, string name, int spiceNodeSequence)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Pin name cannot be null or empty.", nameof(name));
+            if (spiceNodeSequence < 1)
+                throw new ArgumentOutOfRangeException(nameof(spiceNodeSequence), "SPICE node sequence must be 1 or greater.");
 
             ComponentId = componentId;
             Name = name;
-            SpiceNodeSequence = sequence;
+            SpiceNodeSequence = spiceNodeSequence;
         }
 
         /// <summary>
-        /// Clears the internal connected net ID. Must be coordinated with the Schematic/Net classes.
+        /// Internal-only disconnection. Must be called via Schematic.DisconnectPin() to keep the graph consistent.
         /// </summary>
-        internal void Disconnect()
-        {
-            ConnectedNetId = null;
-        }
+        internal void Disconnect() => ConnectedNetId = null;
 
-        public override string ToString() => $"Pin {Name} on Comp {ComponentId} -> Net: {ConnectedNetId?.ToString() ?? "Floating"}";
+        public override string ToString() =>
+            $"Pin '{Name}' [seq={SpiceNodeSequence}] on Comp {ComponentId} → {(IsFloating ? "FLOATING" : $"Net {ConnectedNetId}")}";
     }
 }

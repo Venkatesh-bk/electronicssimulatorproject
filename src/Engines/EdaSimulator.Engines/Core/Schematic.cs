@@ -1,121 +1,225 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace EdaSimulator.Engines.Core
 {
     /// <summary>
-    /// The master graph datastructure representing the active workspace payload.
-    /// Manages the unified integrity between Components, Pins, and routing Nets.
+    /// The master circuit graph. Manages referential integrity between all Components,
+    /// Pins, and routing Nets. This is the central object that gets serialized to disk
+    /// and passed to simulation engines.
     /// </summary>
     public class Schematic
     {
-        private readonly Dictionary<Guid, Component> _components = new Dictionary<Guid, Component>();
-        private readonly Dictionary<Guid, Net> _nets = new Dictionary<Guid, Net>();
+        private readonly Dictionary<Guid, Component> _components = new();
+        private readonly Dictionary<Guid, Net> _nets = new();
 
-        /// <summary>
-        /// Provides read-only access to all active components.
-        /// </summary>
+        /// <summary>Provides read-only access to all active schematic components.</summary>
         public IReadOnlyDictionary<Guid, Component> Components => _components;
 
-        /// <summary>
-        /// Provides read-only access to all routed electrical nets.
-        /// </summary>
+        /// <summary>Provides read-only access to all routing nets.</summary>
         public IReadOnlyDictionary<Guid, Net> Nets => _nets;
 
         /// <summary>
-        /// The universal ground net reference required for simulation matrices.
+        /// The SPICE ground reference node ("0"). Auto-created on schematic construction.
+        /// Every valid SPICE simulation requires this reference to exist.
         /// </summary>
-        public Net MasterGroundNet { get; private set; }
+        public Net MasterGroundNet { get; }
 
-        public Schematic()
+        /// <summary>
+        /// The user-visible name of this schematic (e.g., the filename without extension).
+        /// </summary>
+        public string Title { get; set; }
+
+        /// <summary>Initializes an empty new schematic with a mandatory ground reference.</summary>
+        public Schematic(string title = "Untitled")
         {
-            // Industry Standard: Every valid SPICE environment requires a universal "0" reference.
+            Title = title ?? "Untitled";
+
+            // Industry Standard: Every SPICE simulation environment requires a universal "0" reference node.
             MasterGroundNet = new Net(Net.SpiceGroundName);
             _nets.Add(MasterGroundNet.Id, MasterGroundNet);
         }
 
+        // ─── Component Management ────────────────────────────────────────────────────
+
         /// <summary>
-        /// Ingests a new component instance into the tracking graph.
+        /// Adds a component to the schematic. If the same component ID already exists, it is replaced.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Thrown if component is null.</exception>
         public void AddComponent(Component component)
         {
-            if (component == null) throw new ArgumentNullException(nameof(component));
+            ArgumentNullException.ThrowIfNull(component);
             _components[component.Id] = component;
         }
 
         /// <summary>
-        /// Creates a new net tracking object.
+        /// Safely removes a component, severing all its electrical connections before deletion
+        /// to prevent dangling pin references inside Nets.
         /// </summary>
+        public bool RemoveComponent(Guid componentId)
+        {
+            if (!_components.TryGetValue(componentId, out var component))
+                return false;
+
+            foreach (var pin in component.Pins)
+                DisconnectPin(pin);
+
+            _components.Remove(componentId);
+            return true;
+        }
+
+        // ─── Net Management ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Creates and registers a new named net.
+        /// </summary>
+        /// <exception cref="ArgumentException">Thrown if name is null/empty or conflicts with the reserved "0" ground name.</exception>
         public Net CreateNet(string name)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Net name cannot be null or empty.", nameof(name));
+            if (name == Net.SpiceGroundName)
+                throw new ArgumentException($"Net name '0' is reserved for the master ground net. Use MasterGroundNet directly.", nameof(name));
+
             var net = new Net(name);
             _nets.Add(net.Id, net);
             return net;
         }
 
         /// <summary>
-        /// Wires a specific physical pin to a specific net within the schematic.
+        /// Removes a net from the schematic, first disconnecting all pins attached to it.
+        /// The master ground net cannot be removed.
         /// </summary>
-        /// <param name="pin">The pin to connect</param>
-        /// <param name="netId">The destination Net UUID</param>
+        public bool RemoveNet(Guid netId)
+        {
+            if (netId == MasterGroundNet.Id)
+                throw new InvalidOperationException("The master ground net cannot be removed from a schematic.");
+
+            if (!_nets.TryGetValue(netId, out var net))
+                return false;
+
+            // Disconnect all pins referencing this net
+            var pinIds = net.ConnectedPinIds.ToList();
+            foreach (var pinId in pinIds)
+            {
+                // Find pin across all components
+                foreach (var comp in _components.Values)
+                {
+                    var pin = comp.Pins.FirstOrDefault(p => p.Id == pinId);
+                    if (pin != null)
+                    {
+                        pin.Disconnect();
+                        break;
+                    }
+                }
+            }
+
+            _nets.Remove(netId);
+            return true;
+        }
+
+        // ─── Connection Management ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Connects a pin to an existing net, maintaining full bidirectional graph consistency.
+        /// If the pin is already connected to another net, that connection is safely severed first.
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">Thrown if the target net does not exist in this schematic.</exception>
         public void ConnectPinToNet(Pin pin, Guid netId)
         {
-            if (!_nets.TryGetValue(netId, out var net))
-                throw new KeyNotFoundException("Cannot connect pin. Assigned Net UUID does not exist in this schematic.");
+            ArgumentNullException.ThrowIfNull(pin);
 
-            // Disconnect from old net safely if the pin had a prior connection.
+            if (!_nets.TryGetValue(netId, out var targetNet))
+                throw new KeyNotFoundException($"Cannot connect pin '{pin.Name}': Net ID '{netId}' does not exist in this schematic.");
+
+            // If already connected to a different net, sever that link first
             if (pin.ConnectedNetId.HasValue && pin.ConnectedNetId.Value != netId)
             {
                 if (_nets.TryGetValue(pin.ConnectedNetId.Value, out var oldNet))
-                {
                     oldNet.RemovePin(pin.Id);
-                }
             }
 
             pin.ConnectedNetId = netId;
-            net.AddPin(pin.Id);
+            targetNet.AddPin(pin.Id);
         }
 
         /// <summary>
-        /// Safely disconnects a pin from its attached net, keeping the graph synchronized.
+        /// Disconnects a pin from its current net, maintaining full bidirectional graph consistency.
+        /// Safe to call on already-floating pins.
         /// </summary>
         public void DisconnectPin(Pin pin)
         {
-            if (pin.ConnectedNetId.HasValue)
-            {
-                if (_nets.TryGetValue(pin.ConnectedNetId.Value, out var net))
-                {
-                    net.RemovePin(pin.Id);
-                }
-                pin.Disconnect();
-            }
+            ArgumentNullException.ThrowIfNull(pin);
+
+            if (!pin.ConnectedNetId.HasValue) return;
+
+            if (_nets.TryGetValue(pin.ConnectedNetId.Value, out var net))
+                net.RemovePin(pin.Id);
+
+            pin.Disconnect();
         }
 
+        // ─── Netlist Helpers ─────────────────────────────────────────────────────────
+
         /// <summary>
-        /// Safely removes a component from the active schematic, severing all its electrical connections.
-        /// </summary>
-        public void RemoveComponent(Guid componentId)
-        {
-            if (_components.TryGetValue(componentId, out var component))
-            {
-                // Unwire all pins to prevent ghost connections
-                foreach (var pin in component.Pins)
-                {
-                    DisconnectPin(pin);
-                }
-                _components.Remove(componentId);
-            }
-        }
-        
-        /// <summary>
-        /// Retrieves the exact Name of the net connected to a specific pin, useful during netlist generation.
+        /// Resolves the SPICE net name for a given pin.
+        /// Returns "NC" (No Connect) if the pin is floating.
         /// </summary>
         public string GetNetNameForPin(Pin pin)
         {
-            if (!pin.ConnectedNetId.HasValue) 
-                return "NC"; // Floating or internally pulled
-            
+            ArgumentNullException.ThrowIfNull(pin);
+
+            if (!pin.ConnectedNetId.HasValue)
+                return "NC";
+
             return _nets.TryGetValue(pin.ConnectedNetId.Value, out var net) ? net.Name : "NC";
+        }
+
+        /// <summary>
+        /// Validates the schematic for common errors that would prevent simulation:
+        /// - Components with all pins floating
+        /// - Nets with fewer than 2 connections
+        /// - No ground reference connections
+        /// </summary>
+        /// <returns>List of human-readable warning/error strings. Empty list means no issues found.</returns>
+        public IReadOnlyList<string> Validate()
+        {
+            var issues = new List<string>();
+
+            if (MasterGroundNet.ConnectedPinIds.Count == 0)
+                issues.Add("CRITICAL: No pins are connected to the ground net ('0'). Simulation will fail.");
+
+            foreach (var comp in _components.Values)
+            {
+                var floatingPins = comp.Pins.Where(p => p.IsFloating).ToList();
+                if (floatingPins.Count == comp.Pins.Count)
+                    issues.Add($"WARNING: Component '{comp.Designator}' has all pins floating (unconnected).");
+                else if (floatingPins.Count > 0)
+                    issues.Add($"WARNING: Component '{comp.Designator}' has {floatingPins.Count} floating pin(s): {string.Join(", ", floatingPins.Select(p => p.Name))}.");
+            }
+
+            foreach (var net in _nets.Values)
+            {
+                if (!net.IsGround && net.ConnectedPinIds.Count < 2)
+                    issues.Add($"WARNING: Net '{net.Name}' connects fewer than 2 pins — may be a dangling stub.");
+            }
+
+            return issues;
+        }
+
+        /// <summary>
+        /// Generates a summary of the schematic state — useful for debug logging.
+        /// </summary>
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Schematic: '{Title}'");
+            sb.AppendLine($"  Components : {_components.Count}");
+            sb.AppendLine($"  Nets       : {_nets.Count}");
+            sb.AppendLine($"  Ground pins: {MasterGroundNet.ConnectedPinIds.Count}");
+            return sb.ToString();
         }
     }
 }
