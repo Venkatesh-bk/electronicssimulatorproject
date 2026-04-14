@@ -8,16 +8,52 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — Phase 1 In Progress
 
-### Added
-- Core domain models: `Component`, `Pin`, `Net`, `Schematic`
-- Fixed state leak in Pin disconnection logic, enforcing Schematic encapsulation
-- .NET 8 solution scaffold (`EdaSimulator.sln`)
-- WPF application project (`EdaSimulator.UI`)
-- Engine class library project (`EdaSimulator.Engines`)
+### Planned (Next Session)
+- Concrete component models: `Resistor.cs`, `Capacitor.cs`, `VoltageSource.cs`
+- `SpiceNetlistExporter.cs` — full `.cir` file generation
+- `MainViewModel.cs` — MVVM wiring to Schematic
+- `MainWindow.xaml` — 3-panel IDE-style layout (Toolbox | Canvas | Properties)
 
-### Planned
-- Basic WPF main window (toolbox, canvas, properties panel)
-- Project save/load (XML format)
+---
+
+## [0.2.0] — 2026-04-14 — Phase 1: Core Engine & Industry Hardening
+
+### Added
+- **`Pin.cs`** — Electrical terminal model with SPICE sequence validation, `IsFloating` property
+- **`Net.cs`** — Wire/junction model with O(1) HashSet tracking, ground immutability guard
+- **`Component.cs`** — Abstract base with enforced SPICE contract (`GenerateSpiceNetlistLine`), `GetPinsInSpiceOrder()`
+- **`Schematic.cs`** — Master circuit graph with `Validate()`, `RemoveNet()`, `Title`, ground net protection
+- **`App.xaml.cs`** — Global `DispatcherUnhandledException` handler preventing silent crashes
+- NuGet packages: `CommunityToolkit.Mvvm 8.3.2`, `OxyPlot.Wpf 2.1.2`
+- `docs/ARCHITECTURE.md` — Full system architecture diagram and module breakdown
+- `CONTRIBUTING.md` — Branch strategy, code standards, PR checklist
+- `LICENSE` — MIT License
+- `.gitignore` — .NET 8 + C++ + Python + CMake patterns
+
+### Fixed
+- **Critical:** `Net.Name` was publicly mutable — renaming the ground net `"0"` would break all SPICE simulations
+- **Critical:** `CreateNet("0")` was allowed, potentially creating a duplicate ground
+- **Critical:** No `RemoveNet()` — deleting a net left dangling `ConnectedNetId` references on pins
+- **Critical:** No global unhandled exception handler in WPF — errors would silently terminate the app
+- **Medium:** `Pin.SpiceNodeSequence` accepted `0` or negative values, producing invalid SPICE netlist lines
+- **Medium:** `Designator` setter had no validation, allowing empty strings in netlist output
+
+### Changed
+- Project scope elevated from basic EDA to **Proteus Professional + MATLAB/Simulink + ANSYS** level
+- Roadmap expanded from 5 to 8 phases
+- `Pin.Disconnect()` made `internal` — disconnection must go through `Schematic` to preserve graph integrity
+
+---
+
+## [0.1.0] — 2026-04-14 — Project Initialization
+
+### Added
+- `README.md` — Professional project overview, prerequisites, AI assistant note
+- `AI_CONTEXT.md` — AI model context-switching document with change log
+- `docs/ROADMAP.md` — 8-phase detailed development roadmap (Proteus/MATLAB/ANSYS scope)
+- Folder structure: `src/Frontend/`, `src/Engines/`, `src/NativeEngines/`, `src/Scripting/`, `docs/`, `resources/`
+- `.NET 8 SDK` installed via `winget`
+- `EdaSimulator.sln` scaffolded with two projects linked
 
 ---
 

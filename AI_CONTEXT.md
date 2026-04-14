@@ -78,10 +78,34 @@ electronicssimulatorproject/
 
 🟡 **Phase 1: Foundation — IN PROGRESS**
 
-The basic C# .NET 8 solution and WPF/Engine projects have been scaffolded. 
-Next immediate steps:
-1. Define the core C# POCO models: `Component.cs`, `Pin.cs`, `Net.cs`, `Schematic.cs` in the `EdaSimulator.Engines` project.
-2. Hook up the basic Main Window layout in `MainWindow.xaml` (adding a Toolbox pane, Canvas pane, and Properties pane).
+**Session of 2026-04-14 is complete.** The following work was done:
+- ✅ `.NET 8 SDK` installed, solution scaffolded
+- ✅ Core Engine models built: `Component`, `Pin`, `Net`, `Schematic`
+- ✅ Industry-standard audit complete — 6 critical/medium bugs fixed
+- ✅ NuGet packages installed: `CommunityToolkit.Mvvm`, `OxyPlot.Wpf`
+- ✅ `App.xaml.cs` global exception handler added
+
+**Next session — pick up here:**
+1. Create `src/Engines/EdaSimulator.Engines/Core/Components/` subfolder
+2. Implement `Resistor.cs`, `Capacitor.cs`, `Inductor.cs`, `VoltageSource.cs`
+3. Implement `SpiceNetlistExporter.cs`
+4. Build `MainWindow.xaml` 3-panel layout (Toolbox | Canvas | Properties)
+5. Create `MainViewModel.cs` wired to `Schematic` via MVVM
+
+---
+
+## 6. Change Log
+*(Format: [Date] - [Model] - [Changes])*
+
+- **2026-04-14** - Initial creation — Scaffolded `README.md` and folder structure.
+- **2026-04-14** - Gemini 3.1 Pro — Added `docs/ROADMAP.md` (5 phases, later expanded to 8).
+- **2026-04-14** - Gemini 3.1 Pro — Created `AI_CONTEXT.md` for AI model context switching.
+- **2026-04-14** - Claude Sonnet — Elevated scope to Proteus / MATLAB / ANSYS professional level. Rewrote `README.md`, `AI_CONTEXT.md`, `ROADMAP.md`.
+- **2026-04-14** - Gemini 3.1 Pro — Installed .NET 8 SDK, scaffolded `EdaSimulator.sln`, `EdaSimulator.UI`, `EdaSimulator.Engines`.
+- **2026-04-14** - Gemini 3.1 Pro — Implemented core domain models: `Pin.cs`, `Net.cs`, `Component.cs`, `Schematic.cs`.
+- **2026-04-14** - Gemini 3.1 Pro — Fixed state sync bug in Pin/Net graph disconnection logic.
+- **2026-04-14** - Claude Sonnet — Performed industry-standard audit. Fixed 6 critical/medium bugs across all domain models. Added `Validate()`, `RemoveNet()`, ground immutability guard, SPICE sequence guard, `IsFloating`, `DispatcherUnhandledException` handler. Installed `CommunityToolkit.Mvvm` and `OxyPlot.Wpf`. Build: 0 Errors / 0 Warnings.
+- **2026-04-14** - Claude Sonnet — Updated `CHANGELOG.md`, `AI_CONTEXT.md`. Final git commit for 2026-04-14 session.
 
 ---
 
