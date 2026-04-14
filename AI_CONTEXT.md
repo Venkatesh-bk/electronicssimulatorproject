@@ -76,13 +76,12 @@ electronicssimulatorproject/
 
 ## 5. Current Stage
 
-🔴 **Phase 1: Foundation — NOT STARTED**
+🟡 **Phase 1: Foundation — IN PROGRESS**
 
-No source code has been written yet. The project is documentation-only. The immediate next steps for Phase 1 are:
-1. Run `dotnet new sln` to create the solution file.
-2. Scaffold `EdaSimulator.UI` (WPF app) and `EdaSimulator.Engines` (class library) using `dotnet new`.
-3. Define core domain models: `Component`, `Pin`, `Net`, `Schematic`.
-4. Set up the basic WPF main window layout (toolbox sidebar, canvas area, properties panel).
+The basic C# .NET 8 solution and WPF/Engine projects have been scaffolded. 
+Next immediate steps:
+1. Define the core C# POCO models: `Component.cs`, `Pin.cs`, `Net.cs`, `Schematic.cs` in the `EdaSimulator.Engines` project.
+2. Hook up the basic Main Window layout in `MainWindow.xaml` (adding a Toolbox pane, Canvas pane, and Properties pane).
 
 ---
 
@@ -93,3 +92,4 @@ No source code has been written yet. The project is documentation-only. The imme
 - **2026-04-14** - Gemini 3.1 Pro - Added `docs/ROADMAP.md` detailing the 5 development phases.
 - **2026-04-14** - Gemini 3.1 Pro - Created `AI_CONTEXT.md` to seamlessly preserve context across different AI models.
 - **2026-04-14** - Claude Sonnet - Upgraded project scope to Proteus Professional / MATLAB / ANSYS level. Updated `README.md`, `AI_CONTEXT.md`, and `docs/ROADMAP.md` to reflect the new professional-grade vision.
+- **2026-04-14** - Gemini 3.1 Pro - Installed .NET 8 SDK and scaffolded `EdaSimulator.sln`, `EdaSimulator.UI` (WPF), and `EdaSimulator.Engines` projects.
