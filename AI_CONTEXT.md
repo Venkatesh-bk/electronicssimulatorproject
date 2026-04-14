@@ -93,3 +93,5 @@ Next immediate steps:
 - **2026-04-14** - Gemini 3.1 Pro - Created `AI_CONTEXT.md` to seamlessly preserve context across different AI models.
 - **2026-04-14** - Claude Sonnet - Upgraded project scope to Proteus Professional / MATLAB / ANSYS level. Updated `README.md`, `AI_CONTEXT.md`, and `docs/ROADMAP.md` to reflect the new professional-grade vision.
 - **2026-04-14** - Gemini 3.1 Pro - Installed .NET 8 SDK and scaffolded `EdaSimulator.sln`, `EdaSimulator.UI` (WPF), and `EdaSimulator.Engines` projects.
+- **2026-04-14** - Gemini 3.1 Pro - Implemented exact industry-standard C# Core Domain Models (Component, Pin, Net, Schematic) inside Engine Library.
+- **2026-04-14** - Gemini 3.1 Pro - Fixed state synchronization logic bug preventing `Net` class from detecting when a `Pin` disconnected.

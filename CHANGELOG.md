@@ -8,11 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — Phase 1 In Progress
 
-### Planned
+### Added
+- Core domain models: `Component`, `Pin`, `Net`, `Schematic`
+- Fixed state leak in Pin disconnection logic, enforcing Schematic encapsulation
 - .NET 8 solution scaffold (`EdaSimulator.sln`)
 - WPF application project (`EdaSimulator.UI`)
 - Engine class library project (`EdaSimulator.Engines`)
-- Core domain models: `Component`, `Pin`, `Net`, `Schematic`
+
+### Planned
 - Basic WPF main window (toolbox, canvas, properties panel)
 - Project save/load (XML format)
 
