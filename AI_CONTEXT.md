@@ -31,6 +31,8 @@ This is a **long-term, large-scale engineering project** requiring specialized k
 | **Scripting** | Embedded CPython or LuaJIT | User automation, scripting toolbox |
 | **MCU Simulation** | Custom instruction-set simulators | ARM Cortex-M, AVR, PIC virtual microcontrollers |
 | **File I/O** | XML/JSON (projects), Gerber, STEP, KiCad | Interop and manufacturing export |
+| **MVVM Framework** | CommunityToolkit.Mvvm 8.3.2 | UI data binding and command pattern |
+| **Waveform Plot** | OxyPlot.Wpf 2.1.2 | Oscilloscope-style waveform visualization |
 
 ---
 
@@ -38,13 +40,28 @@ This is a **long-term, large-scale engineering project** requiring specialized k
 
 ```
 electronicssimulatorproject/
+├── EdaSimulator.sln                     ← .NET solution (links all projects)
 ├── src/
-│   ├── Frontend/           # C# WPF Application (UI shell, canvas, tools)
-│   ├── Engines/            # C# interop bindings to native simulation backends
-│   ├── NativeEngines/      # C/C++ high-perf simulation kernels
-│   └── Scripting/          # Python/Lua scripting engine integration
-├── docs/                   # Architecture docs, API reference, roadmap
-└── resources/              # Component libraries, PCB footprints, symbols
+│   ├── Frontend/
+│   │   └── EdaSimulator.UI/             ← WPF Application (UI shell, canvas, panels)
+│   │       ├── App.xaml / App.xaml.cs
+│   │       ├── MainWindow.xaml / .cs    ← ⏳ Empty — next to be built
+│   │       └── EdaSimulator.UI.csproj
+│   ├── Engines/
+│   │   └── EdaSimulator.Engines/        ← C# Engine interop layer
+│   │       └── Core/
+│   │           ├── Pin.cs               ✅ Done + audited
+│   │           ├── Net.cs               ✅ Done + audited
+│   │           ├── Component.cs         ✅ Done + audited
+│   │           ├── Schematic.cs         ✅ Done + audited
+│   │           └── Components/          ⏳ Next — Resistor, Capacitor, etc.
+│   ├── NativeEngines/                   ⏳ Phase 3 — C/C++ simulation kernels
+│   └── Scripting/                       ⏳ Phase 5 — Python scripting integration
+├── docs/
+│   ├── ROADMAP.md                       ✅ 8-phase plan
+│   └── ARCHITECTURE.md                  ✅ Full system diagram
+└── resources/
+    └── components/                      ⏳ Phase 2 — component libraries
 ```
 
 ---
@@ -76,46 +93,56 @@ electronicssimulatorproject/
 
 ## 5. Current Stage
 
-🟡 **Phase 1: Foundation — IN PROGRESS**
+🟡 **Phase 1: Foundation — IN PROGRESS (Day 1 Complete)**
 
-**Session of 2026-04-14 is complete.** The following work was done:
-- ✅ `.NET 8 SDK` installed, solution scaffolded
-- ✅ Core Engine models built: `Component`, `Pin`, `Net`, `Schematic`
-- ✅ Industry-standard audit complete — 6 critical/medium bugs fixed
-- ✅ NuGet packages installed: `CommunityToolkit.Mvvm`, `OxyPlot.Wpf`
-- ✅ `App.xaml.cs` global exception handler added
+### ✅ Completed — Session 2026-04-14
 
-**Next session — pick up here:**
+| Item | Status |
+|------|--------|
+| Project documentation (README, ROADMAP, ARCHITECTURE, CONTRIBUTING, LICENSE, .gitignore) | ✅ Done |
+| `.NET 8 SDK` installed via `winget` | ✅ Done |
+| `EdaSimulator.sln` solution scaffolded | ✅ Done |
+| `EdaSimulator.UI` (WPF) project created | ✅ Done |
+| `EdaSimulator.Engines` (Class Library) created | ✅ Done |
+| `Pin.cs` — electrical terminal model | ✅ Done + audited |
+| `Net.cs` — wire/junction graph model | ✅ Done + audited |
+| `Component.cs` — abstract SPICE base | ✅ Done + audited |
+| `Schematic.cs` — master circuit graph | ✅ Done + audited |
+| Industry-standard bug audit (6 critical/medium bugs fixed) | ✅ Done |
+| NuGet: `CommunityToolkit.Mvvm 8.3.2` | ✅ Installed |
+| NuGet: `OxyPlot.Wpf 2.1.2` | ✅ Installed |
+| `App.xaml.cs` global crash handler | ✅ Done |
+| All changes committed to Git | ✅ Done |
+
+### 🔜 Next Session — Pick Up Here
+
 1. Create `src/Engines/EdaSimulator.Engines/Core/Components/` subfolder
 2. Implement `Resistor.cs`, `Capacitor.cs`, `Inductor.cs`, `VoltageSource.cs`
-3. Implement `SpiceNetlistExporter.cs`
-4. Build `MainWindow.xaml` 3-panel layout (Toolbox | Canvas | Properties)
-5. Create `MainViewModel.cs` wired to `Schematic` via MVVM
+3. Implement `SpiceNetlistExporter.cs` — generates a `.cir` netlist file
+4. Create `MainViewModel.cs` wired to `Schematic` via MVVM
+5. Build `MainWindow.xaml` 3-panel IDE layout (Toolbox | Canvas | Properties)
 
 ---
 
-## 6. Change Log
-*(Format: [Date] - [Model] - [Changes])*
+## 6. Bugs Fixed Today (2026-04-14)
 
-- **2026-04-14** - Initial creation — Scaffolded `README.md` and folder structure.
-- **2026-04-14** - Gemini 3.1 Pro — Added `docs/ROADMAP.md` (5 phases, later expanded to 8).
-- **2026-04-14** - Gemini 3.1 Pro — Created `AI_CONTEXT.md` for AI model context switching.
-- **2026-04-14** - Claude Sonnet — Elevated scope to Proteus / MATLAB / ANSYS professional level. Rewrote `README.md`, `AI_CONTEXT.md`, `ROADMAP.md`.
-- **2026-04-14** - Gemini 3.1 Pro — Installed .NET 8 SDK, scaffolded `EdaSimulator.sln`, `EdaSimulator.UI`, `EdaSimulator.Engines`.
-- **2026-04-14** - Gemini 3.1 Pro — Implemented core domain models: `Pin.cs`, `Net.cs`, `Component.cs`, `Schematic.cs`.
-- **2026-04-14** - Gemini 3.1 Pro — Fixed state sync bug in Pin/Net graph disconnection logic.
-- **2026-04-14** - Claude Sonnet — Performed industry-standard audit. Fixed 6 critical/medium bugs across all domain models. Added `Validate()`, `RemoveNet()`, ground immutability guard, SPICE sequence guard, `IsFloating`, `DispatcherUnhandledException` handler. Installed `CommunityToolkit.Mvvm` and `OxyPlot.Wpf`. Build: 0 Errors / 0 Warnings.
-- **2026-04-14** - Claude Sonnet — Updated `CHANGELOG.md`, `AI_CONTEXT.md`. Final git commit for 2026-04-14 session.
+| # | File | Severity | Bug | Fix Applied |
+|---|------|----------|-----|-------------|
+| 1 | `Net.cs` | 🔴 Critical | `Name` was publicly mutable — renaming ground to anything broke SPICE | Made ground name immutable with `InvalidOperationException` guard |
+| 2 | `Schematic.cs` | 🔴 Critical | `CreateNet("0")` allowed — creates duplicate ground, SPICE matrix failure | Added `ArgumentException` guard rejecting `"0"` as a new net name |
+| 3 | `Schematic.cs` | 🔴 Critical | No `RemoveNet()` — deleting a net left dangling pin references | Added `RemoveNet()` with full pin cleanup loop |
+| 4 | `App.xaml.cs` | 🔴 Critical | No global exception handler — unhandled errors silently kill the app | Added `DispatcherUnhandledException` with user-facing `MessageBox` |
+| 5 | `Pin.cs` | 🟡 Medium | `SpiceNodeSequence` accepted `0` or negative values — invalid SPICE output | Added `ArgumentOutOfRangeException` guard: must be ≥ 1 |
+| 6 | `Component.cs` | 🟡 Medium | `Designator` setter accepted empty string — invalid SPICE element line | Added backing field `_designator` with whitespace validation |
 
 ---
 
-## 6. Change Log
+## 7. Change Log
 *(Format: [Date] - [Model] - [Changes])*
 
-- **2026-04-14** - Initial creation - Scaffolded basic `README.md` and folder structure (`src`, `docs`, `resources`).
-- **2026-04-14** - Gemini 3.1 Pro - Added `docs/ROADMAP.md` detailing the 5 development phases.
-- **2026-04-14** - Gemini 3.1 Pro - Created `AI_CONTEXT.md` to seamlessly preserve context across different AI models.
-- **2026-04-14** - Claude Sonnet - Upgraded project scope to Proteus Professional / MATLAB / ANSYS level. Updated `README.md`, `AI_CONTEXT.md`, and `docs/ROADMAP.md` to reflect the new professional-grade vision.
-- **2026-04-14** - Gemini 3.1 Pro - Installed .NET 8 SDK and scaffolded `EdaSimulator.sln`, `EdaSimulator.UI` (WPF), and `EdaSimulator.Engines` projects.
-- **2026-04-14** - Gemini 3.1 Pro - Implemented exact industry-standard C# Core Domain Models (Component, Pin, Net, Schematic) inside Engine Library.
-- **2026-04-14** - Gemini 3.1 Pro - Fixed state synchronization logic bug preventing `Net` class from detecting when a `Pin` disconnected.
+- **2026-04-14** — Initial creation — Scaffolded `README.md` and folder structure (`src`, `docs`, `resources`).
+- **2026-04-14** — Gemini 3.1 Pro — Added `docs/ROADMAP.md` (5 phases, later expanded to 8). Added `AI_CONTEXT.md` for AI model context switching.
+- **2026-04-14** — Claude Sonnet — Elevated scope to Proteus / MATLAB / ANSYS professional level. Rewrote `README.md`, `AI_CONTEXT.md`, `ROADMAP.md`. Added `CONTRIBUTING.md`, `LICENSE`, `.gitignore`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`.
+- **2026-04-14** — Gemini 3.1 Pro — Installed .NET 8 SDK via `winget`. Scaffolded `EdaSimulator.sln`, `EdaSimulator.UI` (WPF), `EdaSimulator.Engines` (Class Library). Linked projects. Confirmed 0 errors / 0 warnings build.
+- **2026-04-14** — Gemini 3.1 Pro — Implemented core domain models: `Pin.cs`, `Net.cs`, `Component.cs`, `Schematic.cs`. Fixed state sync bug in Pin/Net graph disconnection logic.
+- **2026-04-14** — Claude Sonnet — Full industry-standard audit. Fixed 6 critical/medium bugs (see table above). Added `Validate()`, `RemoveNet()`, `IsFloating`, `GetPinsInSpiceOrder()`, `Title`, ground immutability guard, SPICE sequence validation, global WPF crash handler. Installed `CommunityToolkit.Mvvm 8.3.2` and `OxyPlot.Wpf 2.1.2`. Updated `CHANGELOG.md` and `AI_CONTEXT.md`. Final end-of-day commit made. Build: **0 Errors / 0 Warnings** ✅
