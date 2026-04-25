@@ -55,28 +55,28 @@
             
             <!-- Schematic Canvas Workspace -->
             <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Background="#FF1E1E1E" Name="MainScrollViewer">
-                <!-- Inner ItemsControl bounded to actual physics bounds layer -->
-                <ItemsControl x:Name="SchematicItemsControl" 
-                              ItemsSource="{Binding ActiveSchematicViewModel.Items}" 
-                              Width="10000" Height="10000"
-                              MouseDown="SchematicCanvas_MouseDown"
-                              MouseMove="SchematicCanvas_MouseMove"
-                              MouseUp="SchematicCanvas_MouseUp"
-                              MouseWheel="SchematicCanvas_MouseWheel"
-                              AllowDrop="True"
-                              Drop="SchematicCanvas_Drop"
-                              Background="Transparent">
-                    
-                    <ItemsControl.RenderTransform>
+                <!-- Inner Grid bounded to actual physics bounds layer, sharing the transform context -->
+                <Grid Width="10000" Height="10000" Background="Transparent"
+                      MouseDown="SchematicCanvas_MouseDown"
+                      MouseMove="SchematicCanvas_MouseMove"
+                      MouseUp="SchematicCanvas_MouseUp"
+                      MouseWheel="SchematicCanvas_MouseWheel"
+                      AllowDrop="True"
+                      Drop="SchematicCanvas_Drop">
+                      
+                    <Grid.RenderTransform>
                         <TransformGroup>
                             <ScaleTransform ScaleX="{Binding ActiveSchematicViewModel.ZoomFactor}" ScaleY="{Binding ActiveSchematicViewModel.ZoomFactor}" />
                             <TranslateTransform X="{Binding ActiveSchematicViewModel.PanX}" Y="{Binding ActiveSchematicViewModel.PanY}" />
                         </TransformGroup>
-                    </ItemsControl.RenderTransform>
+                    </Grid.RenderTransform>
 
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas ClipToBounds="True" IsItemsHost="True">
+                    <ItemsControl x:Name="SchematicItemsControl" 
+                                  ItemsSource="{Binding ActiveSchematicViewModel.Items}">
+                        
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas ClipToBounds="True" IsItemsHost="True">
                                 <Canvas.Background>
                                     <DrawingBrush TileMode="Tile" Viewport="0,0,100,100" ViewportUnits="Absolute">
                                         <DrawingBrush.Drawing>
@@ -180,9 +180,47 @@
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
+
+                        <!-- Voltage Probe Visual Representation -->
+                        <DataTemplate DataType="{x:Type canvasVm:VoltageProbeItemViewModel}">
+                            <Grid Canvas.Left="{Binding X}" Canvas.Top="{Binding Y}" Margin="-10,-10,0,0">
+                                <!-- Simple graphical pin indicator -->
+                                <Path Data="M 10,10 L 20,0 L 20,20 Z" Fill="#FF007ACC" Stroke="White" StrokeThickness="1" />
+                                <TextBlock Text="V" FontWeight="Bold" Foreground="White" FontSize="10" Margin="14,4,0,0" />
+                                
+                                <Border Background="#CC1E1E1E" BorderBrush="#FF007ACC" BorderThickness="1" CornerRadius="3" Margin="25,-10,-20,0" Padding="2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding TargetNetName}" Foreground="#FF007ACC" FontSize="10" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+
+                        <!-- Current Probe Visual Representation -->
+                        <DataTemplate DataType="{x:Type canvasVm:CurrentProbeItemViewModel}">
+                            <Grid Canvas.Left="{Binding X}" Canvas.Top="{Binding Y}" Margin="-10,-10,0,0">
+                                <!-- Current arrow graphic -->
+                                <Path Data="M 15,0 L 30,10 L 15,20 Z" Fill="#FFD700" Stroke="White" StrokeThickness="1" />
+                                <TextBlock Text="A" FontWeight="Bold" Foreground="Black" FontSize="10" Margin="16,4,0,0" />
+                                
+                                <Border Background="#CC1E1E1E" BorderBrush="#FFD700" BorderThickness="1" CornerRadius="3" Margin="32,-10,-20,0" Padding="2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding TargetDeviceDesignator}" Foreground="#FFD700" FontSize="10" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
                     </ItemsControl.Resources>
                 </ItemsControl>
-            </ScrollViewer>
+
+                <!-- Box Selection Overlay (Bound to same coordinate plane) -->
+                <Canvas IsHitTestVisible="False">
+                    <Rectangle Canvas.Left="{Binding ActiveSchematicViewModel.SelectionBounds.Left}"
+                               Canvas.Top="{Binding ActiveSchematicViewModel.SelectionBounds.Top}"
+                               Width="{Binding ActiveSchematicViewModel.SelectionBounds.Width}"
+                               Height="{Binding ActiveSchematicViewModel.SelectionBounds.Height}"
+                               Stroke="#FF007ACC" StrokeThickness="1" Fill="#33007ACC"
+                               Visibility="{Binding ActiveSchematicViewModel.IsSelectionBoundsVisible, Converter={StaticResource BoolToVis}}" />
+                </Canvas>
+                
+            </Grid>
+        </ScrollViewer>
             
             <GridSplitter Grid.Row="0" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Background="#FF3F3F46" />
             
@@ -197,6 +235,45 @@
                     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,5">
                         <TextBlock Text="Output Log / SPICE Netlist" FontWeight="Bold" Foreground="#FFCCCCCC" VerticalAlignment="Center"/>
                         <Button Content="Generate .cir" Command="{Binding GenerateNetlistCommand}" Margin="15,0,0,0" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
+                        
+                        <Button Content="Run Simulation ▶" Command="{Binding SimulateCommand}" Margin="15,0,0,0" Padding="10,2" Background="#FF2E8B57" Foreground="White" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSimulating}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button Content="Stop Simulation ■" Command="{Binding StopSimulationCommand}" Margin="15,0,0,0" Padding="10,2" Background="#FFCC3333" Foreground="White" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSimulating}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <ToggleButton Content="Live Tuning: OFF" IsChecked="{Binding IsLiveTuningEnabled}" Margin="20,0,0,0" Padding="10,2" Background="#FF3F3F46" Foreground="White" BorderThickness="0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter Property="Content" Value="Live Tuning (Polling) ON" />
+                                            <Setter Property="Background" Value="#FF9B59B6" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
                     </StackPanel>
                     
                     <TextBox Grid.Row="1" Text="{Binding NetlistOutput, Mode=OneWay}" IsReadOnly="True" Background="#FF1E1E1E" Foreground="#FF4EC9B0" FontFamily="Consolas" BorderThickness="1" BorderBrush="#FF3F3F46" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="5"/>
@@ -211,19 +288,33 @@
             <Grid Margin="10">
                 <TextBlock Text="Properties" FontWeight="Bold" FontSize="16" Foreground="#FFCCCCCC" Margin="0,0,0,10" VerticalAlignment="Top"/>
                 
-                <!-- Fallback Text when nothing is selected -->
-                <TextBlock Text="Select a component to view properties." Foreground="#FF888888" TextWrapping="Wrap" Margin="0,40,0,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
+                <!-- Simulation Configuration (Shows when nothing is selected) -->
+                <StackPanel Margin="0,40,0,0" DataContext="{Binding ActiveSchematicViewModel.SimConfig}">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding ActiveSchematicViewModel.SelectedComponent}" Value="{x:Null}">
+                                <DataTrigger Binding="{Binding DataContext.ActiveSchematicViewModel.SelectedComponent, RelativeSource={RelativeSource AncestorType=Border}}" Value="{x:Null}">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                    </StackPanel.Style>
+                    
+                    <TextBlock Text="Simulation Config" FontWeight="Bold" Foreground="#FF007ACC" Margin="0,0,0,10" />
+                    
+                    <TextBlock Text="Analysis Type:" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
+                    <ComboBox SelectedValue="{Binding AnalysisType, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,15">
+                        <ComboBoxItem Content="Transient"/>
+                        <ComboBoxItem Content="DC Sweep"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Time Step (TStep):" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
+                    <TextBox Text="{Binding TStep, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
+
+                    <TextBlock Text="Stop Time (TStop):" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
+                    <TextBox Text="{Binding TStop, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
+                </StackPanel>
 
                 <!-- Dynamic Component Data Editor -->
                 <StackPanel Margin="0,40,0,0" DataContext="{Binding ActiveSchematicViewModel.SelectedComponent}">

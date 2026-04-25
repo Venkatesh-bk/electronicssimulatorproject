@@ -43,9 +43,10 @@ namespace EdaSimulator.UI.Tools
                 // Completing the wire
                 if (target is PinNodeViewModel endPin && endPin != _startPin)
                 {
-                    // Snap to the physical endpoint
-                    _currentWire.Points[1] = new System.Windows.Point(endPin.X, _startPin.Y);
-                    _currentWire.Points[2] = new System.Windows.Point(endPin.X, endPin.Y);
+                    // Snap the final trackers strictly to the physical endpoint
+                    int count = _currentWire.Points.Count;
+                    _currentWire.Points[count - 2] = new System.Windows.Point(endPin.X, _currentWire.Points[count - 3].Y);
+                    _currentWire.Points[count - 1] = new System.Windows.Point(endPin.X, endPin.Y);
                     
                     // BRIDGING THE VISUAL TO THE CORE LOGIC:
                     Guid activeNetId;
@@ -79,23 +80,27 @@ namespace EdaSimulator.UI.Tools
                 else
                 {
                     // User clicked in empty canvas space to place an absolute corner anchor
-                    // Standard EDA tool usually finalizes the current line segments here and starts next.
-                    // For right now, do nothing on empty canvas clicks, must click a pin.
+                    // Lock the current corner and tracking end
+                    var n = _currentWire.Points.Count;
+                    var lockedEnd = _currentWire.Points[n - 1];
+
+                    // Append 2 new tracker points to continue orthogonal logic
+                    _currentWire.Points.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y)); 
+                    _currentWire.Points.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y));
                 }
             }
         }
 
         public void OnPointerMove(double x, double y)
         {
-            if (_startPin != null && _currentWire != null)
+            if (_startPin != null && _currentWire != null && _currentWire.Points.Count >= 3)
             {
-                // Orthogonal 90-degree track drawing
-                // Point[0] = Fixed Start
-                // Point[1] = L-Shape corner traversing horizontally first
-                // Point[2] = Ending coordinate tracked at mouse
+                int count = _currentWire.Points.Count;
+                var prevPoint = _currentWire.Points[count - 3]; // The last anchored click coordinate
                 
-                _currentWire.Points[1] = new System.Windows.Point(x, _startPin.Y);
-                _currentWire.Points[2] = new System.Windows.Point(x, y);
+                // Track moving corner
+                _currentWire.Points[count - 2] = new System.Windows.Point(x, prevPoint.Y);
+                _currentWire.Points[count - 1] = new System.Windows.Point(x, y);
             }
         }
 

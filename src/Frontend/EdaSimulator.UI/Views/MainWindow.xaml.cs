@@ -28,6 +28,29 @@ namespace EdaSimulator.UI.Views
         private const double GRID_SIZE = 10.0;
         private double Snap(double value) => Math.Round(value / GRID_SIZE) * GRID_SIZE;
 
+        private Point ApplyGravity(Point pos)
+        {
+            if (CanvasViewModel == null) return new Point(Snap(pos.X), Snap(pos.Y));
+
+            double gravityThreshold = 15.0; // Magnetic Radius
+            foreach (var item in CanvasViewModel.Items)
+            {
+                if (item is ViewModels.Canvas.PinNodeViewModel pin)
+                {
+                    double dx = pos.X - pin.X;
+                    double dy = pos.Y - pin.Y;
+                    double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                    if (dist < gravityThreshold)
+                    {
+                        return new Point(pin.X, pin.Y); // Snap exact
+                    }
+                }
+            }
+
+            return new Point(Snap(pos.X), Snap(pos.Y));
+        }
+
         private Point? _panStartPoint;
         private double _panStartX;
         private double _panStartY;
@@ -52,7 +75,8 @@ namespace EdaSimulator.UI.Views
             var target = (e.OriginalSource as FrameworkElement)?.DataContext as ViewModels.Canvas.CanvasItemViewModel;
 
             // Enforce Grid Snapping natively against the core abstraction layer
-            CanvasViewModel.ActiveTool.OnPointerDown(Snap(pos.X), Snap(pos.Y), target);
+            var grav = ApplyGravity(pos);
+            CanvasViewModel.ActiveTool.OnPointerDown(grav.X, grav.Y, target);
         }
 
         private void SchematicCanvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -73,7 +97,8 @@ namespace EdaSimulator.UI.Views
             if (CanvasViewModel.ActiveTool == null) return;
             
             var pos = e.GetPosition(SchematicItemsControl);
-            CanvasViewModel.ActiveTool.OnPointerMove(Snap(pos.X), Snap(pos.Y));
+            var grav = ApplyGravity(pos);
+            CanvasViewModel.ActiveTool.OnPointerMove(grav.X, grav.Y);
         }
 
         private void SchematicCanvas_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -90,7 +115,8 @@ namespace EdaSimulator.UI.Views
             if (CanvasViewModel.ActiveTool == null) return;
             
             var pos = e.GetPosition(SchematicItemsControl);
-            CanvasViewModel.ActiveTool.OnPointerUp(Snap(pos.X), Snap(pos.Y));
+            var grav = ApplyGravity(pos);
+            CanvasViewModel.ActiveTool.OnPointerUp(grav.X, grav.Y);
         }
 
         private void SchematicCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -135,6 +161,25 @@ namespace EdaSimulator.UI.Views
             }
         }
 
+        private string GetNextDesignator(string prefix)
+        {
+            if (CanvasViewModel == null) return prefix + "1";
+            
+            int maxId = 0;
+            foreach (var item in CanvasViewModel.Items)
+            {
+                if (item is ViewModels.Canvas.ComponentNodeViewModel comp && comp.Designator.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    string numericPart = comp.Designator.Substring(prefix.Length);
+                    if (int.TryParse(numericPart, out int val))
+                    {
+                        if (val > maxId) maxId = val;
+                    }
+                }
+            }
+            return prefix + (maxId + 1);
+        }
+
         private void SchematicCanvas_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.StringFormat))
@@ -143,15 +188,14 @@ namespace EdaSimulator.UI.Views
                 var pos = e.GetPosition(SchematicItemsControl);
 
                 Component coreComponent = null;
-                var shortGuid = Guid.NewGuid().ToString().Substring(0, 4).ToUpper();
 
                 switch (componentType)
                 {
-                    case "Resistor": coreComponent = new Resistor("R" + shortGuid, "1k"); break;
-                    case "Capacitor": coreComponent = new Capacitor("C" + shortGuid, "1u"); break;
-                    case "Inductor": coreComponent = new Inductor("L" + shortGuid, "1m"); break;
-                    case "VoltageSource": coreComponent = new VoltageSource("V" + shortGuid, "DC 5"); break;
-                    case "CurrentSource": coreComponent = new CurrentSource("I" + shortGuid, "DC 1m"); break;
+                    case "Resistor": coreComponent = new Resistor(GetNextDesignator("R"), "1k"); break;
+                    case "Capacitor": coreComponent = new Capacitor(GetNextDesignator("C"), "1u"); break;
+                    case "Inductor": coreComponent = new Inductor(GetNextDesignator("L"), "1m"); break;
+                    case "VoltageSource": coreComponent = new VoltageSource(GetNextDesignator("V"), "DC 5"); break;
+                    case "CurrentSource": coreComponent = new CurrentSource(GetNextDesignator("I"), "DC 1m"); break;
                 }
 
                 if (coreComponent != null && CanvasViewModel != null)
@@ -169,24 +213,55 @@ namespace EdaSimulator.UI.Views
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (CanvasViewModel != null)
+            if (CanvasViewModel == null) return;
+
+            // Undo / Redo Global Hooks
+            if (Keyboard.Modifiers == ModifierKeys.Control)
             {
-                foreach (var item in CanvasViewModel.Items)
+                if (e.Key == Key.Z)
                 {
-                    if (item.IsSelected && item is ViewModels.Canvas.ComponentNodeViewModel comp)
+                    CanvasViewModel.History.Undo();
+                    return;
+                }
+                if (e.Key == Key.Y)
+                {
+                    CanvasViewModel.History.Redo();
+                    return;
+                }
+            }
+
+            // Tool Toggles
+            if (e.Key == Key.P)
+            {
+                CanvasViewModel.ActiveTool = new Tools.ProbeTool(CanvasViewModel);
+                return;
+            }
+            if (e.Key == Key.I)
+            {
+                CanvasViewModel.ActiveTool = new Tools.CurrentProbeTool(CanvasViewModel);
+                return;
+            }
+            if (e.Key == Key.Escape)
+            {
+                CanvasViewModel.ActiveTool = new Tools.SelectionTool(CanvasViewModel);
+                return;
+            }
+
+            foreach (var item in CanvasViewModel.Items)
+            {
+                if (item.IsSelected && item is ViewModels.Canvas.ComponentNodeViewModel comp)
+                {
+                    if (e.Key == Key.R)
                     {
-                        if (e.Key == Key.R)
-                        {
-                            comp.RotationAngle = (comp.RotationAngle + 90) % 360;
-                        }
-                        else if (e.Key == Key.X)
-                        {
-                            comp.IsMirroredX = !comp.IsMirroredX;
-                        }
-                        else if (e.Key == Key.Y)
-                        {
-                            comp.IsMirroredY = !comp.IsMirroredY;
-                        }
+                        comp.RotationAngle = (comp.RotationAngle + 90) % 360;
+                    }
+                    else if (e.Key == Key.X)
+                    {
+                        comp.IsMirroredX = !comp.IsMirroredX;
+                    }
+                    else if (e.Key == Key.Y)
+                    {
+                        comp.IsMirroredY = !comp.IsMirroredY;
                     }
                 }
             }

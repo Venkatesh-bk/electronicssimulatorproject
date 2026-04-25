@@ -13,6 +13,8 @@ namespace EdaSimulator.UI.ViewModels.Canvas
     public partial class SchematicViewModel : ObservableObject
     {
         public Schematic CoreSchematic { get; }
+        
+        public EdaSimulator.UI.ViewModels.SimulationConfigViewModel SimConfig { get; }
 
         public ObservableCollection<CanvasItemViewModel> Items { get; } = new();
 
@@ -26,7 +28,15 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         private double _zoomFactor = 1.0;
 
         [ObservableProperty]
+        private System.Windows.Rect _selectionBounds;
+
+        [ObservableProperty]
+        private bool _isSelectionBoundsVisible;
+
+        [ObservableProperty]
         private ComponentNodeViewModel _selectedComponent;
+
+        public EdaSimulator.UI.Commands.CommandManager History { get; } = new EdaSimulator.UI.Commands.CommandManager();
 
         private ICanvasTool _activeTool;
         public ICanvasTool ActiveTool
@@ -46,6 +56,7 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         public SchematicViewModel(Schematic coreSchematic)
         {
             CoreSchematic = coreSchematic ?? throw new ArgumentNullException(nameof(coreSchematic));
+            SimConfig = new EdaSimulator.UI.ViewModels.SimulationConfigViewModel(coreSchematic.SimConfig);
             ActiveTool = new SelectionTool(this); // Default to standard arrow pointer
         }
 

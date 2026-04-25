@@ -1,0 +1,102 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+
+namespace EdaSimulator.Engines.Simulation
+{
+    public class SpiceSimulationData
+    {
+        public IReadOnlyList<string> Variables { get; set; } = new List<string>();
+        // Key represents the "v(n1)" variable. Value represents the array of points across time.
+        public Dictionary<string, List<double>> DataPoints { get; set; } = new Dictionary<string, List<double>>();
+    }
+
+    /// <summary>
+    /// Parses the standard SPICE RAW ASCII dataset trace files into a 
+    /// memory-optimized mapping of C# arrays usable for WPF charting.
+    /// </summary>
+    public static class RawFileParser
+    {
+        public static SpiceSimulationData Parse(string filePath)
+        {
+            var result = new SpiceSimulationData();
+            
+            if (!File.Exists(filePath))
+                return result;
+
+            string[] lines = File.ReadAllLines(filePath);
+            bool parsingVariables = false;
+            bool parsingValues = false;
+
+            int varCount = 0;
+            var varNames = new List<string>();
+
+            // Current state trackers
+            int currentVarIndex = 0;
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                if (line.StartsWith("No. Variables:"))
+                {
+                    var parts = line.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 2) int.TryParse(parts[1].Trim(), out varCount);
+                    continue;
+                }
+
+                if (line.StartsWith("Variables:"))
+                {
+                    parsingVariables = true;
+                    parsingValues = false;
+                    continue;
+                }
+
+                if (line.StartsWith("Values:"))
+                {
+                    parsingVariables = false;
+                    parsingValues = true;
+                    
+                    // Initialize the dictionary based on variables
+                    foreach (var varName in varNames)
+                    {
+                        result.DataPoints[varName] = new List<double>();
+                    }
+                    continue;
+                }
+
+                if (parsingVariables)
+                {
+                    // Format: 0   time   time
+                    var parts = line.Split('\t', ' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2)
+                    {
+                        varNames.Add(parts[1].ToLower()); // standardizes v(1) to lowercase
+                    }
+                }
+                else if (parsingValues)
+                {
+                    // The first variable holds an index counter " 0 0.00 "
+                    // The subsequent variables are "   5.00 "
+                    var parts = line.Split('\t', ' ', StringSplitOptions.RemoveEmptyEntries);
+                    
+                    string valString = parts.Length == 2 ? parts[1] : parts[0];
+
+                    if (double.TryParse(valString, NumberStyles.Float, CultureInfo.InvariantCulture, out double traceVal))
+                    {
+                        string targetVar = varNames[currentVarIndex];
+                        result.DataPoints[targetVar].Add(traceVal);
+                        
+                        currentVarIndex++;
+                        if (currentVarIndex >= varCount) currentVarIndex = 0; // Wrap back to the next time segment
+                    }
+                }
+            }
+
+            result.Variables = varNames.AsReadOnly();
+            return result;
+        }
+    }
+}

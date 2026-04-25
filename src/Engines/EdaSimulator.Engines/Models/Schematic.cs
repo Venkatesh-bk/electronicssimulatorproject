@@ -22,6 +22,11 @@ namespace EdaSimulator.Engines.Models
         public IReadOnlyDictionary<Guid, Net> Nets => _nets;
 
         /// <summary>
+        /// The configuration settings for simulation engines.
+        /// </summary>
+        public EdaSimulator.Engines.Simulation.SimulationConfiguration SimConfig { get; } = new EdaSimulator.Engines.Simulation.SimulationConfiguration();
+
+        /// <summary>
         /// The SPICE ground reference node ("0"). Auto-created on schematic construction.
         /// Every valid SPICE simulation requires this reference to exist.
         /// </summary>
