@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace EdaSimulator.Engines.Core
+namespace EdaSimulator.Engines.Models
 {
     /// <summary>
     /// The master circuit graph. Manages referential integrity between all Components,
@@ -51,6 +51,10 @@ namespace EdaSimulator.Engines.Core
         public void AddComponent(Component component)
         {
             ArgumentNullException.ThrowIfNull(component);
+
+            if (_components.Values.Any(c => string.Equals(c.Designator, component.Designator, StringComparison.OrdinalIgnoreCase) && c.Id != component.Id))
+                throw new ArgumentException($"A component with the designator '{component.Designator}' already exists in this schematic.");
+
             _components[component.Id] = component;
         }
 
@@ -82,6 +86,8 @@ namespace EdaSimulator.Engines.Core
                 throw new ArgumentException("Net name cannot be null or empty.", nameof(name));
             if (name == Net.SpiceGroundName)
                 throw new ArgumentException($"Net name '0' is reserved for the master ground net. Use MasterGroundNet directly.", nameof(name));
+            if (_nets.Values.Any(n => string.Equals(n.Name, name, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException($"A net with the name '{name}' already exists in this schematic.");
 
             var net = new Net(name);
             _nets.Add(net.Id, net);
@@ -165,16 +171,17 @@ namespace EdaSimulator.Engines.Core
 
         /// <summary>
         /// Resolves the SPICE net name for a given pin.
-        /// Returns "NC" (No Connect) if the pin is floating.
+        /// Unconnected/floating pins return a statistically unique local node name ("NC_uuid")
+        /// to prevent independent floating pins from silently short-circuiting together in SPICE.
         /// </summary>
         public string GetNetNameForPin(Pin pin)
         {
             ArgumentNullException.ThrowIfNull(pin);
 
             if (!pin.ConnectedNetId.HasValue)
-                return "NC";
+                return $"NC_{pin.Id:N}";
 
-            return _nets.TryGetValue(pin.ConnectedNetId.Value, out var net) ? net.Name : "NC";
+            return _nets.TryGetValue(pin.ConnectedNetId.Value, out var net) ? net.Name : $"NC_{pin.Id:N}";
         }
 
         /// <summary>
@@ -190,6 +197,14 @@ namespace EdaSimulator.Engines.Core
 
             if (MasterGroundNet.ConnectedPinIds.Count == 0)
                 issues.Add("CRITICAL: No pins are connected to the ground net ('0'). Simulation will fail.");
+
+            var duplicateDesignators = _components.Values.GroupBy(c => c.Designator, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1);
+            foreach (var group in duplicateDesignators)
+                issues.Add($"CRITICAL: Duplicate component designator found: '{group.Key}'. SPICE requires unique designators.");
+
+            var duplicateNets = _nets.Values.GroupBy(n => n.Name, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1);
+            foreach (var group in duplicateNets)
+                issues.Add($"CRITICAL: Duplicate net name found: '{group.Key}'. Pins will implicitly short-circuit in SPICE.");
 
             foreach (var comp in _components.Values)
             {

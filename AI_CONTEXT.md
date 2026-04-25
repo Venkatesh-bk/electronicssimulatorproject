@@ -45,16 +45,17 @@ electronicssimulatorproject/
 │   ├── Frontend/
 │   │   └── EdaSimulator.UI/             ← WPF Application (UI shell, canvas, panels)
 │   │       ├── App.xaml / App.xaml.cs
-│   │       ├── MainWindow.xaml / .cs    ← ⏳ Empty — next to be built
+│   │       ├── ViewModels/              ← MVVM Logic (MainViewModel.cs)
+│   │       ├── Views/                   ← UI Layouts (MainWindow.xaml)
 │   │       └── EdaSimulator.UI.csproj
 │   ├── Engines/
-│   │   └── EdaSimulator.Engines/        ← C# Engine interop layer
-│   │       └── Core/
-│   │           ├── Pin.cs               ✅ Done + audited
-│   │           ├── Net.cs               ✅ Done + audited
-│   │           ├── Component.cs         ✅ Done + audited
-│   │           ├── Schematic.cs         ✅ Done + audited
-│   │           └── Components/          ⏳ Next — Resistor, Capacitor, etc.
+│   │   └── EdaSimulator.Engines/        ← C# Engine wrapper
+│   │       ├── Models/                  ← Core SPICE graph representation
+│   │       │   ├── Component.cs / Schematic.cs / Pin.cs / Net.cs
+│   │       │   └── Components/          ← (Resistor, Capacitor, Inductor, etc)
+│   │       ├── Simulation/              ← Output bindings
+│   │       │   └── SpiceNetlistExporter.cs
+│   │       └── EdaSimulator.Engines.csproj
 │   ├── NativeEngines/                   ⏳ Phase 3 — C/C++ simulation kernels
 │   └── Scripting/                       ⏳ Phase 5 — Python scripting integration
 ├── docs/
@@ -114,13 +115,29 @@ electronicssimulatorproject/
 | `App.xaml.cs` global crash handler | ✅ Done |
 | All changes committed to Git | ✅ Done |
 
-### 🔜 Next Session — Pick Up Here
+### ✅ Completed — Session 2026-04-25
 
-1. Create `src/Engines/EdaSimulator.Engines/Core/Components/` subfolder
-2. Implement `Resistor.cs`, `Capacitor.cs`, `Inductor.cs`, `VoltageSource.cs`
-3. Implement `SpiceNetlistExporter.cs` — generates a `.cir` netlist file
-4. Create `MainViewModel.cs` wired to `Schematic` via MVVM
-5. Build `MainWindow.xaml` 3-panel IDE layout (Toolbox | Canvas | Properties)
+| Item | Status |
+|------|--------|
+| `EdaSimulator.Engines/.../Components/` structure created | ✅ Done |
+| Implemented `Resistor.cs` SPICE model | ✅ Done |
+| Implemented `Capacitor.cs` SPICE model | ✅ Done |
+| Implemented `Inductor.cs` SPICE model | ✅ Done |
+| Implemented `VoltageSource.cs` SPICE model | ✅ Done |
+| Implemented `CurrentSource.cs` SPICE model | ✅ Done |
+| Implemented `SpiceNetlistExporter.cs` (.cir generator) | ✅ Done |
+| Created `MainViewModel.cs` (MVVM Core) | ✅ Done |
+| Built `MainWindow.xaml` 3-panel professional dark UI | ✅ Done |
+| Wired `MainWindow.xaml.cs` to `MainViewModel` | ✅ Done |
+| Deep simulation core bug investigation and patching | ✅ Done |
+| Systematic MVVM and Models namespace restructuring | ✅ Done |
+
+### 🔜 Next Session — Pick Up Here (Phase 2 Start)
+
+1. Implement high-performance rendering Canvas for `Schematic`.
+2. Connect `Toolbox` list to drag-and-drop component placement on Canvas.
+3. Build wire drawing / routing capabilities.
+4. Integrate native SPICE engine execution (ngspice backend).
 
 ---
 
@@ -146,3 +163,5 @@ electronicssimulatorproject/
 - **2026-04-14** — Gemini 3.1 Pro — Installed .NET 8 SDK via `winget`. Scaffolded `EdaSimulator.sln`, `EdaSimulator.UI` (WPF), `EdaSimulator.Engines` (Class Library). Linked projects. Confirmed 0 errors / 0 warnings build.
 - **2026-04-14** — Gemini 3.1 Pro — Implemented core domain models: `Pin.cs`, `Net.cs`, `Component.cs`, `Schematic.cs`. Fixed state sync bug in Pin/Net graph disconnection logic.
 - **2026-04-14** — Claude Sonnet — Full industry-standard audit. Fixed 6 critical/medium bugs (see table above). Added `Validate()`, `RemoveNet()`, `IsFloating`, `GetPinsInSpiceOrder()`, `Title`, ground immutability guard, SPICE sequence validation, global WPF crash handler. Installed `CommunityToolkit.Mvvm 8.3.2` and `OxyPlot.Wpf 2.1.2`. Updated `CHANGELOG.md` and `AI_CONTEXT.md`. Final end-of-day commit made. Build: **0 Errors / 0 Warnings** ✅
+- **2026-04-25** — Gemini 3.1 Pro (High) — Implemented 5 primary SPICE component models (R, C, L, V, I) and `SpiceNetlistExporter.cs`. Developed professional 3-panel dark UI in `MainWindow.xaml` and hooked it to `MainViewModel.cs` using MVVM.
+- **2026-04-25** — Gemini 3.1 Pro (High) — Deep investigated SPICE constraints. Fixed 4 critical graph translation bugs (preventing node shorts via whitespace or un-named isolated nodes). Fully restructured directory and namespaces globally to `Models`, `ViewModels`, and `Views` according to MVVM standard. Compiled with 0 errors.

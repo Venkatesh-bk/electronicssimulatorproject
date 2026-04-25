@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace EdaSimulator.Engines.Core
+namespace EdaSimulator.Engines.Models
 {
     /// <summary>
     /// Represents a wire or electrical junction traversing the schematic.
@@ -35,6 +35,8 @@ namespace EdaSimulator.Engines.Core
                     throw new InvalidOperationException("The ground net name '0' is immutable and cannot be changed.");
                 if (string.IsNullOrWhiteSpace(value))
                     throw new ArgumentException("Net name cannot be null or empty.", nameof(value));
+                if (System.Linq.Enumerable.Any(value, char.IsWhiteSpace))
+                    throw new ArgumentException("Net name cannot contain whitespace, which would break SPICE matrix tokenization.", nameof(value));
                 _name = value;
             }
         }

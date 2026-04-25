@@ -1,0 +1,107 @@
+<Window x:Class="EdaSimulator.UI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EdaSimulator.UI.Views"
+        mc:Ignorable="d"
+        Title="EDA Simulator Platform - Professional" Height="720" Width="1080"
+        Background="#FF1E1E1E" Foreground="White"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="250" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Panel: Toolbox -->
+        <Border Grid.Column="0" Background="#FF252526" BorderBrush="#FF3F3F46" BorderThickness="0,0,1,0">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="Toolbox" FontWeight="Bold" FontSize="16" Foreground="#FFCCCCCC" Margin="0,0,0,10"/>
+                
+                <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White">
+                    <ListBoxItem Content="Resistor" />
+                    <ListBoxItem Content="Capacitor" />
+                    <ListBoxItem Content="Inductor" />
+                    <ListBoxItem Content="Voltage Source" />
+                    <ListBoxItem Content="Current Source" />
+                </ListBox>
+                
+                <Button Grid.Row="2" Content="Add Mock Circuit" Command="{Binding AddMockComponentsCommand}" Padding="5" Margin="0,10,0,0" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
+            </Grid>
+        </Border>
+
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#FF3F3F46" />
+
+        <!-- Center Panel: Canvas Workspace -->
+        <Grid Grid.Column="2" Background="#FF1E1E1E">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="150" />
+            </Grid.RowDefinitions>
+            
+            <!-- Canvas Placeholder -->
+            <Canvas Background="#FF1E1E1E" ClipToBounds="True">
+                <TextBlock Text="Schematic Canvas Workspace" Foreground="#FF555555" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" Canvas.Top="250" Canvas.Left="150"/>
+            </Canvas>
+            
+            <GridSplitter Grid.Row="0" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Background="#FF3F3F46" />
+            
+            <!-- Output Log / Netlist Panel -->
+            <Border Grid.Row="1" Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="0,1,0,0">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,5">
+                        <TextBlock Text="Output Log / SPICE Netlist" FontWeight="Bold" Foreground="#FFCCCCCC" VerticalAlignment="Center"/>
+                        <Button Content="Generate .cir" Command="{Binding GenerateNetlistCommand}" Margin="15,0,0,0" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
+                    </StackPanel>
+                    
+                    <TextBox Grid.Row="1" Text="{Binding NetlistOutput}" IsReadOnly="True" Background="#FF1E1E1E" Foreground="#FF4EC9B0" FontFamily="Consolas" BorderThickness="1" BorderBrush="#FF3F3F46" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="5"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#FF3F3F46" />
+
+        <!-- Right Panel: Properties -->
+        <Border Grid.Column="4" Background="#FF252526" BorderBrush="#FF3F3F46" BorderThickness="1,0,0,0">
+            <Grid Margin="10">
+                <TextBlock Text="Properties" FontWeight="Bold" FontSize="16" Foreground="#FFCCCCCC" Margin="0,0,0,10"/>
+                
+                <StackPanel Margin="0,30,0,0">
+                    <TextBlock Text="Select a component to view properties." Foreground="#FF888888" TextWrapping="Wrap" />
+                    
+                    <Grid Margin="0,15,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Designator:" Foreground="#FFCCCCCC" Margin="0,0,10,10" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="R1" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Value:" Foreground="#FFCCCCCC" Margin="0,0,10,10" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="10k" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

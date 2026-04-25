@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EdaSimulator.Engines.Core
+namespace EdaSimulator.Engines.Models
 {
     /// <summary>
     /// Abstract base class for all electrical components in the simulator.
@@ -13,7 +13,7 @@ namespace EdaSimulator.Engines.Core
         /// <summary>Unique identity for this component instance on the canvas.</summary>
         public Guid Id { get; } = Guid.NewGuid();
 
-        private string _designator;
+        private string _designator = string.Empty;
 
         /// <summary>
         /// Reference designator following EIA standard convention (e.g., "R1", "C2", "U5", "VCC1").
@@ -26,15 +26,29 @@ namespace EdaSimulator.Engines.Core
             {
                 if (string.IsNullOrWhiteSpace(value))
                     throw new ArgumentException("Designator cannot be null or empty.", nameof(value));
+                if (value.Any(char.IsWhiteSpace))
+                    throw new ArgumentException("Designator cannot contain whitespace (SPICE compliance).", nameof(value));
                 _designator = value;
             }
         }
 
+        private string _value = string.Empty;
+
         /// <summary>
         /// Primary simulation value or part number (e.g., "10k", "100nF", "2N3904", "LM741").
         /// Empty string is valid for components that carry no intrinsic value (e.g., connectors).
+        /// Value must not contain whitespace to preserve SPICE text alignment.
         /// </summary>
-        public string Value { get; set; }
+        public string Value 
+        { 
+            get => _value; 
+            set
+            {
+                if (value != null && value.Any(char.IsWhiteSpace))
+                    throw new ArgumentException("Simulation value cannot contain whitespace (e.g., use '10k' instead of '10 k').", nameof(value));
+                _value = value ?? string.Empty;
+            }
+        }
 
         private readonly List<Pin> _pins = new();
 
@@ -46,11 +60,9 @@ namespace EdaSimulator.Engines.Core
         /// </summary>
         protected Component(string designator, string value)
         {
-            if (string.IsNullOrWhiteSpace(designator))
-                throw new ArgumentException("Designator cannot be null or empty.", nameof(designator));
-
-            _designator = designator;
-            Value = value ?? string.Empty;
+            // Setters handle robust SPICE syntax validation rules
+            Designator = designator;
+            Value = value;
         }
 
         /// <summary>

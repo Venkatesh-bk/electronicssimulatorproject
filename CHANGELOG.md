@@ -6,13 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — Phase 1 In Progress
+## [Unreleased] — Phase 1 Integration
 
-### Planned (Next Session)
-- Concrete component models: `Resistor.cs`, `Capacitor.cs`, `VoltageSource.cs`
-- `SpiceNetlistExporter.cs` — full `.cir` file generation
-- `MainViewModel.cs` — MVVM wiring to Schematic
-- `MainWindow.xaml` — 3-panel IDE-style layout (Toolbox | Canvas | Properties)
+### Added (Session 2026-04-25)
+- Core discrete components: `Resistor.cs`, `Capacitor.cs`, `Inductor.cs`, `VoltageSource.cs`, `CurrentSource.cs`
+- `SpiceNetlistExporter.cs` — converts `Schematic` to `.cir` files
+- `MainViewModel.cs` — MVVM wiring core connected to schematic
+- `MainWindow.xaml` — 3-panel professional dark UI (Toolbox | Canvas | Properties) layout
+
+### Changed (Session 2026-04-25)
+- Reorganized `EdaSimulator.Engines` to feature `Models/` and `Simulation/` directories for strict boundary control mechanism.
+- Reorganized `EdaSimulator.UI` with canonical MVVM `ViewModels/` and `Views/` folders. Update namespaces globally.
+
+### Fixed (Session 2026-04-25)
+- **Critical:** Disconnected pins returned "NC" as their net, inadvertently short-circuiting all floating pins in the schematic together. Now returns dynamically unique ids (`NC_uuid`).
+- **Critical:** `Schematic.CreateNet` allowed creating independent nets sharing the exact same string name, artificially shorting them together in SPICE output.
+- **High:** `Schematic.AddComponent` allowed injecting duplicate designators (e.g., two "R1"s), crashing SPICE matrix syntax.
+- **High:** `Component.Designator`, `Component.Value`, and `Net.Name` had no protection against whitespace insertion. Spaces would artificially break SPICE token limit arrays.
 
 ---
 

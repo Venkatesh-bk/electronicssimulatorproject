@@ -1,6 +1,6 @@
 using System;
 
-namespace EdaSimulator.Engines.Core
+namespace EdaSimulator.Engines.Models
 {
     /// <summary>
     /// Represents a single electrical terminal point on a component.
