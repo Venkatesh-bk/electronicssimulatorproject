@@ -1,93 +1,93 @@
-# Changelog
-
-All notable changes to the EDA Simulator Platform will be documented here.
-
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+# EDA Simulator — Changelog
 
 ---
 
-## [Unreleased] — Phase 1 Integration
+## [Research & Planning Session] — 2026-04-25
 
-### Added (Session 2026-04-25)
-- Core discrete components: `Resistor.cs`, `Capacitor.cs`, `Inductor.cs`, `VoltageSource.cs`, `CurrentSource.cs`
-- `SpiceNetlistExporter.cs` — converts `Schematic` to `.cir` files
-- `MainViewModel.cs` — MVVM wiring core connected to schematic
-- `MainWindow.xaml` — 3-panel professional dark UI (Toolbox | Canvas | Properties) layout
+### Gap Analysis vs Industry Tools
+- Deep research completed comparing the project against **Proteus VSM, MATLAB/Simulink, Altium Designer, ANSYS HFSS**
+- **6 critical gaps** identified and documented
+- Full **10-phase extended roadmap (Phases 4–10)** created to close all gaps using free open-source tools
 
-### Changed (Session 2026-04-25)
-- Reorganized `EdaSimulator.Engines` to feature `Models/` and `Simulation/` directories for strict boundary control mechanism.
-- Reorganized `EdaSimulator.UI` with canonical MVVM `ViewModels/` and `Views/` folders. Update namespaces globally.
+### Identified Gaps Summary
+| Gap | Issue | Planned Phase |
+|-----|-------|--------------|
+| GAP 1 | No internal MNA/NR solver (delegates to ngspice — correct) | Keep as-is |
+| GAP 2 | Only ideal R and V components | Phase 4 |
+| GAP 3 | No MCU co-simulation (Proteus unique feature) | Phase 8 |
+| GAP 4 | No AC sweep, Bode, Monte Carlo, Noise | Phase 5 |
+| GAP 5 | No PCB layout module | Phase 9 |
+| GAP 6 | No save/load, BOM, hierarchical schematics | Phase 6–7 |
 
-### Fixed (Session 2026-04-25 — Round 1: SPICE Graph Integrity)
-- **Critical:** Disconnected pins returned `"NC"` as their net, inadvertently short-circuiting all floating pins together in SPICE. Now returns unique `NC_<uuid>` per pin.
-- **Critical:** `Schematic.CreateNet` allowed creating nets sharing the exact same name, silently shorting independent nodes in SPICE output.
-- **High:** `Schematic.AddComponent` allowed duplicate designators (e.g., two `"R1"`s), crashing SPICE matrix syntax.
-- **High:** `Component.Designator` and `Net.Name` had no whitespace protection — spaces break SPICE token parsing.
-
-### Fixed (Session 2026-04-25 — Round 2: Deep Analysis & Runtime Test Suite)
-- **Critical:** `Net` constructor wrote directly to `_name` backing field, bypassing the whitespace setter guard entirely. `new Net("My Net")` was silently accepted and would corrupt any SPICE netlist. Fixed by routing non-ground construction through the `Name` property setter.
-- **Critical:** `VoltageSource` and `CurrentSource` could never be constructed with a valid SPICE value — the `Component.Value` setter incorrectly rejected whitespace, blocking compound values like `"DC 5"`, `"AC 1 0"`, `"PULSE(0 5 0 1n 1n 5u 10u)"`.
-- **Critical:** `MainViewModel.AddMockComponents` used `"DC 5V"` — `V` suffix is not valid ngspice syntax; corrected to `"DC 5"`.
-- **Medium:** `AddMockComponents` crashed on every click after the first — components and nets already existed. Fixed by resetting the schematic before populating.
-- **Medium:** `Component.RegisterPin` allowed duplicate SPICE sequence numbers on the same component, silently corrupting netlist token positions. Now throws `InvalidOperationException` on collision.
-- **Medium:** `GetPinsInSpiceOrder()` XML docstring falsely claimed gap validation was performed. Corrected to accurately describe behaviour.
-- **Low:** `NetlistOutput` TextBox WPF binding defaulted to `TwoWay` on a read-only control. Fixed with explicit `Mode=OneWay`.
-- **Added:** 47-test runtime suite (`scratch/TestApp/Program.cs`) covering all domain classes, graph integrity, and SPICE netlist output — providing a permanent regression baseline.
+### Open-Source Resources Catalogued for Future Phases
+- `KiCad-Spice-Library` (GitHub) — free SPICE `.lib` models (transistors, diodes, op-amps)
+- `SpiceSharp` (NuGet) — full SPICE engine in pure C#
+- `Math.NET Numerics` (NuGet) — statistical distributions for Monte Carlo analysis
+- `simavr` (GitHub C library) — AVR instruction-accurate simulation for MCU co-sim
+- `Renode` (C# framework, antmicro) — ARM Cortex-M board emulation
+- `FreeRouting` (Java CLI, GitHub) — open-source PCB autorouter via Specctra DSN/SES
+- `GerberWriter` (NuGet) — RS-274X Gerber PCB file generation in C#
+- `PdfSharp` (NuGet) — PDF export from WPF canvas
+- OxyPlot `LogarithmicAxis` — already in package, ready for Bode plots
 
 ---
 
-## [0.2.0] — 2026-04-14 — Phase 1: Core Engine & Industry Hardening
+## [Phase 3.5 — Steps 1-3] — 2026-04-25 | Commit: `fb7d573`
 
 ### Added
-- **`Pin.cs`** — Electrical terminal model with SPICE sequence validation, `IsFloating` property
-- **`Net.cs`** — Wire/junction model with O(1) HashSet tracking, ground immutability guard
-- **`Component.cs`** — Abstract base with enforced SPICE contract (`GenerateSpiceNetlistLine`), `GetPinsInSpiceOrder()`
-- **`Schematic.cs`** — Master circuit graph with `Validate()`, `RemoveNet()`, `Title`, ground net protection
-- **`App.xaml.cs`** — Global `DispatcherUnhandledException` handler preventing silent crashes
-- NuGet packages: `CommunityToolkit.Mvvm 8.3.2`, `OxyPlot.Wpf 2.1.2`
-- `docs/ARCHITECTURE.md` — Full system architecture diagram and module breakdown
-- `CONTRIBUTING.md` — Branch strategy, code standards, PR checklist
-- `LICENSE` — MIT License
-- `.gitignore` — .NET 8 + C++ + Python + CMake patterns
+- **Current Probe Tool** (`Key.I`): Drop gold `[A]` arrow probes onto component bodies to track branch currents.
+- **`CurrentProbeItemViewModel`** + **`CurrentProbeTool.cs`**: Full MVVM canvas item and tool for current measurement.
+- **Gold Arrow XAML DataTemplate**: Renders on canvas with device name label, visually distinct from voltage probes.
+- **MATLAB-style Crosshair Tracker**: `TrackerFormatString` on every `LineSeries` — hover snaps crosshair to exact `<Time, Value>`.
+- **OxyPlot Legend Overlay**: Semi-transparent legend (top-right) groups all active traces by name.
+- **`.options savecurrents`**: Injected into every generated `.cir` netlist — forces ngspice to retain branch current vectors in `.raw` output.
 
-### Fixed
-- **Critical:** `Net.Name` was publicly mutable — renaming the ground net `"0"` would break all SPICE simulations
-- **Critical:** `CreateNet("0")` was allowed, potentially creating a duplicate ground
-- **Critical:** No `RemoveNet()` — deleting a net left dangling `ConnectedNetId` references on pins
-- **Critical:** No global unhandled exception handler in WPF — errors would silently terminate the app
-- **Medium:** `Pin.SpiceNodeSequence` accepted `0` or negative values, producing invalid SPICE netlist lines
-- **Medium:** `Designator` setter had no validation, allowing empty strings in netlist output
+---
+
+## [Phase 3 — Complete] — 2026-04-25 | Commit: `fb7d573`
+
+### Added
+- **`SimulationConfiguration.cs`**: Physics analysis config model (`.tran`, `.op` parameters).
+- **`SpiceNetlistExporter`** updated: appends simulation directives from `SimConfig`.
+- **`SimulationConfigViewModel.cs`**: MVVM bridge exposing simulation parameters to the Properties panel.
+- **`OscilloscopeWindow.xaml` + `.xaml.cs`**: Dark-themed oscilloscope popup. Hides on close to preserve traces.
+- **`OscilloscopeViewModel.cs`**: OxyPlot `PlotModel` — `RenderTrace()`, `ClearTraces()`, MATLAB legend, crosshairs.
+- **`SpiceExecutionService.cs`**: Async background ngspice process bridge. Batch mode, ASCII raw, `CancellationToken`.
+- **`RawFileParser.cs`**: Parses SPICE ASCII `.raw` → `Dictionary<string, List<double>>` keyed by variable name.
+- **`VoltageProbeItemViewModel`** + **`ProbeTool`** (`Key.P`): Blue `[V]` pin probes mapping net IDs → oscilloscope traces.
+- **`SimulateAsync` command**: Full pipeline — DRC → netlist → ngspice → RAW parse → probe match → OscilloscopeWindow.
+- **Stop Simulation ■** button: Replaces Run ▶ while simulating. Cancels background ngspice process via `CancellationTokenSource`.
+- **`IsSimulating` flag**: Prevents concurrent runs; DataTrigger drives Run/Stop button visibility swap.
+- **Error Pipeline**: Stdout keyword scanner (`singular matrix`, `timestep too small`, `fatal`, `aborted`) surfaces failures to the Output Log.
+- **Live Tuning Toggle**: `DispatcherTimer` polls every 1s, compares netlist hash, auto-triggers `SimulateAsync` on schematic changes.
+- **`OxyPlot.Wpf 2.2.0`** NuGet package added.
 
 ### Changed
-- Project scope elevated from basic EDA to **Proteus Professional + MATLAB/Simulink + ANSYS** level
-- Roadmap expanded from 5 to 8 phases
-- `Pin.Disconnect()` made `internal` — disconnection must go through `Schematic` to preserve graph integrity
+- `MainWindow.xaml`: Properties panel `DataTrigger` shows Simulation Config when no component selected.
+- `SchematicViewModel`: `SimConfig` property injected.
+- `Schematic.cs`: Exposed `SimulationConfiguration SimConfig` property.
 
 ---
 
-## [0.1.0] — 2026-04-14 — Project Initialization
+## [Phase 2 — Schematic Capture] — Earlier Sessions
 
 ### Added
-- `README.md` — Professional project overview, prerequisites, AI assistant note
-- `AI_CONTEXT.md` — AI model context-switching document with change log
-- `docs/ROADMAP.md` — 8-phase detailed development roadmap (Proteus/MATLAB/ANSYS scope)
-- Folder structure: `src/Frontend/`, `src/Engines/`, `src/NativeEngines/`, `src/Scripting/`, `docs/`, `resources/`
-- `.NET 8 SDK` installed via `winget`
-- `EdaSimulator.sln` scaffolded with two projects linked
+- Full schematic canvas: drag-drop placement, wire routing, selection, move, property editing
+- DRC (Design Rule Check) validation — floating pins, missing grounds
+- SPICE netlist export (Resistors, Voltage Sources)
+- Undo/Redo (`CommandManager`, `MoveItemsCommand`)
+- Symbol registry with SVG-style path data per component type
+- Zoom and pan on canvas
+- 47 runtime tests (all green)
 
 ---
 
-## [0.1.0] — 2026-04-14 — Project Initialization
+## [Phase 1 — Architecture & Domain Models] — Earlier Sessions
 
 ### Added
-- `README.md` — Project overview and prerequisites
-- `AI_CONTEXT.md` — AI model context switching document with change log
-- `docs/ROADMAP.md` — 8-phase detailed development roadmap
-- `docs/ARCHITECTURE.md` — Full system architecture with module breakdown and data flow diagrams
-- `docs/CONTRIBUTING.md` — Contribution guidelines
-- `.gitignore` — .NET 8 + C++ + Python ignore rules
-- `LICENSE` — MIT License
-- Folder structure: `src/Frontend/`, `src/Engines/`, `src/NativeEngines/`, `src/Scripting/`, `docs/`, `resources/components/`
-
-### Changed
-- Project scope elevated from basic EDA tool to **Proteus Professional + MATLAB/Simulink + ANSYS** level professional engineering simulation suite.
+- `.NET 8 / WPF` solution with clean layered architecture
+- `EdaSimulator.Engines` class library (domain models)
+- `Schematic`, `ComponentBase`, `Net`, `Pin` core models
+- Component types: `Resistor`, `VoltageSource`
+- `SpiceNetlistExporter` initial implementation
+- Graph integrity checks and validation
