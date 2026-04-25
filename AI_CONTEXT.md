@@ -129,8 +129,10 @@ electronicssimulatorproject/
 | Created `MainViewModel.cs` (MVVM Core) | ✅ Done |
 | Built `MainWindow.xaml` 3-panel professional dark UI | ✅ Done |
 | Wired `MainWindow.xaml.cs` to `MainViewModel` | ✅ Done |
-| Deep simulation core bug investigation and patching | ✅ Done |
+| Deep simulation core bug investigation and patching (Round 1) | ✅ Done |
 | Systematic MVVM and Models namespace restructuring | ✅ Done |
+| Deep analysis Round 2 — 47-test runtime suite written | ✅ Done |
+| Fixed 7 additional bugs found by runtime tests | ✅ Done |
 
 ### 🔜 Next Session — Pick Up Here (Phase 2 Start)
 
@@ -164,4 +166,5 @@ electronicssimulatorproject/
 - **2026-04-14** — Gemini 3.1 Pro — Implemented core domain models: `Pin.cs`, `Net.cs`, `Component.cs`, `Schematic.cs`. Fixed state sync bug in Pin/Net graph disconnection logic.
 - **2026-04-14** — Claude Sonnet — Full industry-standard audit. Fixed 6 critical/medium bugs (see table above). Added `Validate()`, `RemoveNet()`, `IsFloating`, `GetPinsInSpiceOrder()`, `Title`, ground immutability guard, SPICE sequence validation, global WPF crash handler. Installed `CommunityToolkit.Mvvm 8.3.2` and `OxyPlot.Wpf 2.1.2`. Updated `CHANGELOG.md` and `AI_CONTEXT.md`. Final end-of-day commit made. Build: **0 Errors / 0 Warnings** ✅
 - **2026-04-25** — Gemini 3.1 Pro (High) — Implemented 5 primary SPICE component models (R, C, L, V, I) and `SpiceNetlistExporter.cs`. Developed professional 3-panel dark UI in `MainWindow.xaml` and hooked it to `MainViewModel.cs` using MVVM.
-- **2026-04-25** — Gemini 3.1 Pro (High) — Deep investigated SPICE constraints. Fixed 4 critical graph translation bugs (preventing node shorts via whitespace or un-named isolated nodes). Fully restructured directory and namespaces globally to `Models`, `ViewModels`, and `Views` according to MVVM standard. Compiled with 0 errors.
+- **2026-04-25** — Gemini 3.1 Pro (High) — Deep SPICE investigation (Round 1). Fixed 4 critical graph translation bugs (preventing node shorts via whitespace or un-named isolated nodes). Fully restructured directory and namespaces globally to `Models`, `ViewModels`, and `Views` per MVVM standard. Build: 0 Errors / 0 Warnings ✅
+- **2026-04-25** — Claude Sonnet 4.6 — Full codebase deep analysis (Round 2). Wrote 47-test runtime suite exposing bugs compiler cannot detect. Fixed 7 bugs: `Net` constructor bypassing whitespace setter (Critical), `Component.Value` wrongly rejecting SPICE compound source values (Critical), broken mock circuit with invalid ngspice syntax (Critical), `AddMockComponents` non-idempotency (Medium), `RegisterPin` duplicate-sequence guard (Medium), misleading docstring (Medium), WPF binding mode (Low). All 47 tests green. Build: 0 Errors / 0 Warnings ✅

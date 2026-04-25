@@ -18,11 +18,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Reorganized `EdaSimulator.Engines` to feature `Models/` and `Simulation/` directories for strict boundary control mechanism.
 - Reorganized `EdaSimulator.UI` with canonical MVVM `ViewModels/` and `Views/` folders. Update namespaces globally.
 
-### Fixed (Session 2026-04-25)
-- **Critical:** Disconnected pins returned "NC" as their net, inadvertently short-circuiting all floating pins in the schematic together. Now returns dynamically unique ids (`NC_uuid`).
-- **Critical:** `Schematic.CreateNet` allowed creating independent nets sharing the exact same string name, artificially shorting them together in SPICE output.
-- **High:** `Schematic.AddComponent` allowed injecting duplicate designators (e.g., two "R1"s), crashing SPICE matrix syntax.
-- **High:** `Component.Designator`, `Component.Value`, and `Net.Name` had no protection against whitespace insertion. Spaces would artificially break SPICE token limit arrays.
+### Fixed (Session 2026-04-25 — Round 1: SPICE Graph Integrity)
+- **Critical:** Disconnected pins returned `"NC"` as their net, inadvertently short-circuiting all floating pins together in SPICE. Now returns unique `NC_<uuid>` per pin.
+- **Critical:** `Schematic.CreateNet` allowed creating nets sharing the exact same name, silently shorting independent nodes in SPICE output.
+- **High:** `Schematic.AddComponent` allowed duplicate designators (e.g., two `"R1"`s), crashing SPICE matrix syntax.
+- **High:** `Component.Designator` and `Net.Name` had no whitespace protection — spaces break SPICE token parsing.
+
+### Fixed (Session 2026-04-25 — Round 2: Deep Analysis & Runtime Test Suite)
+- **Critical:** `Net` constructor wrote directly to `_name` backing field, bypassing the whitespace setter guard entirely. `new Net("My Net")` was silently accepted and would corrupt any SPICE netlist. Fixed by routing non-ground construction through the `Name` property setter.
+- **Critical:** `VoltageSource` and `CurrentSource` could never be constructed with a valid SPICE value — the `Component.Value` setter incorrectly rejected whitespace, blocking compound values like `"DC 5"`, `"AC 1 0"`, `"PULSE(0 5 0 1n 1n 5u 10u)"`.
+- **Critical:** `MainViewModel.AddMockComponents` used `"DC 5V"` — `V` suffix is not valid ngspice syntax; corrected to `"DC 5"`.
+- **Medium:** `AddMockComponents` crashed on every click after the first — components and nets already existed. Fixed by resetting the schematic before populating.
+- **Medium:** `Component.RegisterPin` allowed duplicate SPICE sequence numbers on the same component, silently corrupting netlist token positions. Now throws `InvalidOperationException` on collision.
+- **Medium:** `GetPinsInSpiceOrder()` XML docstring falsely claimed gap validation was performed. Corrected to accurately describe behaviour.
+- **Low:** `NetlistOutput` TextBox WPF binding defaulted to `TwoWay` on a read-only control. Fixed with explicit `Mode=OneWay`.
+- **Added:** 47-test runtime suite (`scratch/TestApp/Program.cs`) covering all domain classes, graph integrity, and SPICE netlist output — providing a permanent regression baseline.
 
 ---
 
