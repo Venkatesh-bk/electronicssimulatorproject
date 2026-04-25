@@ -19,7 +19,7 @@ namespace EdaSimulator.Engines.Models
         /// </summary>
         public Guid Id { get; } = Guid.NewGuid();
 
-        private string _name;
+        private string _name = string.Empty;
 
         /// <summary>
         /// User-defined or auto-generated label for this net (e.g., "VCC", "Net_1001", "GND").
@@ -62,7 +62,12 @@ namespace EdaSimulator.Engines.Models
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Net name cannot be null or empty.", nameof(name));
 
-            _name = name;
+            // Ground net is the only case where _name is set directly (bypasses the setter's IsGround guard).
+            // All other names are routed through the setter to enforce whitespace and future rules.
+            if (name == SpiceGroundName)
+                _name = name;
+            else
+                Name = name;  // setter enforces whitespace check
         }
 
         /// <summary>
