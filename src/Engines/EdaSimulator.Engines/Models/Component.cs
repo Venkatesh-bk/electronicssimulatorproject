@@ -35,19 +35,14 @@ namespace EdaSimulator.Engines.Models
         private string _value = string.Empty;
 
         /// <summary>
-        /// Primary simulation value or part number (e.g., "10k", "100nF", "2N3904", "LM741").
+        /// Primary simulation value or part number (e.g., "10k", "100nF", "DC 5", "PULSE(0 5 0 1n 1n 5u 10u)").
         /// Empty string is valid for components that carry no intrinsic value (e.g., connectors).
-        /// Value must not contain whitespace to preserve SPICE text alignment.
+        /// Note: Source components (V, I) use multi-token SPICE values such as "DC 5" or "AC 1 0" which contain spaces.
         /// </summary>
         public string Value 
         { 
             get => _value; 
-            set
-            {
-                if (value != null && value.Any(char.IsWhiteSpace))
-                    throw new ArgumentException("Simulation value cannot contain whitespace (e.g., use '10k' instead of '10 k').", nameof(value));
-                _value = value ?? string.Empty;
-            }
+            set => _value = value ?? string.Empty;
         }
 
         private readonly List<Pin> _pins = new();
@@ -67,12 +62,17 @@ namespace EdaSimulator.Engines.Models
 
         /// <summary>
         /// Factory method for derived classes to create and register a pin during construction.
-        /// Pins must be registered in the correct SPICE order (sequence 1, 2, 3, ...).
+        /// Pins must be registered in the correct SPICE order (sequence 1, 2, 3, ...) with no duplicate sequences.
         /// </summary>
         /// <param name="name">Pin name from the component's datasheet.</param>
-        /// <param name="spiceSequence">1-indexed position for SPICE netlist line output.</param>
+        /// <param name="spiceSequence">1-indexed position for SPICE netlist line output. Must be unique per component.</param>
+        /// <exception cref="InvalidOperationException">Thrown if a pin with the same spiceSequence already exists.</exception>
         protected Pin RegisterPin(string name, int spiceSequence)
         {
+            if (_pins.Any(p => p.SpiceNodeSequence == spiceSequence))
+                throw new InvalidOperationException(
+                    $"Pin with SPICE sequence {spiceSequence} is already registered on '{Designator}'. Each pin must have a unique sequence.");
+
             var pin = new Pin(Id, name, spiceSequence);
             _pins.Add(pin);
             return pin;
@@ -90,7 +90,8 @@ namespace EdaSimulator.Engines.Models
         }
 
         /// <summary>
-        /// Returns all pins in their SPICE sequence order. Validates no sequence gaps exist.
+        /// Returns all pins sorted by their SPICE sequence order (1, 2, 3, ...).
+        /// Used by <see cref="GenerateSpiceNetlistLine"/> to build positionally correct netlist tokens.
         /// </summary>
         public IEnumerable<Pin> GetPinsInSpiceOrder() => _pins.OrderBy(p => p.SpiceNodeSequence);
 

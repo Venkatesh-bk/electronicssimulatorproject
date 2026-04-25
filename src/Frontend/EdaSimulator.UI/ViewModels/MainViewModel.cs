@@ -32,24 +32,25 @@ namespace EdaSimulator.UI.ViewModels
         [RelayCommand]
         private void AddMockComponents()
         {
-            // Quick test logic to populate the schematic so layout and netlist functionality can be verified visually
+            // Reset the schematic each time so this command is safe to call multiple times
+            ActiveSchematic = new Schematic("Mock Circuit");
+
             try
             {
                 var r1 = new Resistor("R1", "10k");
-                var v1 = new VoltageSource("V1", "DC 5V");
-                
+                var v1 = new VoltageSource("V1", "DC 5");  // Valid ngspice syntax: DC <value>
+
                 ActiveSchematic.AddComponent(r1);
                 ActiveSchematic.AddComponent(v1);
 
-                // Connect them in series
+                // Connect V1(+) → N001 ← R1(pin1) and V1(-) → GND ← R1(pin2)
                 var net1 = ActiveSchematic.CreateNet("N001");
                 ActiveSchematic.ConnectPinToNet(v1.GetPinByName("+"), net1.Id);
                 ActiveSchematic.ConnectPinToNet(r1.GetPinByName("1"), net1.Id);
-                
-                // Connect to ground
+
                 ActiveSchematic.ConnectPinToNet(v1.GetPinByName("-"), ActiveSchematic.MasterGroundNet.Id);
                 ActiveSchematic.ConnectPinToNet(r1.GetPinByName("2"), ActiveSchematic.MasterGroundNet.Id);
-                
+
                 MessageBox.Show("Successfully added mock V1 and R1 components to schematic.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
