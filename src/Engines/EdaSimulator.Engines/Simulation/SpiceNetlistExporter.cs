@@ -29,6 +29,17 @@ namespace EdaSimulator.Engines.Simulation
             sb.AppendLine(".options savecurrents");
             sb.AppendLine();
 
+            // 1.5 Includes
+            if (schematic.SpiceIncludes.Count > 0)
+            {
+                sb.AppendLine("* --- Includes ---");
+                foreach (var include in schematic.SpiceIncludes)
+                {
+                    sb.AppendLine($".include \"{include}\"");
+                }
+                sb.AppendLine();
+            }
+
             // 2. Validate schematic for fundamental errors before export
             var issues = schematic.Validate();
             if (issues.Any())

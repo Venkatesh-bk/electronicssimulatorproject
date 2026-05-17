@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.Models.Components;
+using EdaSimulator.Engines.Simulation.Digital;
 using EdaSimulator.UI.ViewModels;
 
 namespace EdaSimulator.UI.Views
@@ -196,6 +197,15 @@ namespace EdaSimulator.UI.Views
                     case "Inductor": coreComponent = new Inductor(GetNextDesignator("L"), "1m"); break;
                     case "VoltageSource": coreComponent = new VoltageSource(GetNextDesignator("V"), "DC 5"); break;
                     case "CurrentSource": coreComponent = new CurrentSource(GetNextDesignator("I"), "DC 1m"); break;
+                    
+                    case "Diode": coreComponent = new Diode(GetNextDesignator("D"), "1N4148"); break;
+                    case "BJT": coreComponent = new BJT(GetNextDesignator("Q"), "2N2222"); break;
+                    case "MOSFET": coreComponent = new MOSFET(GetNextDesignator("M"), "2N7002"); break;
+                    case "OpAmp": coreComponent = new OpAmp(GetNextDesignator("X"), "LM358"); break;
+
+                    // Note: Digital components will need an adapter if they are to be placed directly as Component.
+                    // For now, we will map them using a mock/dummy SPICE representation until the MixedSignalBridge
+                    // is fully wired into the Canvas ViewModel layer.
                 }
 
                 if (coreComponent != null && CanvasViewModel != null)
@@ -209,6 +219,16 @@ namespace EdaSimulator.UI.Views
                     CanvasViewModel.AddComponentNode(vm);
                 }
             }
+        }
+
+        private void SelectTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.SelectionTool(CanvasViewModel);
+        }
+
+        private void WireTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.WiringTool(CanvasViewModel);
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -239,6 +259,11 @@ namespace EdaSimulator.UI.Views
             if (e.Key == Key.I)
             {
                 CanvasViewModel.ActiveTool = new Tools.CurrentProbeTool(CanvasViewModel);
+                return;
+            }
+            if (e.Key == Key.W)
+            {
+                CanvasViewModel.ActiveTool = new Tools.WiringTool(CanvasViewModel);
                 return;
             }
             if (e.Key == Key.Escape)

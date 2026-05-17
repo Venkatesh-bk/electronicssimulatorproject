@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using EdaSimulator.Engines.Models.Components;
+using EdaSimulator.Engines.Simulation.Digital;
 
 namespace EdaSimulator.UI.ViewModels.Canvas
 {
@@ -101,6 +102,66 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                     { 1, new Point(0, -20) }, // output direction
                     { 2, new Point(0, 20) }
                 }
+            };
+
+            // === Phase 4: Advanced Analog Components ===
+
+            _registry[typeof(Diode)] = new ComponentSymbol
+            {
+                Width = 40, Height = 20,
+                PathData = "M -20,0 L -10,0 M -10,-10 L 10,0 L -10,10 Z M 10,-10 L 10,10 M 10,0 L 20,0",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-20, 0) }, { 2, new Point(20, 0) } }
+            };
+
+            _registry[typeof(BJT)] = new ComponentSymbol
+            {
+                Width = 40, Height = 40,
+                PathData = "M -20,0 L -5,0 M -5,-15 L -5,15 M -5,5 L 15,15 L 15,20 M -5,-5 L 15,-15 L 15,-20 M 10,15 L 5,10 L 15,10 Z",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(15, -20) }, { 2, new Point(-20, 0) }, { 3, new Point(15, 20) } }
+            };
+
+            _registry[typeof(MOSFET)] = new ComponentSymbol
+            {
+                Width = 40, Height = 40,
+                PathData = "M -20,0 L -10,0 M -10,-15 L -10,15 M -5,-15 L -5,-5 M -5,-2 L -5,2 M -5,5 L -5,15 M -5,-10 L 15,-10 L 15,-20 M -5,10 L 15,10 L 15,20 M 15,10 L 15,0 L -5,0 M 10,-5 L 5,0 L 10,5 Z",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(15, -20) }, { 2, new Point(-20, 0) }, { 3, new Point(15, 20) }, { 4, new Point(15, 0) } }
+            };
+
+            _registry[typeof(OpAmp)] = new ComponentSymbol
+            {
+                Width = 60, Height = 60,
+                PathData = "M -20,-30 L 30,0 L -20,30 Z M -20,-15 L -30,-15 M -20,15 L -30,15 M -15,-15 L -5,-15 M -10,-20 L -10,-10 M -15,15 L -5,15 M 0,-18 L 0,-28 M 0,18 L 0,28 M 30,0 L 40,0",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-30, -15) }, { 2, new Point(-30, 15) }, { 3, new Point(0, -28) }, { 4, new Point(0, 28) }, { 5, new Point(40, 0) } }
+            };
+
+            // === Phase 4: Digital Gates ===
+
+            _registry[typeof(AndGate)] = new ComponentSymbol
+            {
+                Width = 50, Height = 40,
+                PathData = "M -25,-15 L -10,-15 M -25,15 L -10,15 M -10,-20 L 0,-20 A 20,20 0 0,1 0,20 L -10,20 Z M 20,0 L 35,0",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-25, -15) }, { 2, new Point(-25, 15) }, { 3, new Point(35, 0) } }
+            };
+
+            _registry[typeof(OrGate)] = new ComponentSymbol
+            {
+                Width = 50, Height = 40,
+                PathData = "M -25,-15 L -15,-15 M -25,15 L -15,15 M -20,-20 Q 0,-20 20,0 Q 0,20 -20,20 Q -5,0 -20,-20 M 20,0 L 35,0",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-25, -15) }, { 2, new Point(-25, 15) }, { 3, new Point(35, 0) } }
+            };
+
+            _registry[typeof(NotGate)] = new ComponentSymbol
+            {
+                Width = 40, Height = 20,
+                PathData = "M -20,0 L -10,0 M -10,-10 L 5,0 L -10,10 Z M 5,0 A 3,3 0 1,1 11,0 A 3,3 0 1,1 5,0 M 11,0 L 20,0",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-20, 0) }, { 2, new Point(20, 0) } }
+            };
+
+            _registry[typeof(DFlipFlop)] = new ComponentSymbol
+            {
+                Width = 50, Height = 60,
+                PathData = "M -20,-30 L 20,-30 L 20,30 L -20,30 Z M -20,-15 L -30,-15 M -20,15 L -30,15 M -20,10 L -10,15 L -20,20 M 20,-15 L 30,-15 M 20,15 L 30,15",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(-30, -15) }, { 2, new Point(-30, 15) }, { 3, new Point(30, -15) }, { 4, new Point(30, 15) } }
             };
         }
 

@@ -17,12 +17,14 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         /// Orthogonal points comprising the line.
         /// Ex: Pt1(10,10) -> Pt2(50,10) -> Pt3(50,80)
         /// </summary>
-        public PointCollection Points { get; } = new PointCollection();
+        [ObservableProperty]
+        private PointCollection _points;
 
         public WireViewModel(Guid targetNetId)
         {
             TargetNetId = targetNetId;
             ZIndex = 0; // Wires render below components
+            _points = new PointCollection();
         }
     }
 }

@@ -27,6 +27,11 @@ namespace EdaSimulator.Engines.Models
         public EdaSimulator.Engines.Simulation.SimulationConfiguration SimConfig { get; } = new EdaSimulator.Engines.Simulation.SimulationConfiguration();
 
         /// <summary>
+        /// A list of file paths to external SPICE libraries (.lib, .mod) that should be included in the netlist.
+        /// </summary>
+        public List<string> SpiceIncludes { get; } = new List<string>();
+
+        /// <summary>
         /// The SPICE ground reference node ("0"). Auto-created on schematic construction.
         /// Every valid SPICE simulation requires this reference to exist.
         /// </summary>

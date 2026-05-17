@@ -22,6 +22,56 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private bool _isLiveTuningEnabled;
 
+        [ObservableProperty]
+        private string _pythonScriptCode = @"import cupy as cp
+import time
+import math
+
+print('--- GPU-Accelerated Monte Carlo Yield Analysis ---')
+print('Simulating 10,000,000 variations of an Active RC Filter...')
+print('Nominal Values: R1=10k, R2=10k, C1=1nF, C2=1nF')
+print('Tolerance: Resistors 5%, Capacitors 10%')
+
+start = time.time()
+
+# Number of Monte Carlo iterations
+N = 10000000
+
+# Generate normal distributions directly on the GPU
+print('Allocating random variables on GPU...')
+R1 = cp.random.normal(10000, 10000 * 0.05 / 3, N, dtype=cp.float32)
+R2 = cp.random.normal(10000, 10000 * 0.05 / 3, N, dtype=cp.float32)
+C1 = cp.random.normal(1e-9, 1e-9 * 0.10 / 3, N, dtype=cp.float32)
+C2 = cp.random.normal(1e-9, 1e-9 * 0.10 / 3, N, dtype=cp.float32)
+
+# Calculate Cutoff Frequency for all 10M circuits in parallel
+# f_c = 1 / (2 * pi * sqrt(R1 * R2 * C1 * C2))
+print('Calculating cutoff frequencies in parallel...')
+fc = 1.0 / (2.0 * math.pi * cp.sqrt(R1 * R2 * C1 * C2))
+
+# Target Cutoff: 15.9 kHz. Let's find yield % within +/- 5% of target
+target_fc = 15915.5
+lower_bound = target_fc * 0.95
+upper_bound = target_fc * 1.05
+
+# GPU boolean array evaluation
+valid_circuits = (fc >= lower_bound) & (fc <= upper_bound)
+yield_count = cp.sum(valid_circuits).item()
+yield_percentage = (yield_count / N) * 100.0
+
+cp.cuda.Stream.null.synchronize()
+end = time.time()
+
+print(f'\n--- Results ---')
+print(f'Total Iterations: {N:,}')
+print(f'Yield Rate: {yield_percentage:.2f}% ({yield_count:,} passed)')
+print(f'Execution Time: {end - start:.4f} seconds')
+print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
+";
+
+        [ObservableProperty]
+        private string _pythonScriptOutput;
+
         private string _lastExecutedNetlistHash = string.Empty;
         private System.Windows.Threading.DispatcherTimer _liveTunerTimer;
 
@@ -171,34 +221,93 @@ namespace EdaSimulator.UI.ViewModels
         }
 
         [RelayCommand]
+        private void RunPythonScript()
+        {
+            if (string.IsNullOrWhiteSpace(PythonScriptCode))
+                return;
+
+            try
+            {
+                PythonScriptOutput = EdaSimulator.Engines.Scripting.PythonEngineService.ExecuteScript(PythonScriptCode, ActiveSchematicViewModel.CoreSchematic);
+            }
+            catch (System.Exception ex)
+            {
+                PythonScriptOutput = $"[Engine Error] {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
         private void AddMockComponents()
         {
             // Reset the schematic each time so this command is safe to call multiple times
-            ActiveSchematicViewModel = new SchematicViewModel(new Schematic("Mock Circuit"));
+            ActiveSchematicViewModel = new SchematicViewModel(new Schematic("Sallen-Key Active Low-Pass Filter"));
             var schVM = ActiveSchematicViewModel;
             var sch = schVM.CoreSchematic;
 
             try
             {
+                // Component Instantiation
+                var u1 = new OpAmp("X1", "LM358");
                 var r1 = new Resistor("R1", "10k");
-                var v1 = new VoltageSource("V1", "DC 5");  
-
-                // Create Visual Wrappers and assign locations
-                var r1Node = new ComponentNodeViewModel(r1) { X = 300, Y = 200 };
-                var v1Node = new ComponentNodeViewModel(v1) { X = 100, Y = 200 };
+                var r2 = new Resistor("R2", "10k");
+                var c1 = new Capacitor("C1", "1n");
+                var c2 = new Capacitor("C2", "1n");
                 
-                schVM.AddComponentNode(r1Node);
-                schVM.AddComponentNode(v1Node);
+                var vIn = new VoltageSource("V_IN", "SINE(0 5 15.9k)");
+                var vcc = new VoltageSource("V_CC", "DC 15");
+                var vee = new VoltageSource("V_EE", "DC -15");
 
-                // Connect V1(+) → N001 ← R1(pin1) and V1(-) → GND ← R1(pin2)
-                var net1 = sch.CreateNet("N001");
-                sch.ConnectPinToNet(v1.GetPinByName("+"), net1.Id);
-                sch.ConnectPinToNet(r1.GetPinByName("1"), net1.Id);
+                // Visual Layout on Canvas
+                schVM.AddComponentNode(new ComponentNodeViewModel(vIn) { X = 100, Y = 250 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(r1) { X = 200, Y = 250 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(r2) { X = 300, Y = 250 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(c1) { X = 400, Y = 150 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(c2) { X = 400, Y = 350 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(u1) { X = 500, Y = 250 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(vcc) { X = 500, Y = 150 });
+                schVM.AddComponentNode(new ComponentNodeViewModel(vee) { X = 500, Y = 350 });
 
-                sch.ConnectPinToNet(v1.GetPinByName("-"), sch.MasterGroundNet.Id);
-                sch.ConnectPinToNet(r1.GetPinByName("2"), sch.MasterGroundNet.Id);
+                // Nets
+                var netVin = sch.CreateNet("VIN_NODE");
+                var netMid = sch.CreateNet("MID_NODE");
+                var netP = sch.CreateNet("POS_NODE");
+                var netOut = sch.CreateNet("OUT_NODE");
+                var netVcc = sch.CreateNet("VCC_NET");
+                var netVee = sch.CreateNet("VEE_NET");
 
-                MessageBox.Show("Successfully added mock V1 and R1 components to schematic.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Wiring (Sallen-Key Topology)
+                // Input -> R1
+                sch.ConnectPinToNet(vIn.GetPinByName("+"), netVin.Id);
+                sch.ConnectPinToNet(r1.GetPinByName("1"), netVin.Id);
+                
+                // R1 -> R2 -> C1
+                sch.ConnectPinToNet(r1.GetPinByName("2"), netMid.Id);
+                sch.ConnectPinToNet(r2.GetPinByName("1"), netMid.Id);
+                sch.ConnectPinToNet(c1.GetPinByName("1"), netMid.Id);
+
+                // R2 -> C2 -> OpAmp IN+
+                sch.ConnectPinToNet(r2.GetPinByName("2"), netP.Id);
+                sch.ConnectPinToNet(c2.GetPinByName("1"), netP.Id);
+                sch.ConnectPinToNet(u1.GetPinByName("IN+"), netP.Id);
+
+                // Feedback: OpAmp OUT -> C1 -> OpAmp IN- (Buffer)
+                sch.ConnectPinToNet(u1.GetPinByName("OUT"), netOut.Id);
+                sch.ConnectPinToNet(c1.GetPinByName("2"), netOut.Id);
+                sch.ConnectPinToNet(u1.GetPinByName("IN-"), netOut.Id);
+
+                // Power rails
+                sch.ConnectPinToNet(vcc.GetPinByName("+"), netVcc.Id);
+                sch.ConnectPinToNet(u1.GetPinByName("V+"), netVcc.Id);
+                sch.ConnectPinToNet(vee.GetPinByName("-"), netVee.Id);
+                sch.ConnectPinToNet(u1.GetPinByName("V-"), netVee.Id);
+
+                // Grounding
+                sch.ConnectPinToNet(vIn.GetPinByName("-"), sch.MasterGroundNet.Id);
+                sch.ConnectPinToNet(c2.GetPinByName("2"), sch.MasterGroundNet.Id);
+                sch.ConnectPinToNet(vcc.GetPinByName("-"), sch.MasterGroundNet.Id);
+                sch.ConnectPinToNet(vee.GetPinByName("+"), sch.MasterGroundNet.Id);
+
+                MessageBox.Show("Successfully generated International Standard Sallen-Key Active Low-Pass Filter.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
             {

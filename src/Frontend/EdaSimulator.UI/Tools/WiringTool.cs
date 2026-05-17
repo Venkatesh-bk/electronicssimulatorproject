@@ -31,9 +31,11 @@ namespace EdaSimulator.UI.Tools
                     
                     // Start orthogonal wire path: [0] = Original, [1] = X-Corner, [2] = Mouse-Tracking
                     _currentWire = new WireViewModel(Guid.NewGuid());
-                    _currentWire.Points.Add(new System.Windows.Point(pin.X, pin.Y));
-                    _currentWire.Points.Add(new System.Windows.Point(pin.X, pin.Y)); // Initialize corner underneath start
-                    _currentWire.Points.Add(new System.Windows.Point(x, y));         // Final tracker point
+                    var pts = new System.Windows.Media.PointCollection();
+                    pts.Add(new System.Windows.Point(pin.X, pin.Y));
+                    pts.Add(new System.Windows.Point(pin.X, pin.Y)); // Initialize corner underneath start
+                    pts.Add(new System.Windows.Point(x, y));         // Final tracker point
+                    _currentWire.Points = pts;
                     
                     _schematic.AddWire(_currentWire);
                 }
@@ -44,9 +46,11 @@ namespace EdaSimulator.UI.Tools
                 if (target is PinNodeViewModel endPin && endPin != _startPin)
                 {
                     // Snap the final trackers strictly to the physical endpoint
-                    int count = _currentWire.Points.Count;
-                    _currentWire.Points[count - 2] = new System.Windows.Point(endPin.X, _currentWire.Points[count - 3].Y);
-                    _currentWire.Points[count - 1] = new System.Windows.Point(endPin.X, endPin.Y);
+                    var pts = new System.Windows.Media.PointCollection(_currentWire.Points);
+                    int count = pts.Count;
+                    pts[count - 2] = new System.Windows.Point(endPin.X, pts[count - 3].Y);
+                    pts[count - 1] = new System.Windows.Point(endPin.X, endPin.Y);
+                    _currentWire.Points = pts;
                     
                     // BRIDGING THE VISUAL TO THE CORE LOGIC:
                     Guid activeNetId;
@@ -81,12 +85,14 @@ namespace EdaSimulator.UI.Tools
                 {
                     // User clicked in empty canvas space to place an absolute corner anchor
                     // Lock the current corner and tracking end
-                    var n = _currentWire.Points.Count;
-                    var lockedEnd = _currentWire.Points[n - 1];
+                    var pts = new System.Windows.Media.PointCollection(_currentWire.Points);
+                    var n = pts.Count;
+                    var lockedEnd = pts[n - 1];
 
                     // Append 2 new tracker points to continue orthogonal logic
-                    _currentWire.Points.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y)); 
-                    _currentWire.Points.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y));
+                    pts.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y)); 
+                    pts.Add(new System.Windows.Point(lockedEnd.X, lockedEnd.Y));
+                    _currentWire.Points = pts;
                 }
             }
         }
@@ -95,12 +101,16 @@ namespace EdaSimulator.UI.Tools
         {
             if (_startPin != null && _currentWire != null && _currentWire.Points.Count >= 3)
             {
-                int count = _currentWire.Points.Count;
-                var prevPoint = _currentWire.Points[count - 3]; // The last anchored click coordinate
+                // Clone the collection so WPF detects a property change and redraws the UI
+                var pts = new System.Windows.Media.PointCollection(_currentWire.Points);
+                int count = pts.Count;
+                var prevPoint = pts[count - 3]; // The last anchored click coordinate
                 
                 // Track moving corner
-                _currentWire.Points[count - 2] = new System.Windows.Point(x, prevPoint.Y);
-                _currentWire.Points[count - 1] = new System.Windows.Point(x, y);
+                pts[count - 2] = new System.Windows.Point(x, prevPoint.Y);
+                pts[count - 1] = new System.Windows.Point(x, y);
+
+                _currentWire.Points = pts;
             }
         }
 
