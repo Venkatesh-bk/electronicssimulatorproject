@@ -368,9 +368,12 @@
                     </StackPanel>
                     
                     <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+                        <!-- ══ SPICE Netlist ══ -->
                         <TabItem Header="SPICE Netlist" Foreground="#FF007ACC" Background="#FF2D2D30">
                             <TextBox Text="{Binding NetlistOutput, Mode=OneWay}" IsReadOnly="True" Background="#FF1E1E1E" Foreground="#FF4EC9B0" FontFamily="Consolas" BorderThickness="1" BorderBrush="#FF3F3F46" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="5"/>
                         </TabItem>
+
+                        <!-- ══ Python Console ══ -->
                         <TabItem Header="Python Console" Foreground="#FF9B59B6" Background="#FF2D2D30">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -383,7 +386,235 @@
                                 <TextBox Grid.Row="2" Text="{Binding PythonScriptOutput}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" Background="#FF2D2D30" Foreground="LawnGreen" BorderThickness="1" BorderBrush="#FF3F3F46" Margin="0" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                             </Grid>
                         </TabItem>
+
+                        <!-- ══ Phase 6: Physics / FEA ══ -->
+                        <TabItem Header="⚗ Physics" Foreground="#FFFF8C00" Background="#FF2D2D30">
+                            <TabControl DataContext="{Binding PhysicsVM}" Background="Transparent" BorderThickness="0">
+
+                                <!-- Sub-tab: Thermal Analysis -->
+                                <TabItem Header="Thermal Analysis" Foreground="#FFFF8C00">
+                                    <ScrollViewer>
+                                    <StackPanel Margin="8">
+                                        <TextBlock Text="IC JUNCTION TEMPERATURE ANALYSIS" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="13" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Reference: JEDEC JESD51 | RC Thermal Ladder Network" Foreground="#FF888888" FontSize="10" Margin="0,0,0,12"/>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Power Dissipation (W):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding Power_W, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="T_Ambient (°C):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TAmbient_C, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="R_JC — Junction-to-Case (°C/W):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding RJc_CW, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="R_CS — Case-to-Sink (°C/W):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding RCs_CW, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="R_SA — Sink-to-Ambient (°C/W):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding RSa_CW, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="Max Junction Temp (°C):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding MaxJunction_C, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,10"/>
+
+                                                <Button Content="Analyze Thermal ▶" Command="{Binding RunThermalAnalysisCommand}"
+                                                        Background="#FFFF8C00" Foreground="Black" FontWeight="Bold"
+                                                        BorderThickness="0" Padding="10,6"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Results:" Foreground="#FFAAAAAA" Margin="0,0,0,4" FontWeight="Bold"/>
+                                                <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="8" CornerRadius="4">
+                                                    <TextBox Text="{Binding ThermalResult}" IsReadOnly="True" Background="Transparent"
+                                                             Foreground="#FF4EC9B0" FontFamily="Consolas" FontSize="11"
+                                                             BorderThickness="0" TextWrapping="Wrap"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+
+                                <!-- Sub-tab: RF / TL Calculator -->
+                                <TabItem Header="RF / Transmission Lines" Foreground="#FFFF8C00">
+                                    <ScrollViewer>
+                                    <StackPanel Margin="8">
+                                        <TextBlock Text="RF TRANSMISSION LINE CALCULATOR" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="13" Margin="0,0,0,8"/>
+                                        <TextBlock Text="IPC-2141A | Pozar Microwave Engineering 4th Ed | Wadell 1991" Foreground="#FF888888" FontSize="10" Margin="0,0,0,12"/>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Topology:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <ComboBox SelectedValue="{Binding TlTopology}" SelectedValuePath="Content"
+                                                          Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,6">
+                                                    <ComboBoxItem Content="Microstrip"/>
+                                                    <ComboBoxItem Content="Stripline"/>
+                                                    <ComboBoxItem Content="Coaxial"/>
+                                                </ComboBox>
+
+                                                <TextBlock Text="Width (mm)  [or Inner Dia for Coax]:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TlWidth_mm, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="Height/B/OuterDia (mm):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TlHeight_mm, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="Substrate εr:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TlEr, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="Frequency (GHz):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TlFreq_GHz, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                                <TextBlock Text="Target Z0 for Synthesis (Ω):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                                <TextBox Text="{Binding TlTargetZ0, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,10"/>
+
+                                                <Button Content="Calculate ▶" Command="{Binding CalculateTxLineCommand}"
+                                                        Background="#FFFF8C00" Foreground="Black" FontWeight="Bold"
+                                                        BorderThickness="0" Padding="10,6"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Results:" Foreground="#FFAAAAAA" Margin="0,0,0,4" FontWeight="Bold"/>
+                                                <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="8" CornerRadius="4">
+                                                    <TextBox Text="{Binding TlResult}" IsReadOnly="True" Background="Transparent"
+                                                             Foreground="#FF4EC9B0" FontFamily="Consolas" FontSize="11"
+                                                             BorderThickness="0" TextWrapping="Wrap"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                            </TabControl>
+                        </TabItem>
+
+                        <!-- ══ Phase 7: PCB Layout ══ -->
+                        <TabItem Header="🖥 PCB Layout" Foreground="#FF4EC9B0" Background="#FF2D2D30">
+                            <Grid DataContext="{Binding PcbVM}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="220"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- PCB Controls Panel -->
+                                <ScrollViewer Grid.Column="0" Background="#FF252526">
+                                    <StackPanel Margin="8">
+                                        <TextBlock Text="PCB LAYOUT" FontWeight="Bold" Foreground="#FF4EC9B0" FontSize="13" Margin="0,0,0,8"/>
+
+                                        <TextBlock Text="Board Width (mm):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding BoardWidth, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Board Height (mm):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding BoardHeight, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+
+                                        <TextBlock Text="Active Layer:" Foreground="#FFAAAAAA" Margin="0,8,0,2"/>
+                                        <ComboBox ItemsSource="{Binding AvailableLayers}"
+                                                  SelectedValue="{Binding ActiveLayer}"
+                                                  Background="#FF333337" Foreground="#FF4EC9B0"
+                                                  BorderBrush="#FF3F3F46" Margin="0,0,0,10"/>
+
+                                        <Button Content="Import from Schematic"
+                                                Command="{Binding ImportFromSchematicCommand}"
+                                                CommandParameter="{Binding DataContext.ActiveSchematicViewModel.CoreSchematic, RelativeSource={RelativeSource AncestorType=Grid}}"
+                                                Background="#FF4EC9B0" Foreground="Black" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
+                                        <Button Content="Run DRC" Command="{Binding RunPcbDrcCommand}"
+                                                Background="#FFCC3333" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
+                                        <Button Content="Export Gerber (All Layers)"
+                                                Command="{Binding ExportGerberCommand}"
+                                                Background="#FF2E8B57" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
+                                        <Button Content="Export BOM (CSV)"
+                                                Command="{Binding ExportBomCommand}"
+                                                CommandParameter="{Binding DataContext.ActiveSchematicViewModel.CoreSchematic, RelativeSource={RelativeSource AncestorType=Grid}}"
+                                                Background="#FF007ACC" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,8"/>
+
+                                        <Separator Background="#FF3F3F46" Margin="0,0,0,8"/>
+                                        <TextBlock Text="DESIGN RULES" FontWeight="Bold" Foreground="#FF4EC9B0" Margin="0,0,0,4"/>
+                                        <TextBlock Text="IPC-2221B Standard" Foreground="#FF888888" FontSize="10" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Min Trace: 0.15mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                        <TextBlock Text="Min Clearance: 0.15mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                        <TextBlock Text="Min Via Drill: 0.2mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                        <TextBlock Text="Annular Ring: 0.125mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                        <TextBlock Text="Edge Clearance: 0.5mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- PCB Canvas -->
+                                <Border Grid.Column="1" Background="#FF1A1A2E" BorderBrush="#FF3F3F46" BorderThickness="1">
+                                    <Grid>
+                                        <!-- Grid background -->
+                                        <ItemsControl ItemsSource="{Binding CanvasFootprints}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                                                    <Setter Property="Canvas.Top"  Value="{Binding CanvasY}"/>
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="{Binding Width}" Height="{Binding Height}"
+                                                            Background="#FF1E3A5A" BorderBrush="{Binding LayerColor}"
+                                                            BorderThickness="1" CornerRadius="2">
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Empty state -->
+                                        <TextBlock Text="Import schematic to begin PCB layout" Foreground="#FF444444"
+                                                   FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding CanvasFootprints.Count, Converter={StaticResource BoolToVis}}"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- DRC / BOM Output -->
+                                <ScrollViewer Grid.Column="2" Background="#FF252526">
+                                    <StackPanel Margin="8">
+                                        <TextBlock Text="DRC RESULTS" FontWeight="Bold" Foreground="#FFCC3333" Margin="0,0,0,4"/>
+                                        <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="6" Margin="0,0,0,8">
+                                            <TextBox Text="{Binding DrcOutput}" IsReadOnly="True" Background="Transparent"
+                                                     Foreground="#FF4EC9B0" FontFamily="Consolas" FontSize="10"
+                                                     BorderThickness="0" TextWrapping="Wrap"/>
+                                        </Border>
+
+                                        <TextBlock Text="BILL OF MATERIALS" FontWeight="Bold" Foreground="#FF007ACC" Margin="0,0,0,4"/>
+                                        <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="6">
+                                            <TextBox Text="{Binding BomOutput}" IsReadOnly="True" Background="Transparent"
+                                                     Foreground="#FFE8E8A0" FontFamily="Consolas" FontSize="10"
+                                                     BorderThickness="0" TextWrapping="Wrap"/>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+
                     </TabControl>
+
                 </Grid>
             </Border>
         </Grid>

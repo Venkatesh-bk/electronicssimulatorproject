@@ -123,6 +123,12 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
 
         private System.Threading.CancellationTokenSource? _simCancellationTokenSource;
 
+        // ── Phase 6: Physics Engine ViewModels ─────────────────────────────────────
+        public PhysicsViewModel PhysicsVM { get; } = new PhysicsViewModel();
+
+        // ── Phase 7: PCB Layout ViewModel ──────────────────────────────────────────
+        public PcbLayoutViewModel PcbVM { get; } = new PcbLayoutViewModel();
+
         public MainViewModel()
         {
             // Initialize with an empty schematic
