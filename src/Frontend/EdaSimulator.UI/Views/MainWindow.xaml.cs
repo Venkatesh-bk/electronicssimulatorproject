@@ -290,6 +290,75 @@ namespace EdaSimulator.UI.Views
                     }
                 }
             }
+
+            // ── Phase 7: Global Keyboard Shortcuts ───────────────────────────────────
+            if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                ViewModel?.SaveProjectCommand.Execute(null);
+            }
+            else if (e.Key == Key.O && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                ViewModel?.LoadProjectCommand.Execute(null);
+            }
+            else if (e.Key == Key.N && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                ViewModel?.NewProjectCommand.Execute(null);
+            }
+        }
+
+        // ── Phase 7: Menu Click Handlers ─────────────────────────────────────────────
+
+        private void MenuExit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void MenuZoomIn_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null)
+                CanvasViewModel.ZoomFactor = Math.Min(CanvasViewModel.ZoomFactor * 1.25, 10.0);
+        }
+
+        private void MenuZoomOut_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null)
+                CanvasViewModel.ZoomFactor = Math.Max(CanvasViewModel.ZoomFactor / 1.25, 0.1);
+        }
+
+        private void MenuZoomReset_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null)
+            {
+                CanvasViewModel.ZoomFactor = 1.0;
+                CanvasViewModel.PanX = 0;
+                CanvasViewModel.PanY = 0;
+            }
+        }
+
+        private void MenuAbout_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "EDA Simulator Platform\nProfessional Electronic Design Automation\n\n" +
+                "Phase 7: Professional UX & Workflow\n" +
+                "Capabilities: Schematic Capture, SPICE Simulation,\n" +
+                "GPU-Accelerated Monte Carlo, AI/ML Research Database\n\n" +
+                "Knowledge Base: 6-Volume Physics Library (High School → PhD)\n" +
+                "Research PKL: 118 MB compressed EDA dataset\n\n" +
+                "Matching: Proteus Professional + MATLAB/Simulink level",
+                "About EDA Simulator", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void MenuKnowledgeBase_Click(object sender, RoutedEventArgs e)
+        {
+            var kbPath = System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!
+                    .Replace("bin\\Debug\\net8.0-windows", "").Replace("src\\Frontend\\EdaSimulator.UI\\", ""),
+                "KnowledgeBase");
+
+            if (System.IO.Directory.Exists(kbPath))
+                System.Diagnostics.Process.Start("explorer.exe", kbPath);
+            else
+                MessageBox.Show($"Knowledge Base folder not found at:\n{kbPath}", "Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

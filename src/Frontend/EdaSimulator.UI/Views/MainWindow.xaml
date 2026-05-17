@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:EdaSimulator.UI.Views"
         xmlns:canvasVm="clr-namespace:EdaSimulator.UI.ViewModels.Canvas"
         mc:Ignorable="d"
-        Title="EDA Simulator Platform - Professional" Height="720" Width="1080"
+        Title="{Binding WindowTitle}" Height="800" Width="1280"
         Background="#FF1E1E1E" Foreground="White"
         WindowStartupLocation="CenterScreen"
         KeyDown="Window_KeyDown">
@@ -15,7 +15,76 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
 
-    <Grid>
+    <DockPanel LastChildFill="True">
+
+        <!-- ============================================================ -->
+        <!-- MENU BAR                                                     -->
+        <!-- ============================================================ -->
+        <Menu DockPanel.Dock="Top" Background="#FF252526" Foreground="White" FontSize="13">
+            <Menu.Resources>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Background" Value="#FF252526"/>
+                    <Setter Property="Foreground" Value="#FFCCCCCC"/>
+                </Style>
+            </Menu.Resources>
+
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Project" Command="{Binding NewProjectCommand}" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="_Open Project..." Command="{Binding LoadProjectCommand}" InputGestureText="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="_Save Project" Command="{Binding SaveProjectCommand}" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save Project _As..." Command="{Binding SaveProjectAsCommand}"/>
+                <Separator/>
+                <MenuItem Header="Export SPICE _Netlist (.cir)..." Command="{Binding ExportNetlistToFileCommand}"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="MenuExit_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Simulation">
+                <MenuItem Header="Run Simulation ▶" Command="{Binding SimulateCommand}"/>
+                <MenuItem Header="Stop Simulation ■" Command="{Binding StopSimulationCommand}"/>
+                <Separator/>
+                <MenuItem Header="Generate Netlist (.cir)" Command="{Binding GenerateNetlistWithModeCommand}"/>
+                <Separator/>
+                <MenuItem Header="Build Complex Circuit (Sallen-Key)" Command="{Binding AddMockComponentsCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="_View">
+                <MenuItem Header="Zoom In (+)" Click="MenuZoomIn_Click"/>
+                <MenuItem Header="Zoom Out (-)" Click="MenuZoomOut_Click"/>
+                <MenuItem Header="Reset Zoom" Click="MenuZoomReset_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Help">
+                <MenuItem Header="About EDA Simulator" Click="MenuAbout_Click"/>
+                <MenuItem Header="Open Knowledge Base..." Click="MenuKnowledgeBase_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ============================================================ -->
+        <!-- STATUS BAR                                                   -->
+        <!-- ============================================================ -->
+        <StatusBar DockPanel.Dock="Bottom" Background="#FF007ACC" Foreground="White" Height="24">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}" FontSize="11"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock FontSize="11">
+                    <Run Text="X:"/>
+                    <Run Text="{Binding MouseCanvasX, StringFormat='{}{0:F0}'}"/>
+                    <Run Text="  Y:"/>
+                    <Run Text="{Binding MouseCanvasY, StringFormat='{}{0:F0}'}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Text="{Binding ActiveToolName, StringFormat='Tool: {0}'}" FontSize="11"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Main content Grid -->
+        <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250" />
             <ColumnDefinition Width="Auto" />
@@ -321,70 +390,97 @@
 
         <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#FF3F3F46" />
 
-        <!-- Right Panel: Properties -->
+        <!-- ============================================================ -->
+        <!-- RIGHT PANEL: Properties + Simulation Controls                -->
+        <!-- ============================================================ -->
         <Border Grid.Column="4" Background="#FF252526" BorderBrush="#FF3F3F46" BorderThickness="1,0,0,0">
-            <Grid Margin="10">
-                <TextBlock Text="Properties" FontWeight="Bold" FontSize="16" Foreground="#FFCCCCCC" Margin="0,0,0,10" VerticalAlignment="Top"/>
-                
-                <!-- Simulation Configuration (Shows when nothing is selected) -->
-                <StackPanel Margin="0,40,0,0" DataContext="{Binding ActiveSchematicViewModel.SimConfig}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="10">
+
+                <!-- Section: Component Properties -->
+                <TextBlock Text="Properties" FontWeight="Bold" FontSize="15" Foreground="#FF007ACC" Margin="0,0,0,8"/>
+
+                <StackPanel DataContext="{Binding ComponentProperties}">
+                    <!-- No selection placeholder -->
+                    <TextBlock Text="Click a component to inspect" Foreground="#FF666666" FontStyle="Italic"
+                               Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
+                               Margin="0,0,0,10"/>
+
+                    <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding ComponentType, StringFormat='Type: {0}'}" Foreground="#FF9B59B6" FontWeight="Bold" Margin="0,0,0,4"/>
+
+                        <TextBlock Text="Designator:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding Designator, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Value:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="{Binding SpiceModelName, StringFormat='Model: {0}'}" Foreground="#FF4EC9B0" FontSize="11" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding PinSummary, StringFormat='Pins: {0}'}" Foreground="#FF666666" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Separator Background="#FF3F3F46" Margin="0,8,0,8"/>
+
+                <!-- Section: Simulation Type -->
+                <TextBlock Text="Simulation" FontWeight="Bold" FontSize="15" Foreground="#FF007ACC" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Analysis Type:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                <ComboBox SelectedValue="{Binding SimulationType}" SelectedValuePath="Content"
+                          Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10">
+                    <ComboBoxItem Content="Transient"/>
+                    <ComboBoxItem Content="AC Sweep"/>
+                    <ComboBoxItem Content="DC Sweep"/>
+                </ComboBox>
+
+                <!-- Transient options -->
+                <StackPanel Margin="0,0,0,0">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ActiveSchematicViewModel.SelectedComponent, RelativeSource={RelativeSource AncestorType=Border}}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Visible" />
+                                <DataTrigger Binding="{Binding SimulationType}" Value="Transient">
+                                    <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    
-                    <TextBlock Text="Simulation Config" FontWeight="Bold" Foreground="#FF007ACC" Margin="0,0,0,10" />
-                    
-                    <TextBlock Text="Analysis Type:" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
-                    <ComboBox SelectedValue="{Binding AnalysisType, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,15">
-                        <ComboBoxItem Content="Transient"/>
-                        <ComboBoxItem Content="DC Sweep"/>
-                    </ComboBox>
-
-                    <TextBlock Text="Time Step (TStep):" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
-                    <TextBox Text="{Binding TStep, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
-
-                    <TextBlock Text="Stop Time (TStop):" Foreground="#FFCCCCCC" Margin="0,0,0,5" />
-                    <TextBox Text="{Binding TStop, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
+                    <TextBlock Text="Step Time:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                    <TextBox Text="{Binding TransientStepTime, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+                    <TextBlock Text="Stop Time:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                    <TextBox Text="{Binding TransientStopTime, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
                 </StackPanel>
 
-                <!-- Dynamic Component Data Editor -->
-                <StackPanel Margin="0,40,0,0" DataContext="{Binding ActiveSchematicViewModel.SelectedComponent}">
+                <!-- AC Sweep options -->
+                <StackPanel Margin="0,0,0,0">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Visible" />
+                            <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Hidden" />
+                                <DataTrigger Binding="{Binding SimulationType}" Value="AC Sweep">
+                                    <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Designator:" Foreground="#FFCCCCCC" Margin="0,0,10,10" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Designator, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Value:" Foreground="#FFCCCCCC" Margin="0,0,10,10" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,10" Padding="2" />
-                    </Grid>
+                    <TextBlock Text="Start Freq (Hz):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                    <TextBox Text="{Binding AcStartFreq, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+                    <TextBlock Text="Stop Freq (Hz):" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                    <TextBox Text="{Binding AcStopFreq, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
+                    <TextBlock Text="Points/Decade:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                    <TextBox Text="{Binding AcPointsPerDecade, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
                 </StackPanel>
-            </Grid>
+
+                <Button Content="Generate Netlist" Command="{Binding GenerateNetlistWithModeCommand}"
+                        Margin="0,8,0,4" Padding="8,5" Background="#FF3F3F46" Foreground="White" BorderThickness="0"/>
+                <Button Content="Run Simulation ▶" Command="{Binding SimulateCommand}"
+                        Margin="0,0,0,4" Padding="8,5" Background="#FF2E8B57" Foreground="White" BorderThickness="0"/>
+
+            </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
+    </DockPanel>
 </Window>

@@ -1,10 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using EdaSimulator.Engines.IO;
 using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.Models.Components;
 using EdaSimulator.Engines.Simulation;
 using EdaSimulator.UI.ViewModels.Canvas;
 using System.Windows;
+using Microsoft.Win32;
 
 namespace EdaSimulator.UI.ViewModels
 {
@@ -21,6 +23,50 @@ namespace EdaSimulator.UI.ViewModels
 
         [ObservableProperty]
         private bool _isLiveTuningEnabled;
+
+        // ── Phase 7: Status Bar ─────────────────────────────────────────────────────
+        [ObservableProperty]
+        private string _statusText = "Ready  |  Press 'W' to wire  |  ESC to select";
+
+        [ObservableProperty]
+        private double _mouseCanvasX;
+
+        [ObservableProperty]
+        private double _mouseCanvasY;
+
+        [ObservableProperty]
+        private string _activeToolName = "Selection";
+
+        // ── Phase 7: Save/Load ──────────────────────────────────────────────────────
+        [ObservableProperty]
+        private string _currentProjectPath = "";
+
+        [ObservableProperty]
+        private string _windowTitle = "EDA Simulator Platform - Professional  [New Project]";
+
+        // ── Phase 7: Properties Panel ───────────────────────────────────────────────
+        [ObservableProperty]
+        private ComponentPropertiesViewModel _componentProperties = new();
+
+        // ── Phase 7: Simulation Mode ────────────────────────────────────────────────
+        [ObservableProperty]
+        private string _simulationType = "Transient";
+
+        [ObservableProperty]
+        private string _acStartFreq = "1";
+
+        [ObservableProperty]
+        private string _acStopFreq = "10Meg";
+
+        [ObservableProperty]
+        private string _acPointsPerDecade = "100";
+
+        [ObservableProperty]
+        private string _transientStopTime = "10m";
+
+        [ObservableProperty]
+        private string _transientStepTime = "1u";
+
 
         [ObservableProperty]
         private string _pythonScriptCode = @"import cupy as cp
@@ -257,7 +303,6 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 var vcc = new VoltageSource("V_CC", "DC 15");
                 var vee = new VoltageSource("V_EE", "DC -15");
 
-                // Visual Layout on Canvas
                 schVM.AddComponentNode(new ComponentNodeViewModel(vIn) { X = 100, Y = 250 });
                 schVM.AddComponentNode(new ComponentNodeViewModel(r1) { X = 200, Y = 250 });
                 schVM.AddComponentNode(new ComponentNodeViewModel(r2) { X = 300, Y = 250 });
@@ -267,46 +312,34 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 schVM.AddComponentNode(new ComponentNodeViewModel(vcc) { X = 500, Y = 150 });
                 schVM.AddComponentNode(new ComponentNodeViewModel(vee) { X = 500, Y = 350 });
 
-                // Nets
                 var netVin = sch.CreateNet("VIN_NODE");
                 var netMid = sch.CreateNet("MID_NODE");
-                var netP = sch.CreateNet("POS_NODE");
+                var netP   = sch.CreateNet("POS_NODE");
                 var netOut = sch.CreateNet("OUT_NODE");
                 var netVcc = sch.CreateNet("VCC_NET");
                 var netVee = sch.CreateNet("VEE_NET");
 
-                // Wiring (Sallen-Key Topology)
-                // Input -> R1
                 sch.ConnectPinToNet(vIn.GetPinByName("+"), netVin.Id);
                 sch.ConnectPinToNet(r1.GetPinByName("1"), netVin.Id);
-                
-                // R1 -> R2 -> C1
                 sch.ConnectPinToNet(r1.GetPinByName("2"), netMid.Id);
                 sch.ConnectPinToNet(r2.GetPinByName("1"), netMid.Id);
                 sch.ConnectPinToNet(c1.GetPinByName("1"), netMid.Id);
-
-                // R2 -> C2 -> OpAmp IN+
                 sch.ConnectPinToNet(r2.GetPinByName("2"), netP.Id);
                 sch.ConnectPinToNet(c2.GetPinByName("1"), netP.Id);
                 sch.ConnectPinToNet(u1.GetPinByName("IN+"), netP.Id);
-
-                // Feedback: OpAmp OUT -> C1 -> OpAmp IN- (Buffer)
                 sch.ConnectPinToNet(u1.GetPinByName("OUT"), netOut.Id);
                 sch.ConnectPinToNet(c1.GetPinByName("2"), netOut.Id);
                 sch.ConnectPinToNet(u1.GetPinByName("IN-"), netOut.Id);
-
-                // Power rails
                 sch.ConnectPinToNet(vcc.GetPinByName("+"), netVcc.Id);
                 sch.ConnectPinToNet(u1.GetPinByName("V+"), netVcc.Id);
                 sch.ConnectPinToNet(vee.GetPinByName("-"), netVee.Id);
                 sch.ConnectPinToNet(u1.GetPinByName("V-"), netVee.Id);
-
-                // Grounding
                 sch.ConnectPinToNet(vIn.GetPinByName("-"), sch.MasterGroundNet.Id);
                 sch.ConnectPinToNet(c2.GetPinByName("2"), sch.MasterGroundNet.Id);
                 sch.ConnectPinToNet(vcc.GetPinByName("-"), sch.MasterGroundNet.Id);
                 sch.ConnectPinToNet(vee.GetPinByName("+"), sch.MasterGroundNet.Id);
 
+                StatusText = $"Sallen-Key LPF built  |  {sch.Components.Count} components  |  {sch.Nets.Count} nets";
                 MessageBox.Show("Successfully generated International Standard Sallen-Key Active Low-Pass Filter.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
@@ -314,5 +347,188 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Phase 7: Save / Load / New
+        // ──────────────────────────────────────────────────────────────────────────────
+
+        [RelayCommand]
+        private void NewProject()
+        {
+            var result = MessageBox.Show("Create a new project? Unsaved changes will be lost.", "New Project",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+
+            ActiveSchematicViewModel = new SchematicViewModel(new Schematic("New Project"));
+            CurrentProjectPath = "";
+            WindowTitle = "EDA Simulator Platform - Professional  [New Project]";
+            StatusText = "New project created  |  0 components  |  0 nets";
+            NetlistOutput = "No netlist generated yet.";
+        }
+
+        [RelayCommand]
+        private void SaveProject()
+        {
+            if (string.IsNullOrEmpty(CurrentProjectPath))
+            {
+                SaveProjectAs();
+                return;
+            }
+            PerformSave(CurrentProjectPath);
+        }
+
+        [RelayCommand]
+        private void SaveProjectAs()
+        {
+            var dlg = new SaveFileDialog
+            {
+                Title            = "Save EDA Project",
+                Filter           = "EDA Project (*.edaproj)|*.edaproj|All Files (*.*)|*.*",
+                DefaultExt       = ".edaproj",
+                FileName         = ActiveSchematicViewModel.CoreSchematic.Title
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                PerformSave(dlg.FileName);
+            }
+        }
+
+        private void PerformSave(string filePath)
+        {
+            try
+            {
+                var placements = ActiveSchematicViewModel.Items
+                    .OfType<ComponentNodeViewModel>()
+                    .Select(n => new ComponentPlacementRecord
+                    {
+                        Designator = n.CoreComponent.Designator,
+                        X          = n.X,
+                        Y          = n.Y
+                    });
+
+                var doc = ProjectFileService.ToDocument(
+                    ActiveSchematicViewModel.CoreSchematic,
+                    placements,
+                    ActiveSchematicViewModel.CoreSchematic.Title);
+
+                ProjectFileService.Save(doc, filePath);
+                CurrentProjectPath = filePath;
+                WindowTitle = $"EDA Simulator Platform - Professional  [{System.IO.Path.GetFileName(filePath)}]";
+                StatusText = $"Project saved  |  {System.IO.Path.GetFileName(filePath)}";
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Failed to save project:\n{ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void LoadProject()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Open EDA Project",
+                Filter = "EDA Project (*.edaproj)|*.edaproj|All Files (*.*)|*.*"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var doc       = ProjectFileService.Load(dlg.FileName);
+                var schematic = ProjectFileService.FromDocument(doc);
+                ActiveSchematicViewModel = new SchematicViewModel(schematic);
+
+                // Restore canvas positions from the placement records
+                foreach (var placement in doc.Placements)
+                {
+                    var node = ActiveSchematicViewModel.Items
+                        .OfType<ComponentNodeViewModel>()
+                        .FirstOrDefault(n => n.CoreComponent.Designator == placement.Designator);
+                    if (node != null)
+                    {
+                        node.X = placement.X;
+                        node.Y = placement.Y;
+                    }
+                }
+
+                CurrentProjectPath = dlg.FileName;
+                WindowTitle = $"EDA Simulator Platform - Professional  [{System.IO.Path.GetFileName(dlg.FileName)}]";
+                StatusText = $"Project loaded  |  {schematic.Components.Count} components  |  {schematic.Nets.Count} nets";
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Failed to load project:\n{ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void ExportNetlistToFile()
+        {
+            var dlg = new SaveFileDialog
+            {
+                Title  = "Export SPICE Netlist",
+                Filter = "SPICE Netlist (*.cir)|*.cir|Circuit (*.net)|*.net|All Files (*.*)|*.*",
+                DefaultExt = ".cir"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var exporter  = new SpiceNetlistExporter();
+                var directive = BuildSimDirective();
+                var netlist   = exporter.GenerateNetlist(ActiveSchematicViewModel.CoreSchematic, directive);
+                System.IO.File.WriteAllText(dlg.FileName, netlist);
+                StatusText = $"Netlist exported  |  {System.IO.Path.GetFileName(dlg.FileName)}";
+                MessageBox.Show($"Netlist exported to:\n{dlg.FileName}", "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Phase 7: Simulation Type Support (Transient / AC / DC)
+        // ──────────────────────────────────────────────────────────────────────────────
+
+        private string BuildSimDirective()
+        {
+            return SimulationType switch
+            {
+                "AC Sweep"  => $".ac dec {AcPointsPerDecade} {AcStartFreq} {AcStopFreq}",
+                "DC Sweep"  => ".dc V1 0 5 0.1",
+                _           => $".tran {TransientStepTime} {TransientStopTime}"
+            };
+        }
+
+        // Override GenerateNetlist so it uses the current sim type
+        [RelayCommand]
+        private void GenerateNetlistWithMode()
+        {
+            var drcResult = ActiveSchematicViewModel.RunDRC();
+            var exporter  = new SpiceNetlistExporter();
+            var directive = BuildSimDirective();
+            NetlistOutput = drcResult.logOutput + exporter.GenerateNetlist(ActiveSchematicViewModel.CoreSchematic, directive);
+            StatusText    = $"Netlist generated  |  Mode: {SimulationType}";
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Phase 7: Update Status when selection changes
+        // ──────────────────────────────────────────────────────────────────────────────
+
+        public void OnComponentSelected(ComponentNodeViewModel? node)
+        {
+            if (node == null)
+            {
+                ComponentProperties.Clear();
+                StatusText = $"Ready  |  {ActiveSchematicViewModel.CoreSchematic.Components.Count} components  |  {ActiveSchematicViewModel.CoreSchematic.Nets.Count} nets";
+            }
+            else
+            {
+                ComponentProperties.Populate(node.CoreComponent);
+                StatusText = $"Selected: {node.CoreComponent.Designator} ({node.CoreComponent.GetType().Name})  |  Value: {node.CoreComponent.Value}";
+            }
+        }
     }
 }
+
