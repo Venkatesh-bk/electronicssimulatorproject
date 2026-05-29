@@ -219,5 +219,47 @@ namespace EdaSimulator.Tests
             Assert.Equal(@"C:\firmware\blink.bin", restoredMcu.FirmwarePath);
             Assert.Equal(mcu.Pins.Count, restoredMcu.Pins.Count);
         }
+
+        [Fact]
+        public void GerberWriter_GenerateAllLayers_ReturnsValidOutputs()
+        {
+            var pcb = new PcbDocument();
+            pcb.Title = "TestBoard";
+            pcb.Outline = new PcbBoardOutline { Width_mm = 80, Height_mm = 60, CornerX = 0, CornerY = 0 };
+
+            // Add a footprint
+            var fp = new PcbFootprint
+            {
+                Designator = "U1",
+                X = 40,
+                Y = 30,
+                CrtYd_Width_mm = 10,
+                CrtYd_Height_mm = 10
+            };
+            fp.Pads.Add(new PcbPad { X = -2, Y = 0, Type = PadType.SMD, Layer = PcbLayerType.FCu });
+            fp.Pads.Add(new PcbPad { X = 2, Y = 0, Type = PadType.THT, DrillDia_mm = 0.8 });
+            pcb.Footprints.Add(fp);
+
+            // Add trace and via
+            pcb.Traces.Add(new PcbTrace { StartX = 10, StartY = 10, EndX = 20, EndY = 20, Width_mm = 0.3, Layer = PcbLayerType.FCu, NetName = "Net1" });
+            pcb.Vias.Add(new PcbVia { X = 20, Y = 20, DrillDia_mm = 0.4, PadDia_mm = 0.7 });
+
+            var writer = new GerberWriter();
+            var files = writer.GenerateAllLayers(pcb);
+
+            Assert.NotNull(files);
+            Assert.True(files.ContainsKey("TestBoard-F_Cu.gbr"));
+            Assert.True(files.ContainsKey("TestBoard-B_Cu.gbr"));
+            Assert.True(files.ContainsKey("TestBoard-Edge_Cuts.gbr"));
+            Assert.True(files.ContainsKey("TestBoard.drl"));
+
+            var edgeCuts = files["TestBoard-Edge_Cuts.gbr"];
+            Assert.Contains("%MOMM*%", edgeCuts); // Metric unit mode
+            Assert.Contains("M02*", edgeCuts);    // End of file
+
+            var drillFile = files["TestBoard.drl"];
+            Assert.Contains("METRIC,TZ", drillFile); // Metric, trailing zeros format
+            Assert.Contains("M30", drillFile);       // End of program
+        }
     }
 }

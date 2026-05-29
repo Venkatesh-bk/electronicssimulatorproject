@@ -82,6 +82,35 @@
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="Live Design Rule Check (DRC) Status">
+                    <Ellipse Width="8" Height="8" Margin="0,0,5,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#FF2ECC71"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDrcValid}" Value="False">
+                                        <Setter Property="Fill" Value="#FFE74C3C"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding DrcStatusMessage}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#FF2ECC71"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDrcValid}" Value="False">
+                                        <Setter Property="Foreground" Value="#FFE74C3C"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
                 <TextBlock FontSize="11">
                     <Run Text="X:"/>
                     <Run Text="{Binding MouseCanvasX, StringFormat='{}{0:F0}'}"/>

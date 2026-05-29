@@ -49,6 +49,12 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private ComponentPropertiesViewModel _componentProperties = new();
 
+        [ObservableProperty]
+        private bool _isDrcValid = true;
+
+        [ObservableProperty]
+        private string _drcStatusMessage = "DRC: OK";
+
         // ── Phase 7: Simulation Mode ────────────────────────────────────────────────
         [ObservableProperty]
         private string _simulationType = "Transient";
@@ -632,6 +638,29 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 ComponentProperties.Populate(node);
                 StatusText = $"Selected: {node.CoreComponent.Designator} ({node.CoreComponent.GetType().Name})  |  Value: {node.CoreComponent.Value}";
             }
+        }
+
+        partial void OnActiveSchematicViewModelChanged(SchematicViewModel? oldValue, SchematicViewModel newValue)
+        {
+            if (oldValue != null)
+            {
+                oldValue.Items.CollectionChanged -= HandleSchematicItemsChanged;
+            }
+            newValue.Items.CollectionChanged += HandleSchematicItemsChanged;
+            RunLiveDRC();
+        }
+
+        private void HandleSchematicItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            RunLiveDRC();
+        }
+
+        private void RunLiveDRC()
+        {
+            if (ActiveSchematicViewModel == null) return;
+            var (isValid, logOutput) = ActiveSchematicViewModel.RunDRC();
+            IsDrcValid = isValid;
+            DrcStatusMessage = isValid ? "DRC: PASS" : "DRC: FAIL/WARN";
         }
     }
 }
