@@ -145,6 +145,11 @@
                     <ListBoxItem Content="XOR Gate"  Tag="XorGate"  Foreground="#FF4EC9B0" />
                     <ListBoxItem Content="D Flip-Flop" Tag="DFlipFlop" Foreground="#FF4EC9B0" />
 
+                    <!-- Microcontrollers (MCU) -->
+                    <ListBoxItem Content="Arduino Uno R3" Tag="ArduinoUno" Foreground="#FFC586C0" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="ESP32-WROOM" Tag="Esp32Wroom" Foreground="#FFC586C0" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="STM32 Blue Pill" Tag="Stm32BluePill" Foreground="#FFC586C0" FontWeight="SemiBold"/>
+
                     <!-- Sources -->
                     <ListBoxItem Content="─────────" IsEnabled="False" Foreground="#FF555555"/>
                     <ListBoxItem Content="~ SIN Source" Tag="SinVSource" Foreground="#FFFFD700" FontWeight="SemiBold"/>
@@ -822,6 +827,21 @@
 
                         <TextBlock Text="{Binding SpiceModelName, StringFormat='Model: {0}'}" Foreground="#FF4EC9B0" FontSize="11" Margin="0,0,0,4"/>
                         <TextBlock Text="{Binding PinSummary, StringFormat='Pins: {0}'}" Foreground="#FF666666" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <!-- Firmware selection for MCUs -->
+                        <StackPanel Visibility="{Binding IsMcu, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Firmware Path:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding FirmwarePath, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" IsReadOnly="True"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding BrowseFirmwareCommand}" Width="25" Margin="5,0,0,0"
+                                        Background="#FF3F3F46" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 

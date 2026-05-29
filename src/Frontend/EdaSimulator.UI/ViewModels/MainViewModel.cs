@@ -629,7 +629,7 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             }
             else
             {
-                ComponentProperties.Populate(node.CoreComponent);
+                ComponentProperties.Populate(node);
                 StatusText = $"Selected: {node.CoreComponent.Designator} ({node.CoreComponent.GetType().Name})  |  Value: {node.CoreComponent.Value}";
             }
         }

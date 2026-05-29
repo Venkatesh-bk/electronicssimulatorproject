@@ -67,6 +67,7 @@ namespace EdaSimulator.Engines.IO
                 TypeName    = c.GetType().Name,
                 Designator  = c.Designator,
                 Value       = c.Value,
+                FirmwarePath = (c as McuComponent)?.FirmwarePath
             }).ToList();
 
             var nets = schematic.Nets.Values
@@ -111,6 +112,10 @@ namespace EdaSimulator.Engines.IO
                     nameof(GroundSymbol)  => new GroundSymbol(rec.Designator),
                     nameof(PowerRail)     => new PowerRail(rec.Designator,
                         double.TryParse((rec.Value ?? "5V").Replace("V",""), out double v) ? v : 5.0),
+                    nameof(McuComponent)  => new McuComponent(rec.Designator, rec.Value ?? "Arduino Uno R3")
+                    {
+                        FirmwarePath = rec.FirmwarePath ?? string.Empty
+                    },
                     _ => throw new NotSupportedException($"Unknown component type: {rec.TypeName}")
                 };
 
@@ -174,6 +179,7 @@ namespace EdaSimulator.Engines.IO
         public string TypeName { get; set; } = "";
         public string Designator { get; set; } = "";
         public string Value { get; set; } = "";
+        public string? FirmwarePath { get; set; }
     }
 
     public class NetRecord

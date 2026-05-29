@@ -219,6 +219,11 @@ namespace EdaSimulator.UI.Views
                     case "NorGate":  coreComponent = new OpAmp(GetNextDesignator("U"), "74HC02"); break;
                     case "XorGate":  coreComponent = new OpAmp(GetNextDesignator("U"), "74HC86"); break;
 
+                    // Microcontrollers (MCU)
+                    case "ArduinoUno": coreComponent = new McuComponent(GetNextDesignator("MCU"), "Arduino Uno R3"); break;
+                    case "Esp32Wroom": coreComponent = new McuComponent(GetNextDesignator("MCU"), "ESP32-WROOM-32"); break;
+                    case "Stm32BluePill": coreComponent = new McuComponent(GetNextDesignator("MCU"), "STM32 Blue Pill"); break;
+
                     // === Power Symbols ===
                     case "Ground": coreComponent = new GroundSymbol(GetNextDesignator("GND")); break;
                     case "VCC":    coreComponent = new PowerRail(GetNextDesignator("VCC"), 5.0); break;

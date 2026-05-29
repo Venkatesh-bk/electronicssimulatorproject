@@ -1,8 +1,11 @@
 using System;
 using System.IO;
+using System.Linq;
 using Xunit;
 using EdaSimulator.Engines.Simulation;
 using EdaSimulator.Engines.PCB;
+using EdaSimulator.Engines.Models.Components;
+using EdaSimulator.Engines.IO;
 
 namespace EdaSimulator.Tests
 {
@@ -185,6 +188,36 @@ namespace EdaSimulator.Tests
             Assert.NotNull(drcResult);
             // Out of bounds violation should be flagged
             Assert.Contains(drcResult.Violations, v => v.Rule == "Component Out of Bounds" && v.Message.Contains("U1"));
+        }
+
+        [Fact]
+        public void McuComponent_SerializationAndRestoration_PreservesProperties()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("MCU Test Project");
+            var mcu = new McuComponent("MCU1", "ESP32-WROOM-32")
+            {
+                FirmwarePath = @"C:\firmware\blink.bin"
+            };
+            schematic.AddComponent(mcu);
+
+            // Serialize
+            var placements = new[]
+            {
+                new ComponentPlacementRecord { Designator = "MCU1", X = 150, Y = 200 }
+            };
+            var doc = ProjectFileService.ToDocument(schematic, placements, schematic.Title);
+
+            // Deserialize
+            var restoredSchematic = ProjectFileService.FromDocument(doc);
+            
+            Assert.Single(restoredSchematic.Components);
+            var restoredMcu = restoredSchematic.Components.Values.First() as McuComponent;
+            
+            Assert.NotNull(restoredMcu);
+            Assert.Equal("MCU1", restoredMcu.Designator);
+            Assert.Equal("ESP32-WROOM-32", restoredMcu.McuType);
+            Assert.Equal(@"C:\firmware\blink.bin", restoredMcu.FirmwarePath);
+            Assert.Equal(mcu.Pins.Count, restoredMcu.Pins.Count);
         }
     }
 }

@@ -181,6 +181,29 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                 PathData = "M 0,15 L 0,-5 M -8,-5 L 8,-5 M -4,-12 L 0,-20 L 4,-12",
                 PinOffsets = new Dictionary<int, Point> { { 1, new Point(0, 15) } }
             };
+
+            // MCU (Arduino, ESP32, STM32): Large chip box with dynamic pins layout
+            var mcuSymbol = new ComponentSymbol
+            {
+                Width = 80,
+                Height = 160,
+                PathData = "M -40,-80 L 40,-80 L 40,80 L -40,80 Z M -35,-75 L 35,-75 L 35,75 L -35,75 Z",
+                PinOffsets = new Dictionary<int, Point>()
+            };
+            for (int i = 1; i <= 40; i++)
+            {
+                if (i % 2 == 1) // Odd on left
+                {
+                    int row = (i - 1) / 2;
+                    mcuSymbol.PinOffsets[i] = new Point(-40, -70 + row * 7);
+                }
+                else // Even on right
+                {
+                    int row = (i - 2) / 2;
+                    mcuSymbol.PinOffsets[i] = new Point(40, -70 + row * 7);
+                }
+            }
+            _registry[typeof(McuComponent)] = mcuSymbol;
         }
 
         public static ComponentSymbol GetSymbol(Type componentType)
