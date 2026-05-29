@@ -186,6 +186,20 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             
             NetlistOutput = drcResult.logOutput + netlist;
         }
+
+        [RelayCommand]
+        private void SyncPcb()
+        {
+            var schematic = ActiveSchematicViewModel.CoreSchematic;
+            if (schematic.Components.Count == 0)
+            {
+                StatusText = "Sync to PCB: No components in schematic.";
+                return;
+            }
+
+            PcbVM.ImportFromSchematicCommand.Execute(schematic);
+            StatusText = $"📰 PCB synced — {schematic.Components.Count} component(s) placed as footprints. Switch to the PCB Layout tab to edit.";
+        }
         [RelayCommand]
         private async System.Threading.Tasks.Task SimulateAsync()
         {

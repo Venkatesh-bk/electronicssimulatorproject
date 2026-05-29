@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EdaSimulator.Engines.Library;
+using EdaSimulator.Engines.Simulation;
 
 namespace EdaSimulator.UI.ViewModels
 {
@@ -17,6 +18,15 @@ namespace EdaSimulator.UI.ViewModels
         public int Pins { get; set; }
         public bool IsCustomIoT { get; set; }
         public string IotBadge => IsCustomIoT ? "⚡ IoT" : string.Empty;
+    }
+
+    public class SpiceModelItem
+    {
+        public string Name        { get; set; } = "";
+        public string Category    { get; set; } = "";
+        public string TypeLabel   { get; set; } = "";
+        public string Definition  { get; set; } = "";
+        public string Badge       => TypeLabel == "SUBCKT" ? "📦 SubCkt" : ".MODEL";
     }
 
     public partial class ComponentHubViewModel : ObservableObject
@@ -45,9 +55,23 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private int _totalCount;
 
+        // SPICE Model Library tab
+        [ObservableProperty]
+        private ObservableCollection<SpiceModelItem> _spiceModels = new();
+
+        [ObservableProperty]
+        private string _spiceModelStatus = "";
+
+        [ObservableProperty]
+        private string _spiceSearchQuery = string.Empty;
+
+        [ObservableProperty]
+        private ObservableCollection<SpiceModelItem> _filteredSpiceModels = new();
+
         public ComponentHubViewModel()
         {
             _ = InitializeAsync();
+            LoadSpiceModels();
         }
 
         private async Task InitializeAsync()
@@ -126,9 +150,8 @@ namespace EdaSimulator.UI.ViewModels
 
             IsLoading = true;
             StatusMessage = $"Installing {SelectedComponent.Name}...";
-            await Task.Delay(800); // Simulate injection into SymbolRegistry
+            await Task.Delay(800);
 
-            // Future: inject SPICE model into local SymbolRegistry
             IsLoading = false;
             StatusMessage = $"✅ {SelectedComponent.Name} installed to local library.";
             System.Windows.MessageBox.Show(
@@ -136,6 +159,57 @@ namespace EdaSimulator.UI.ViewModels
                 "Component Installed",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
+        }
+
+        // ── SPICE Model Library ──────────────────────────────────────────────────────
+
+        private void LoadSpiceModels()
+        {
+            var lib = ModelLibraryService.Instance;
+            SpiceModels.Clear();
+            FilteredSpiceModels.Clear();
+
+            if (!lib.IsLoaded)
+            {
+                SpiceModelStatus = "ℹ️ eda_components.lib not found.";
+                return;
+            }
+
+            var catalog = lib.GetCatalog();
+            foreach (var kv in catalog)
+            {
+                foreach (var name in kv.Value)
+                {
+                    var raw = lib.FindModel(name);
+                    SpiceModels.Add(new SpiceModelItem
+                    {
+                        Name       = name,
+                        Category   = kv.Key,
+                        TypeLabel  = raw?.Type == SpiceModelType.Subcircuit ? "SUBCKT" : "MODEL",
+                        Definition = raw?.RawDefinition.Substring(0, Math.Min(80, raw.RawDefinition.Length)).Trim() ?? ""
+                    });
+                }
+            }
+
+            foreach (var m in SpiceModels) FilteredSpiceModels.Add(m);
+
+            SpiceModelStatus = $"✔ {SpiceModels.Count} models loaded from eda_components.lib";
+        }
+
+        [RelayCommand]
+        private void FilterSpiceModels()
+        {
+            FilteredSpiceModels.Clear();
+            var q = SpiceSearchQuery.Trim().ToLower();
+            foreach (var m in SpiceModels)
+            {
+                if (string.IsNullOrEmpty(q) ||
+                    m.Name.ToLower().Contains(q) ||
+                    m.Category.ToLower().Contains(q))
+                {
+                    FilteredSpiceModels.Add(m);
+                }
+            }
         }
     }
 }

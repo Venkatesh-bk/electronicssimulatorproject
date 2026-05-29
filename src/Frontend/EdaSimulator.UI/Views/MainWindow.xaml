@@ -46,6 +46,8 @@
                 <Separator/>
                 <MenuItem Header="Generate Netlist (.cir)" Command="{Binding GenerateNetlistWithModeCommand}"/>
                 <Separator/>
+                <MenuItem Header="📰 Sync to PCB Layout" Command="{Binding SyncPcbCommand}" InputGestureText="Ctrl+Shift+P"/>
+                <Separator/>
                 <MenuItem Header="Build Complex Circuit (Sallen-Key)" Command="{Binding AddMockComponentsCommand}"/>
             </MenuItem>
 
