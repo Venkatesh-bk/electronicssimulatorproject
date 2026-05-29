@@ -1,0 +1,332 @@
+{
+    "metadata": {
+        "title": "EDA Simulator Consolidated Deep Research Database",
+        "version": "3.1.0",
+        "description": "Unified database of semiconductor physics, technology nodes, 3D-IC thermal networks, and industry modeling methodologies."
+    },
+    "wide_bandgap_semiconductors": [
+        {
+            "material": "GaN",
+            "bandgap_eV": 3.4,
+            "critical_field_MV_cm": 3.3,
+            "electron_mobility_cm2Vs": 1500,
+            "hole_mobility_cm2Vs": 20,
+            "thermal_conductivity_W_mK": 130,
+            "relative_permittivity": 9.0,
+            "saturation_velocity_1e7_cms": 2.5,
+            "johnson_FOM_rel_to_Si": 260.0,
+            "typical_application": "5G PA/LNA, Power Converters >600V"
+        },
+        {
+            "material": "SiC_4H",
+            "bandgap_eV": 3.26,
+            "critical_field_MV_cm": 2.5,
+            "electron_mobility_cm2Vs": 900,
+            "hole_mobility_cm2Vs": 100,
+            "thermal_conductivity_W_mK": 370,
+            "relative_permittivity": 10.0,
+            "saturation_velocity_1e7_cms": 2.0,
+            "johnson_FOM_rel_to_Si": 200.0,
+            "typical_application": "EV Inverters, Industrial Motor Drives"
+        },
+        {
+            "material": "GaAs",
+            "bandgap_eV": 1.42,
+            "critical_field_MV_cm": 0.4,
+            "electron_mobility_cm2Vs": 8500,
+            "hole_mobility_cm2Vs": 400,
+            "thermal_conductivity_W_mK": 46,
+            "relative_permittivity": 12.9,
+            "saturation_velocity_1e7_cms": 1.0,
+            "johnson_FOM_rel_to_Si": 7.0,
+            "typical_application": "Low-Noise Amplifiers, Laser Diodes"
+        },
+        {
+            "material": "Si",
+            "bandgap_eV": 1.12,
+            "critical_field_MV_cm": 0.3,
+            "electron_mobility_cm2Vs": 1400,
+            "hole_mobility_cm2Vs": 450,
+            "thermal_conductivity_W_mK": 149,
+            "relative_permittivity": 11.7,
+            "saturation_velocity_1e7_cms": 1.0,
+            "johnson_FOM_rel_to_Si": 1.0,
+            "typical_application": "CMOS Logic, DRAM, NAND Flash"
+        },
+        {
+            "material": "Ge",
+            "bandgap_eV": 0.66,
+            "critical_field_MV_cm": 0.1,
+            "electron_mobility_cm2Vs": 3900,
+            "hole_mobility_cm2Vs": 1900,
+            "thermal_conductivity_W_mK": 60,
+            "relative_permittivity": 16.0,
+            "saturation_velocity_1e7_cms": 0.6,
+            "johnson_FOM_rel_to_Si": 0.3,
+            "typical_application": "Infrared Detectors, Photodetectors"
+        },
+        {
+            "material": "Diamond",
+            "bandgap_eV": 5.5,
+            "critical_field_MV_cm": 10.0,
+            "electron_mobility_cm2Vs": 2200,
+            "hole_mobility_cm2Vs": 1600,
+            "thermal_conductivity_W_mK": 2200,
+            "relative_permittivity": 5.7,
+            "saturation_velocity_1e7_cms": 2.7,
+            "johnson_FOM_rel_to_Si": 8100.0,
+            "typical_application": "Extreme-Environment Electronics"
+        },
+        {
+            "material": "AlGaN",
+            "bandgap_eV": 4.0,
+            "critical_field_MV_cm": 11.7,
+            "electron_mobility_cm2Vs": 300,
+            "hole_mobility_cm2Vs": 10,
+            "thermal_conductivity_W_mK": 20,
+            "relative_permittivity": 8.5,
+            "saturation_velocity_1e7_cms": 1.2,
+            "johnson_FOM_rel_to_Si": 700.0,
+            "typical_application": "HEMT active region, 2DEG layer"
+        }
+    ],
+    "bsim_node_statistics": [
+        {
+            "node_nm": 2,
+            "geometry_type": "GAAFET",
+            "channel_length_nm_mean": 2.00006293930615,
+            "channel_length_nm_std": 0.03990448343261623,
+            "thickness_nm_mean": 3.999514322707792,
+            "oxide_thickness_nm_mean": 5.200348796666928e-10,
+            "vth0_V_mean": 0.2600063273059452,
+            "vth0_V_std": 0.01505685292451122,
+            "mobility_cm2Vs_mean": 375.0479119481416,
+            "sat_velocity_cms_mean": 8499744.930008484,
+            "subthreshold_slope_mv_dec_mean": 64.49894245782751,
+            "drive_current_uA_um_mean": 799.8047974541399,
+            "off_current_pA_um_mean": 0.1999771616024609,
+            "yield_pct": 98.4368
+        },
+        {
+            "node_nm": 3,
+            "geometry_type": "GAAFET",
+            "channel_length_nm_mean": 3.0001622942368673,
+            "channel_length_nm_std": 0.05988098771401625,
+            "thickness_nm_mean": 3.999615524578349,
+            "oxide_thickness_nm_mean": 5.200095805640894e-10,
+            "vth0_V_mean": 0.26501856622054787,
+            "vth0_V_std": 0.014970388796278426,
+            "mobility_cm2Vs_mean": 389.878874007005,
+            "sat_velocity_cms_mean": 9001050.372034015,
+            "subthreshold_slope_mv_dec_mean": 64.00164877997153,
+            "drive_current_uA_um_mean": 880.0091958130431,
+            "off_current_pA_um_mean": 0.18000797206682656,
+            "yield_pct": 98.98
+        },
+        {
+            "node_nm": 5,
+            "geometry_type": "GAAFET",
+            "channel_length_nm_mean": 4.999277823143583,
+            "channel_length_nm_std": 0.09970334444885819,
+            "thickness_nm_mean": 4.000192762707069,
+            "oxide_thickness_nm_mean": 7.799156370889555e-10,
+            "vth0_V_mean": 0.2750115055631094,
+            "vth0_V_std": 0.014933656165626742,
+            "mobility_cm2Vs_mean": 420.0345408416593,
+            "sat_velocity_cms_mean": 10000922.916637553,
+            "subthreshold_slope_mv_dec_mean": 63.00109007970494,
+            "drive_current_uA_um_mean": 1040.039314612502,
+            "off_current_pA_um_mean": 0.14000639157109468,
+            "yield_pct": 99.3448
+        },
+        {
+            "node_nm": 7,
+            "geometry_type": "FinFET",
+            "channel_length_nm_mean": 7.000176072897787,
+            "channel_length_nm_std": 0.14005674640554308,
+            "thickness_nm_mean": 4.1999026795299015,
+            "oxide_thickness_nm_mean": 1.0918889805437392e-09,
+            "vth0_V_mean": 0.2849703928982366,
+            "vth0_V_std": 0.015016042648593271,
+            "mobility_cm2Vs_mean": 450.03638218800575,
+            "sat_velocity_cms_mean": 10999781.876932329,
+            "subthreshold_slope_mv_dec_mean": 62.00107520391354,
+            "drive_current_uA_um_mean": 1200.0925920867107,
+            "off_current_pA_um_mean": 0.09999656876547393,
+            "yield_pct": 99.3888
+        }
+    ],
+    "chiplet_thermal_profiles": [
+        {
+            "stack_layers": 2,
+            "avg_thermal_resistance_CW": 0.8213265348570569,
+            "avg_junction_temp_C": 151.16869334214542,
+            "safe_yield_pct": 30.0,
+            "max_safe_tdp_W": 120.0
+        },
+        {
+            "stack_layers": 3,
+            "avg_thermal_resistance_CW": 1.0399744412656127,
+            "avg_junction_temp_C": 180.11225900724858,
+            "safe_yield_pct": 25.0,
+            "max_safe_tdp_W": 75.0
+        },
+        {
+            "stack_layers": 4,
+            "avg_thermal_resistance_CW": 1.21502754491874,
+            "avg_junction_temp_C": 207.81639761282455,
+            "safe_yield_pct": 21.666666666666668,
+            "max_safe_tdp_W": 90.0
+        },
+        {
+            "stack_layers": 5,
+            "avg_thermal_resistance_CW": 1.4230741276510928,
+            "avg_junction_temp_C": 239.4539430349291,
+            "safe_yield_pct": 15.0,
+            "max_safe_tdp_W": 45.0
+        },
+        {
+            "stack_layers": 6,
+            "avg_thermal_resistance_CW": 1.6029604723598083,
+            "avg_junction_temp_C": 267.7178145723386,
+            "safe_yield_pct": 16.666666666666664,
+            "max_safe_tdp_W": 50.0
+        },
+        {
+            "stack_layers": 7,
+            "avg_thermal_resistance_CW": 1.7775531000248468,
+            "avg_junction_temp_C": 299.74508883789343,
+            "safe_yield_pct": 15.0,
+            "max_safe_tdp_W": 50.0
+        },
+        {
+            "stack_layers": 8,
+            "avg_thermal_resistance_CW": 1.9686524129708118,
+            "avg_junction_temp_C": 324.272247657415,
+            "safe_yield_pct": 11.666666666666666,
+            "max_safe_tdp_W": 35.0
+        }
+    ],
+    "open_source_pdk_distributions": {
+        "SKY130_NMOS_1V8": {
+            "vth0_mean": 0.4959432061228115,
+            "vth0_std": 0.025073539125814857,
+            "mobility_mean": 397.9981266663514,
+            "tox_nm_mean": 4.150471789114748,
+            "l_min_nm": 150,
+            "w_min_nm": 420
+        },
+        "SKY130_PMOS_1V8": {
+            "vth0_mean": -0.6171464981846909,
+            "vth0_std": 0.027994893987539363,
+            "mobility_mean": 131.95560503193087,
+            "tox_nm_mean": 4.149997771052972,
+            "l_min_nm": 150,
+            "w_min_nm": 420
+        },
+        "IHP_SG13G2_nMOS": {
+            "vth0_mean": 0.44996094021442623,
+            "vth0_std": 0.01801656309637395,
+            "mobility_mean": 475.0571779351313,
+            "tox_nm_mean": 1.8998771507196073,
+            "l_min_nm": 130,
+            "w_min_nm": 160
+        },
+        "GF180MCU_NMOS_3V3": {
+            "vth0_mean": 0.4701705856282334,
+            "vth0_std": 0.030016031962396147,
+            "mobility_mean": 349.87175559502964,
+            "tox_nm_mean": 7.90017233609165,
+            "l_min_nm": 180,
+            "w_min_nm": 280
+        }
+    },
+    "signal_integrity_hyperlynx": {
+        "S_Parameters": {
+            "description": "Scattering parameters describing wave propagation through a multi-port network (PCB traces, vias) in the frequency domain without requiring SPICE structural nets.",
+            "matrix_formulation": "b = S * a (where 'a' is incident power wave, 'b' is reflected/transmitted power wave)",
+            "integration": "Simulated directly in frequency domain or via convolution in time-domain."
+        },
+        "IBIS_AMI": {
+            "description": "Input/Output Buffer Information Specification - Algorithmic Modeling Interface. Used for high-speed serial links (SERDES).",
+            "mathematics": "Separates analog buffer (I-V/V-t tables) from digital DSP equalization (CTLE, DFE).",
+            "algorithms": "Uses AMI_Init (linear transformation via impulse response and convolution) and AMI_GetWave (non-linear, time-domain stepping)."
+        }
+    },
+    "electromagnetics_ansys": {
+        "Perfectly_Matched_Layers_PML": {
+            "description": "A mathematical boundary condition used in FEM to terminate open-space problems. Constructed as fictitious complex anisotropic material layers that absorb outgoing EM waves without reflection.",
+            "usage": "Antenna simulations and scattering. Reduces computational volume compared to standard radiation boundaries."
+        },
+        "Method_Of_Moments_MoM": {
+            "description": "Integral Equation (IE) solver solving for surface currents on conducting objects, unlike FEM which solves volume fields.",
+            "matrix_properties": "Produces Dense Matrices (every point interacts with every other point).",
+            "acceleration": "Uses Adaptive Cross Approximation (ACA) and Fast Multipole Method (FMM) to solve O(N^2) memory complexity."
+        }
+    },
+    "system_modeling_matlab": {
+        "ode45_Nonstiff": {
+            "algorithm": "Explicit Runge-Kutta (4,5) formula, specifically Dormand-Prince.",
+            "mechanism": "One-step explicit solver. Calculates next state using only the immediately preceding time point.",
+            "usage": "Highly efficient for nonstiff problems. Fails or slows drastically on stiff problems."
+        },
+        "ode15s_Stiff": {
+            "algorithm": "Variable-order Numerical Differentiation Formulas (NDFs) and Backward Differentiation Formulas (BDFs / Gear's method).",
+            "mechanism": "Implicit solver. Performs more work per step by solving systems of equations, allowing much larger time steps without losing stability.",
+            "usage": "Essential for 'stiff' systems containing components varying on drastically different time scales, or Differential Algebraic Equations (DAEs)."
+        }
+    },
+    "mixed_signal_proteus": {
+        "Discrete_Event_Simulation_DES": {
+            "description": "Event-driven digital logic simulation. Instead of solving matrices continuously, states change only at discrete time events.",
+            "synchronization": "Lock-step or optimistic synchronization algorithms bridging the continuous SPICE Newton-Raphson time-steps with the discrete digital event queue."
+        }
+    },
+    "core_algorithms": {
+        "Modified_Nodal_Analysis": {
+            "description": "MNA formulates the circuit as a system of linear equations in the form A * x = z. It extends Nodal Analysis to handle elements without simple admittance (voltage sources, inductors).",
+            "matrix_formulation": "[ G  B ] [ v ] = [ i ]\n[ C  D ] [ j ]   [ e ]",
+            "components": {
+                "v": "Vector of unknown node voltages",
+                "j": "Vector of unknown currents through voltage sources",
+                "G": "Nodal conductance matrix (n x n)",
+                "B": "Connections of voltage sources to nodes (n x m)",
+                "C": "KCL constraints at nodes connected to voltage sources (m x n)",
+                "D": "Often zero for independent sources, contains values for controlled sources (m x m)",
+                "i": "Known currents",
+                "e": "Known voltages"
+            },
+            "stamping_technique": "SPICE uses 'stamping' where each element adds its specific contribution to the A matrix and z vector based on terminals, rather than assembling the global matrix directly."
+        },
+        "Newton_Raphson": {
+            "description": "Iterative numerical method for solving systems of nonlinear algebraic equations arising from semiconductor devices.",
+            "equation": "x_{n+1} = x_n - J^{-1}(x_n) * F(x_n)",
+            "process": [
+                "1. Initial Guess: Start with estimate of node voltages.",
+                "2. Linearization: Calculate Jacobian matrix (linear companion models representing tangent to I-V curve).",
+                "3. Solving: Solve linear system Ax = b for voltage corrections.",
+                "4. Iteration: Repeat until changes fall below VNTOL/RELTOL tolerances."
+            ],
+            "convergence_aids": [
+                "Nodeset",
+                "GMIN Stepping",
+                "Source Stepping",
+                "RSHUNT damping"
+            ]
+        },
+        "Transient_Integration": {
+            "Trapezoidal": {
+                "description": "Approximates area under curve connecting two points with a straight line.",
+                "formula": "x_{n+1} = x_n + (h/2) * (f(t_n, x_n) + f(t_{n+1}, x_{n+1}))",
+                "pros": "Highly accurate, preserves energy (ideal for oscillators).",
+                "cons": "Susceptible to 'trap ringing' (numerical artifacts alternating signs)."
+            },
+            "Gear_BDF": {
+                "description": "Backward Differentiation Formula using multiple past time points.",
+                "formula": "Gear Order 2: x_{n+1} = (4/3)x_n - (1/3)x_{n-1} + (2/3)h * f(t_{n+1}, x_{n+1})",
+                "pros": "Highly stable for stiff circuits (varying time constants).",
+                "cons": "Introduces artificial numerical damping, can mask real instability."
+            }
+        }
+    }
+}

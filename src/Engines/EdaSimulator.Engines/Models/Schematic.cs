@@ -111,6 +111,72 @@ namespace EdaSimulator.Engines.Models
             => _nets.TryGetValue(netId, out var net) ? net : null;
 
         /// <summary>
+        /// Renames a net. If the new name already exists, the nets are merged, and the surviving net ID is returned.
+        /// </summary>
+        public Guid RenameNet(Guid netId, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("Net name cannot be empty.", nameof(newName));
+
+            if (!_nets.TryGetValue(netId, out var net))
+                throw new KeyNotFoundException($"Net '{netId}' not found.");
+
+            if (string.Equals(net.Name, newName, StringComparison.OrdinalIgnoreCase))
+                return netId;
+
+            var existingNet = _nets.Values.FirstOrDefault(n => string.Equals(n.Name, newName, StringComparison.OrdinalIgnoreCase));
+            if (existingNet != null)
+            {
+                Guid targetId = existingNet.Id;
+                MergeNets(netId, targetId);
+                return targetId;
+            }
+            else
+            {
+                net.Name = newName;
+                return netId;
+            }
+        }
+
+        /// <summary>
+        /// Merges two nets by moving all pins from the source net to the target net and removing the source net.
+        /// </summary>
+        public void MergeNets(Guid sourceNetId, Guid targetNetId)
+        {
+            if (sourceNetId == targetNetId) return;
+
+            if (!_nets.TryGetValue(sourceNetId, out var sourceNet))
+                throw new KeyNotFoundException($"Source net '{sourceNetId}' not found.");
+            if (!_nets.TryGetValue(targetNetId, out var targetNet))
+                throw new KeyNotFoundException($"Target net '{targetNetId}' not found.");
+
+            if (sourceNetId == MasterGroundNet.Id)
+            {
+                var temp = sourceNetId;
+                sourceNetId = targetNetId;
+                targetNetId = temp;
+                sourceNet = _nets[sourceNetId];
+                targetNet = _nets[targetNetId];
+            }
+
+            var pinIdsToMove = sourceNet.ConnectedPinIds.ToList();
+            foreach (var pinId in pinIdsToMove)
+            {
+                foreach (var comp in _components.Values)
+                {
+                    var pin = comp.Pins.FirstOrDefault(p => p.Id == pinId);
+                    if (pin != null)
+                    {
+                        ConnectPinToNet(pin, targetNetId);
+                        break;
+                    }
+                }
+            }
+
+            _nets.Remove(sourceNetId);
+        }
+
+        /// <summary>
         /// Removes a net from the schematic, first disconnecting all pins attached to it.
         /// The master ground net cannot be removed.
         /// </summary>

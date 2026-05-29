@@ -80,7 +80,7 @@
         <TextBox Grid.Row="4" x:Name="ValueBox" Margin="0,0,0,4"/>
 
         <!-- Hint -->
-        <TextBlock Grid.Row="5" Foreground="#666688" FontSize="11" TextWrapping="Wrap"
+        <TextBlock Grid.Row="5" x:Name="HintBlock" Foreground="#8888AA" FontSize="11" TextWrapping="Wrap"
                    Text="Tip: For voltage sources use 'DC 5' or 'PULSE(0 5 0 1n 1n 5u 10u)'. For resistors use '1k', '10k', '1Meg'."/>
 
         <!-- Buttons -->

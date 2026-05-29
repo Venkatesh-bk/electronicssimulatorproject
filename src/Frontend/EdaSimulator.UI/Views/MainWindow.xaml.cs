@@ -231,7 +231,12 @@ namespace EdaSimulator.UI.Views
                     case "V12":    coreComponent = new PowerRail(GetNextDesignator("V12"), 12.0); break;
                     case "VN12":   coreComponent = new PowerRail(GetNextDesignator("VN"), -12.0); break;
 
-
+                    // === Mathematical Blocks ===
+                    case "BlockGain": coreComponent = new BlockGainComponent(GetNextDesignator("XG"), "1.0"); break;
+                    case "BlockIntegrator": coreComponent = new BlockIntegratorComponent(GetNextDesignator("XI"), "0.0"); break;
+                    case "BlockSum": coreComponent = new BlockSumComponent(GetNextDesignator("XS"), "+-"); break;
+                    case "BlockSource": coreComponent = new BlockSourceComponent(GetNextDesignator("XSO"), "Constant 1.0"); break;
+                    case "BlockTransferFunction": coreComponent = new BlockTransferFunctionComponent(GetNextDesignator("XTF"), "1 / 1 1"); break;
                 }
 
                 if (coreComponent != null && CanvasViewModel != null)

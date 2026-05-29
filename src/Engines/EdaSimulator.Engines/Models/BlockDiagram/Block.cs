@@ -35,8 +35,8 @@ namespace EdaSimulator.Engines.Models.BlockDiagram
         public string Name { get; set; }
 
         // Unidirectional input and output ports
-        protected double[] Inputs { get; set; }
-        protected double[] Outputs { get; set; }
+        public double[] Inputs { get; }
+        public double[] Outputs { get; }
 
         protected Block(string name, int inputCount, int outputCount)
         {

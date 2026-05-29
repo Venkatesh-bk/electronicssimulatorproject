@@ -190,6 +190,14 @@
                     <ListBoxItem Content="↑  VDD  (+3.3V)" Tag="VDD"    Foreground="#FFFF6060" FontWeight="SemiBold"/>
                     <ListBoxItem Content="↑  +12V"         Tag="V12"    Foreground="#FFFF8C00" FontWeight="SemiBold"/>
                     <ListBoxItem Content="↓  -12V"         Tag="VN12"   Foreground="#FF87CEEB" FontWeight="SemiBold"/>
+
+                    <!-- Mathematical Simulink Blocks -->
+                    <ListBoxItem Content="─────────" IsEnabled="False" Foreground="#FF555555"/>
+                    <ListBoxItem Content=" Gain Block" Tag="BlockGain" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="∫ Integrator Block" Tag="BlockIntegrator" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="∑ Sum Block" Tag="BlockSum" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="📶 Signal Source Block" Tag="BlockSource" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="➗ Transfer Function Block" Tag="BlockTransferFunction" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
                 </ListBox>
                 
                 <Button Grid.Row="2" Content="Build Complex Circuit" Command="{Binding AddMockComponentsCommand}" Padding="5" Margin="0,10,0,0" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
@@ -349,8 +357,27 @@
                         <DataTemplate DataType="{x:Type canvasVm:PinNodeViewModel}">
                             <Grid Margin="-5,-5,0,0">
                                 <!-- Visual connector pin: GREEN when wired, RED when floating -->
-                                <Ellipse Width="10" Height="10" StrokeThickness="1.5"
-                                         ToolTip="{Binding ConnectedNetName, StringFormat='Net: {0}'}">
+                                <Ellipse Width="10" Height="10" StrokeThickness="1.5">
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Background="#252526" BorderBrush="#3F3F46" BorderThickness="1">
+                                            <StackPanel Orientation="Vertical" Margin="2">
+                                                <TextBlock Text="{Binding Name, StringFormat='Pin: {0}'}" FontWeight="Bold" Foreground="White"/>
+                                                <TextBlock Foreground="#FF00CC44">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding ConnectedNetName, StringFormat='Net: {0}'}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                    <Setter Property="Text" Value="Net: Floating"/>
+                                                                    <Setter Property="Foreground" Value="#FFFF4444"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </Ellipse.ToolTip>
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
                                             <!-- Default: floating = red -->
@@ -687,6 +714,103 @@
                                     </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
+
+                                <!-- Sub-tab: Deep Research Database -->
+                                <TabItem Header="Deep Research Database" Foreground="#FFFF8C00">
+                                    <ScrollViewer>
+                                    <Grid Margin="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="SECTOR 1: WBG SEMICONDUCTORS" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="11" Margin="0,0,0,4"/>
+                                            <ComboBox ItemsSource="{Binding WideBandgapSemiconductors}" 
+                                                      SelectedItem="{Binding SelectedWbgMaterial}"
+                                                      DisplayMemberPath="Material"
+                                                      Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,12"/>
+
+                                            <TextBlock Text="SECTOR 2: BSIM-CMG v107 GEOMETRIES" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="11" Margin="0,0,0,4"/>
+                                            <ComboBox ItemsSource="{Binding BsimNodeStatistics}" 
+                                                      SelectedItem="{Binding SelectedBsimNode}"
+                                                      Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,12">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding NodeNm, StringFormat='{}{0} nm Node'}" Foreground="White"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <TextBlock Text="SECTOR 3: 3D-IC THERMAL STCO PROFILE" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="11" Margin="0,0,0,4"/>
+                                            <ComboBox ItemsSource="{Binding ChipletThermalProfiles}" 
+                                                      SelectedItem="{Binding SelectedChipletProfile}"
+                                                      Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Margin="0,0,0,6">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding StackLayers, StringFormat='{}{0}-Layer Chiplet Stack'}" Foreground="White"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <Button Content="Apply Stack params to Thermal Analysis" 
+                                                    Command="{Binding ApplyChipletThermalParametersCommand}"
+                                                    Background="#FFFF8C00" Foreground="Black" FontWeight="Bold"
+                                                    BorderThickness="0" Padding="8,4" Margin="0,0,0,12"/>
+
+                                            <TextBlock Text="SECTOR 4: OPEN-SOURCE PDK SUMMARIES" FontWeight="Bold" Foreground="#FFFF8C00" FontSize="11" Margin="0,0,0,4"/>
+                                            <ItemsControl ItemsSource="{Binding OpenSourcePdkDistributions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,4">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Key}" FontWeight="Bold" Foreground="#FF4EC9B0" FontSize="10"/>
+                                                                <Grid Margin="0,2,0,0">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel Grid.Column="0">
+                                                                        <TextBlock Text="{Binding Value.Vth0Mean, StringFormat='Vth0: {0:F3} V'}" Foreground="#FFAAAAAA" FontSize="9"/>
+                                                                        <TextBlock Text="{Binding Value.MobilityMean, StringFormat='Mobility: {0:F0} cm²/Vs'}" Foreground="#FFAAAAAA" FontSize="9"/>
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1">
+                                                                        <TextBlock Text="{Binding Value.ToxNmMean, StringFormat='Tox: {0:F3} nm'}" Foreground="#FFAAAAAA" FontSize="9"/>
+                                                                        <TextBlock Text="{Binding Value.LMinNm, StringFormat='Min L: {0} nm'}" Foreground="#FFAAAAAA" FontSize="9"/>
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Material Properties Output:" Foreground="#FFAAAAAA" Margin="0,0,0,4" FontWeight="Bold"/>
+                                            <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="8" CornerRadius="4" Margin="0,0,0,10">
+                                                <TextBox Text="{Binding WbgMaterialDetails}" IsReadOnly="True" Background="Transparent"
+                                                         Foreground="#FFE8E8A0" FontFamily="Consolas" FontSize="11"
+                                                         BorderThickness="0" TextWrapping="Wrap" MinLines="8"/>
+                                            </Border>
+
+                                            <TextBlock Text="Technology Node Details:" Foreground="#FFAAAAAA" Margin="0,0,0,4" FontWeight="Bold"/>
+                                            <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="8" CornerRadius="4" Margin="0,0,0,10">
+                                                <TextBox Text="{Binding BsimNodeDetails}" IsReadOnly="True" Background="Transparent"
+                                                         Foreground="#FF4EC9B0" FontFamily="Consolas" FontSize="11"
+                                                         BorderThickness="0" TextWrapping="Wrap" MinLines="8"/>
+                                            </Border>
+
+                                            <TextBlock Text="Chiplet Thermal Details:" Foreground="#FFAAAAAA" Margin="0,0,0,4" FontWeight="Bold"/>
+                                            <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="8" CornerRadius="4">
+                                                <TextBox Text="{Binding ChipletProfileDetails}" IsReadOnly="True" Background="Transparent"
+                                                         Foreground="#FF9CDCFE" FontFamily="Consolas" FontSize="11"
+                                                         BorderThickness="0" TextWrapping="Wrap" MinLines="8"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                    </ScrollViewer>
+                                </TabItem>
                             </TabControl>
                         </TabItem>
 
@@ -721,6 +845,12 @@
                                                 Background="#FF4EC9B0" Foreground="Black" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
 
+                                        <Button Content="Auto-Route Board"
+                                                Command="{Binding AutoRouteBoardCommand}"
+                                                Background="#FFFF8C00" Foreground="Black" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"
+                                                ToolTip="Automatically routes ratsnest connections using dual-layer orthogonal paths"/>
+
                                         <Button Content="Run DRC" Command="{Binding RunPcbDrcCommand}"
                                                 Background="#FFCC3333" Foreground="White" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
@@ -750,7 +880,64 @@
                                 <!-- PCB Canvas -->
                                 <Border Grid.Column="1" Background="#FF1A1A2E" BorderBrush="#FF3F3F46" BorderThickness="1">
                                     <Grid>
-                                        <!-- Grid background -->
+                                        <!-- Ratsnest Layer -->
+                                        <ItemsControl ItemsSource="{Binding CanvasRatsnestLines}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                                          Stroke="#FF888888" StrokeThickness="1" StrokeDashArray="3 3"
+                                                          Opacity="0.75" ToolTip="{Binding NetName, StringFormat='Net: {0} (Unrouted)'}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Traces Layer -->
+                                        <ItemsControl ItemsSource="{Binding CanvasTraces}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                                          Stroke="{Binding LayerColor}" StrokeThickness="{Binding Thickness}"
+                                                          StrokeEndLineCap="Round" StrokeStartLineCap="Round"
+                                                          ToolTip="{Binding NetName, StringFormat='Net: {0}'}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Vias Layer -->
+                                        <ItemsControl ItemsSource="{Binding CanvasVias}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Canvas>
+                                                        <!-- Outer copper annular ring (Gold) -->
+                                                        <Ellipse Width="{Binding OuterDia}" Height="{Binding OuterDia}"
+                                                                 Fill="#FFD7A15C" Stroke="#FFA07030" StrokeThickness="1"
+                                                                 Canvas.Left="{Binding LeftOuter}" Canvas.Top="{Binding TopOuter}"
+                                                                 ToolTip="{Binding NetName, StringFormat='Via Net: {0}'}"/>
+                                                        <!-- Inner drill hole (Black) -->
+                                                        <Ellipse Width="{Binding InnerDia}" Height="{Binding InnerDia}"
+                                                                 Fill="#FF1A1A2E"
+                                                                 Canvas.Left="{Binding LeftInner}" Canvas.Top="{Binding TopInner}"/>
+                                                    </Canvas>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Footprints Layer -->
                                         <ItemsControl ItemsSource="{Binding CanvasFootprints}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -772,10 +959,33 @@
                                                             MouseDown="PcbFootprint_MouseDown"
                                                             MouseMove="PcbFootprint_MouseMove"
                                                             MouseUp="PcbFootprint_MouseUp">
-                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
-                                                        </StackPanel>
+                                                        <Grid>
+                                                            <!-- Center text -->
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5">
+                                                                <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+
+                                                            <!-- Individual pads -->
+                                                            <ItemsControl ItemsSource="{Binding VisualPads}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <Canvas Background="Transparent" IsHitTestVisible="False"/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border Width="{Binding Width}" Height="{Binding Height}"
+                                                                                Background="{Binding Color}" CornerRadius="1"
+                                                                                Canvas.Left="{Binding Left}" Canvas.Top="{Binding Top}"
+                                                                                ToolTip="{Binding Number, StringFormat='Pad {0}'}">
+                                                                            <TextBlock Text="{Binding Number}" Foreground="Black" FontSize="6" 
+                                                                                       FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -839,23 +1049,90 @@
 
                 <StackPanel DataContext="{Binding ComponentProperties}">
                     <!-- No selection placeholder -->
-                    <TextBlock Text="Click a component to inspect" Foreground="#FF666666" FontStyle="Italic"
+                    <TextBlock Text="Click an item to inspect" Foreground="#FF666666" FontStyle="Italic"
                                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
                                Margin="0,0,0,10"/>
 
                     <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding ComponentType, StringFormat='Type: {0}'}" Foreground="#FF9B59B6" FontWeight="Bold" Margin="0,0,0,4"/>
 
-                        <TextBlock Text="Designator:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                        <!-- Conditional Designator vs Net Name label -->
+                        <Grid>
+                            <TextBlock Text="Designator:" Foreground="#FFAAAAAA" Margin="0,0,0,2">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWire}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="Net Name:" Foreground="#FFAAAAAA" Margin="0,0,0,2">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWire}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
                         <TextBox Text="{Binding Designator, UpdateSourceTrigger=PropertyChanged}"
                                  Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,8"/>
 
-                        <TextBlock Text="Value:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
-                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,8"/>
+                        <!-- Value field shown only for components -->
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsWire}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="Value:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,8"/>
+                        </StackPanel>
 
-                        <TextBlock Text="{Binding SpiceModelName, StringFormat='Model: {0}'}" Foreground="#FF4EC9B0" FontSize="11" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding PinSummary, StringFormat='Pins: {0}'}" Foreground="#FF666666" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <!-- Net ID or Spice Model -->
+                        <Grid>
+                            <TextBlock Text="{Binding SpiceModelName, StringFormat='Model: {0}'}" Foreground="#FF4EC9B0" FontSize="11" Margin="0,0,0,4">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWire}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding SpiceModelName}" Foreground="#FF4EC9B0" FontSize="11" Margin="0,0,0,4">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWire}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
+                        <TextBlock Text="{Binding PinSummary, StringFormat='Connected Pins: {0}'}" Foreground="#FF666666" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
                         <!-- Firmware selection for MCUs -->
                         <StackPanel Visibility="{Binding IsMcu, Converter={StaticResource BoolToVis}}">

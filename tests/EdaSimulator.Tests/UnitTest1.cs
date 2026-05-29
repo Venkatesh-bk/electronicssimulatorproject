@@ -5,7 +5,10 @@ using Xunit;
 using EdaSimulator.Engines.Simulation;
 using EdaSimulator.Engines.PCB;
 using EdaSimulator.Engines.Models.Components;
+using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.IO;
+using EdaSimulator.Engines.Models.BlockDiagram;
+using EdaSimulator.Engines.Physics;
 
 namespace EdaSimulator.Tests
 {
@@ -221,6 +224,59 @@ namespace EdaSimulator.Tests
         }
 
         [Fact]
+        public void ProjectFileService_SerializationRestoresNetConnectivity_Successfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("Connectivity Test");
+            var r1 = new Resistor("R1", "10k");
+            var r2 = new Resistor("R2", "20k");
+            schematic.AddComponent(r1);
+            schematic.AddComponent(r2);
+
+            var net = schematic.CreateNet("TEST_NET");
+            schematic.ConnectPinToNet(r1.Pins[0], net.Id);
+            schematic.ConnectPinToNet(r2.Pins[0], net.Id);
+
+            // Serialize
+            var placements = new[]
+            {
+                new ComponentPlacementRecord { Designator = "R1", X = 10, Y = 10 },
+                new ComponentPlacementRecord { Designator = "R2", X = 20, Y = 20 }
+            };
+            var doc = ProjectFileService.ToDocument(schematic, placements, schematic.Title);
+
+            // Deserialize
+            var restored = ProjectFileService.FromDocument(doc);
+
+            // Verify connectivity is fully restored
+            var restoredR1 = restored.Components.Values.First(c => c.Designator == "R1");
+            var restoredR2 = restored.Components.Values.First(c => c.Designator == "R2");
+
+            Assert.Equal("TEST_NET", restored.GetNetNameForPin(restoredR1.Pins[0]));
+            Assert.Equal("TEST_NET", restored.GetNetNameForPin(restoredR2.Pins[0]));
+        }
+
+        [Fact]
+        public void McuComponent_SpiceNetlistExport_GeneratesSubcircuit()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("MCU Netlist Test");
+            var mcu = new McuComponent("MCU1", "ESP32-WROOM-32");
+            schematic.AddComponent(mcu);
+
+            var exporter = new SpiceNetlistExporter();
+            string netlist = exporter.GenerateNetlist(schematic, ".op");
+
+            // Verify instance line is correct
+            Assert.Contains("XMCU1", netlist);
+            Assert.Contains("McuModel_ESP32_WROOM_32", netlist);
+
+            // Verify subcircuit definition exists and is complete
+            Assert.Contains(".SUBCKT McuModel_ESP32_WROOM_32", netlist);
+            Assert.Contains("R_P_3V3 P_3V3 0 1G", netlist);
+            Assert.Contains("R_GPIO0 GPIO0 0 1G", netlist);
+            Assert.Contains(".ENDS McuModel_ESP32_WROOM_32", netlist);
+        }
+
+        [Fact]
         public void GerberWriter_GenerateAllLayers_ReturnsValidOutputs()
         {
             var pcb = new PcbDocument();
@@ -260,6 +316,203 @@ namespace EdaSimulator.Tests
             var drillFile = files["TestBoard.drl"];
             Assert.Contains("METRIC,TZ", drillFile); // Metric, trailing zeros format
             Assert.Contains("M30", drillFile);       // End of program
+        }
+
+        [Fact]
+        public void RenameNet_MergesNetsAndReconnectsPins_Successfully()
+        {
+            var schematic = new Schematic("Net Merge Test");
+            var comp1 = new Resistor("R1", "1k");
+            var comp2 = new Resistor("R2", "2k");
+            schematic.AddComponent(comp1);
+            schematic.AddComponent(comp2);
+
+            var net1 = schematic.CreateNet("NET_A");
+            var net2 = schematic.CreateNet("NET_B");
+
+            schematic.ConnectPinToNet(comp1.Pins[0], net1.Id);
+            schematic.ConnectPinToNet(comp2.Pins[0], net2.Id);
+
+            Assert.Equal("NET_A", schematic.GetNetNameForPin(comp1.Pins[0]));
+            Assert.Equal("NET_B", schematic.GetNetNameForPin(comp2.Pins[0]));
+
+            // Rename NET_B to NET_A: this should merge NET_B into NET_A
+            var survivingId = schematic.RenameNet(net2.Id, "NET_A");
+
+            Assert.Equal(net1.Id, survivingId);
+            Assert.Equal("NET_A", schematic.GetNetNameForPin(comp1.Pins[0]));
+            Assert.Equal("NET_A", schematic.GetNetNameForPin(comp2.Pins[0]));
+            
+            // The original net2 should be removed from the schematic
+            Assert.Null(schematic.GetNetById(net2.Id));
+            Assert.NotNull(schematic.GetNetById(net1.Id));
+        }
+
+        [Fact]
+        public void BlockDiagramSimulator_IntegratorFeedbackLoop_ComputesCorrectStepResponse()
+        {
+            var sim = new BlockDiagramSimulator();
+
+            // Step input (starts at t=0, value=1.0)
+            var step = new SourceBlock("StepInput")
+            {
+                Type = SourceType.Constant,
+                Amplitude = 1.0,
+                Offset = 0.0
+            };
+
+            // Summing junction: Error = Input - Output
+            var sum = new SumBlock("Sum", new[] { "+", "-" });
+
+            // Integrator: dy/dt = Error
+            var integrator = new IntegratorBlock("Integrator", 0.0);
+
+            sim.AddBlock(step);
+            sim.AddBlock(sum);
+            sim.AddBlock(integrator);
+
+            // Connect Step -> Sum port 0
+            sim.Connect(step, 0, sum, 0);
+            // Connect Sum -> Integrator
+            sim.Connect(sum, 0, integrator, 0);
+            // Feedback: Connect Integrator -> Sum port 1
+            sim.Connect(integrator, 0, sum, 1);
+
+            // Run simulation for 5 seconds with 1ms step
+            double lastOutput = 0.0;
+            double outputAt1s = 0.0;
+
+            sim.Run(5.0, 0.001, (t, s) =>
+            {
+                double outputVal = integrator.GetOutput(0);
+                if (Math.Abs(t - 1.0) < 0.0005)
+                {
+                    outputAt1s = outputVal;
+                }
+                lastOutput = outputVal;
+            });
+
+            // Analytically: y(t) = 1 - e^-t
+            // At t = 1.0, y(1) = 1 - e^-1 = 0.63212
+            // At t = 5.0, y(5) = 1 - e^-5 = 0.99326
+            Assert.True(Math.Abs(outputAt1s - 0.63212) < 0.01, $"Expected ~0.632 at t=1, got {outputAt1s}");
+            Assert.True(Math.Abs(lastOutput - 0.99326) < 0.01, $"Expected ~0.993 at t=5, got {lastOutput}");
+        }
+
+        [Fact]
+        public void BlockDiagramSimulator_TransferFunction_ComputesCorrectResponse()
+        {
+            var sim = new BlockDiagramSimulator();
+
+            // Step input (starts at t=0, value=1.0)
+            var step = new SourceBlock("StepInput")
+            {
+                Type = SourceType.Constant,
+                Amplitude = 1.0,
+                Offset = 0.0
+            };
+
+            // G(s) = 1 / (s + 1) -> Numerator: [1.0], Denominator: [1.0, 1.0]
+            var tf = new TransferFunctionBlock("LowPassFilter", new[] { 1.0 }, new[] { 1.0, 1.0 });
+
+            sim.AddBlock(step);
+            sim.AddBlock(tf);
+
+            sim.Connect(step, 0, tf, 0);
+
+            double lastOutput = 0.0;
+            double outputAt1s = 0.0;
+
+            sim.Run(5.0, 0.001, (t, s) =>
+            {
+                double outputVal = tf.GetOutput(0);
+                if (Math.Abs(t - 1.0) < 0.0005)
+                {
+                    outputAt1s = outputVal;
+                }
+                lastOutput = outputVal;
+            });
+
+            // G(s) = 1 / (s + 1) step response is 1 - e^-t
+            Assert.True(Math.Abs(outputAt1s - 0.63212) < 0.01, $"Expected ~0.632 at t=1, got {outputAt1s}");
+            Assert.True(Math.Abs(lastOutput - 0.99326) < 0.01, $"Expected ~0.993 at t=5, got {lastOutput}");
+        }
+
+        [Fact]
+        public void SpiceNetlistExport_WithBlockComponents_GeneratesLaplaceAndSubcircuitsCorrectly()
+        {
+            var schematic = new Schematic("Co-Sim Block Test");
+            
+            var source = new BlockSourceComponent("XSO1", "Constant 2.5");
+            var gain = new BlockGainComponent("XG1", "4.0");
+            var integrator = new BlockIntegratorComponent("XI1", "0.0");
+            var tf = new BlockTransferFunctionComponent("XTF1", "1 / 1 2 1"); // 1 / (s^2 + 2s + 1)
+
+            schematic.AddComponent(source);
+            schematic.AddComponent(gain);
+            schematic.AddComponent(integrator);
+            schematic.AddComponent(tf);
+
+            // Connect using nets
+            var net1 = schematic.CreateNet("NET_SRC");
+            var net2 = schematic.CreateNet("NET_GAIN");
+            var net3 = schematic.CreateNet("NET_INT");
+            var net4 = schematic.CreateNet("NET_OUT");
+
+            schematic.ConnectPinToNet(source.Pins[0], net1.Id);       // OUT -> NET_SRC
+            schematic.ConnectPinToNet(gain.Pins[0], net1.Id);         // IN -> NET_SRC
+            schematic.ConnectPinToNet(gain.Pins[1], net2.Id);         // OUT -> NET_GAIN
+            schematic.ConnectPinToNet(integrator.Pins[0], net2.Id);   // IN -> NET_GAIN
+            schematic.ConnectPinToNet(integrator.Pins[1], net3.Id);   // OUT -> NET_INT
+            schematic.ConnectPinToNet(tf.Pins[0], net3.Id);           // IN -> NET_INT
+            schematic.ConnectPinToNet(tf.Pins[1], net4.Id);           // OUT -> NET_OUT
+
+            var exporter = new SpiceNetlistExporter();
+            string netlist = exporter.GenerateNetlist(schematic, ".tran 1u 10m");
+
+            // Verify BlockSource line
+            Assert.Contains("XSO1 NET_SRC BlockSourceConst params: val=2.5", netlist);
+            
+            // Verify BlockGain line
+            Assert.Contains("XG1 NET_SRC NET_GAIN BlockGain params: gain=4.0", netlist);
+
+            // Verify BlockIntegrator line
+            Assert.Contains("XI1 NET_GAIN NET_INT BlockIntegrator params: ic=0.0", netlist);
+
+            // Verify BlockTransferFunction line (translates to E-source with Laplace)
+            // Designator "XTF1" has prefix 'X' stripped when translated to E source -> ETF1
+            Assert.Contains("ETF1 NET_OUT 0 laplace {V(NET_INT)} = { 1 / (s^2 + 2*s + 1) }", netlist);
+
+            // Verify subcircuit library output is appended
+            Assert.Contains(".SUBCKT BlockGain IN OUT params: gain=1", netlist);
+            Assert.Contains(".SUBCKT BlockIntegrator IN OUT params: ic=0", netlist);
+            Assert.Contains(".SUBCKT BlockSourceConst OUT params: val=1", netlist);
+        }
+
+        [Fact]
+        public void ResearchDatabaseService_LoadsConsolidatedJsonCorrectly()
+        {
+            var service = ResearchDatabaseService.Instance;
+            service.LoadDatabase(); // ensure fresh load
+
+            Assert.True(service.IsLoaded, "Database should load successfully");
+            Assert.NotEmpty(service.Content.WideBandgapSemiconductors);
+            Assert.NotEmpty(service.Content.BsimNodeStatistics);
+            Assert.NotEmpty(service.Content.ChipletThermalProfiles);
+            Assert.NotEmpty(service.Content.OpenSourcePdkDistributions);
+
+            // Assert specific items are present
+            var gan = service.Content.WideBandgapSemiconductors.FirstOrDefault(m => m.Material == "GaN");
+            Assert.NotNull(gan);
+            Assert.Equal(3.4, gan.Bandgap_eV);
+
+            var node3 = service.Content.BsimNodeStatistics.FirstOrDefault(n => n.NodeNm == 3);
+            Assert.NotNull(node3);
+            Assert.Equal("GAAFET", node3.GeometryType);
+
+            var pdkSky = service.Content.OpenSourcePdkDistributions["SKY130_NMOS_1V8"];
+            Assert.NotNull(pdkSky);
+            Assert.True(pdkSky.Vth0Mean > 0);
         }
     }
 }

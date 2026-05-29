@@ -72,11 +72,30 @@ namespace EdaSimulator.Engines.IO
 
             var nets = schematic.Nets.Values
                 .Where(n => n.Id != schematic.MasterGroundNet.Id) // Ground is auto-created on load
-                .Select(n => new NetRecord
+                .Select(n =>
                 {
-                    Id   = n.Id,
-                    Name = n.Name,
-                    ConnectedPinIds = n.ConnectedPinIds.ToList()
+                    var designators = new List<PinDesignatorRecord>();
+                    foreach (var pinId in n.ConnectedPinIds)
+                    {
+                        var component = schematic.Components.Values
+                            .FirstOrDefault(c => c.Pins.Any(p => p.Id == pinId));
+                        if (component != null)
+                        {
+                            var pin = component.Pins.First(p => p.Id == pinId);
+                            designators.Add(new PinDesignatorRecord
+                            {
+                                ComponentDesignator = component.Designator,
+                                PinName = pin.Name
+                            });
+                        }
+                    }
+                    return new NetRecord
+                    {
+                        Id = n.Id,
+                        Name = n.Name,
+                        ConnectedPinIds = n.ConnectedPinIds.ToList(),
+                        ConnectedPinDesignators = designators
+                    };
                 }).ToList();
 
             return new ProjectDocument
@@ -116,6 +135,11 @@ namespace EdaSimulator.Engines.IO
                     {
                         FirmwarePath = rec.FirmwarePath ?? string.Empty
                     },
+                    nameof(BlockGainComponent) => new BlockGainComponent(rec.Designator, rec.Value ?? "1.0"),
+                    nameof(BlockIntegratorComponent) => new BlockIntegratorComponent(rec.Designator, rec.Value ?? "0.0"),
+                    nameof(BlockSumComponent) => new BlockSumComponent(rec.Designator, rec.Value ?? "+-"),
+                    nameof(BlockSourceComponent) => new BlockSourceComponent(rec.Designator, rec.Value ?? "Constant 1.0"),
+                    nameof(BlockTransferFunctionComponent) => new BlockTransferFunctionComponent(rec.Designator, rec.Value ?? "1 / 1 1"),
                     _ => throw new NotSupportedException($"Unknown component type: {rec.TypeName}")
                 };
 

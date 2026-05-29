@@ -626,17 +626,30 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
         // Phase 7: Update Status when selection changes
         // ──────────────────────────────────────────────────────────────────────────────
 
-        public void OnComponentSelected(ComponentNodeViewModel? node)
+        public void UpdateSelectionState()
         {
-            if (node == null)
+            if (ActiveSchematicViewModel == null)
             {
                 ComponentProperties.Clear();
-                StatusText = $"Ready  |  {ActiveSchematicViewModel.CoreSchematic.Components.Count} components  |  {ActiveSchematicViewModel.CoreSchematic.Nets.Count} nets";
+                return;
+            }
+
+            if (ActiveSchematicViewModel.SelectedComponent != null)
+            {
+                var node = ActiveSchematicViewModel.SelectedComponent;
+                ComponentProperties.Populate(node);
+                StatusText = $"Selected: {node.CoreComponent.Designator} ({node.CoreComponent.GetType().Name})  |  Value: {node.CoreComponent.Value}";
+            }
+            else if (ActiveSchematicViewModel.SelectedWire != null)
+            {
+                var wire = ActiveSchematicViewModel.SelectedWire;
+                ComponentProperties.PopulateWire(wire, ActiveSchematicViewModel);
+                StatusText = $"Selected Net/Wire: {wire.NetLabel}  |  GUID: {wire.TargetNetId}";
             }
             else
             {
-                ComponentProperties.Populate(node);
-                StatusText = $"Selected: {node.CoreComponent.Designator} ({node.CoreComponent.GetType().Name})  |  Value: {node.CoreComponent.Value}";
+                ComponentProperties.Clear();
+                StatusText = $"Ready  |  {ActiveSchematicViewModel.CoreSchematic.Components.Count} components  |  {ActiveSchematicViewModel.CoreSchematic.Nets.Count} nets";
             }
         }
 
@@ -645,9 +658,20 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             if (oldValue != null)
             {
                 oldValue.Items.CollectionChanged -= HandleSchematicItemsChanged;
+                oldValue.PropertyChanged -= HandleSchematicPropertyChanged;
             }
             newValue.Items.CollectionChanged += HandleSchematicItemsChanged;
+            newValue.PropertyChanged += HandleSchematicPropertyChanged;
             RunLiveDRC();
+        }
+
+        private void HandleSchematicPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SchematicViewModel.SelectedComponent) ||
+                e.PropertyName == nameof(SchematicViewModel.SelectedWire))
+            {
+                UpdateSelectionState();
+            }
         }
 
         private void HandleSchematicItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)

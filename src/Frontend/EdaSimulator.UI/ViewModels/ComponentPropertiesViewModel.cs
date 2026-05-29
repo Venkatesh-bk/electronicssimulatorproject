@@ -13,7 +13,8 @@ namespace EdaSimulator.UI.ViewModels
     /// </summary>
     public partial class ComponentPropertiesViewModel : ObservableObject
     {
-        private ComponentNodeViewModel? _activeNode;
+        private CanvasItemViewModel? _activeItem;
+        private SchematicViewModel? _activeSchematic;
         private bool _isPopulating;
 
         [ObservableProperty]
@@ -38,6 +39,9 @@ namespace EdaSimulator.UI.ViewModels
         private bool _isMcu = false;
 
         [ObservableProperty]
+        private bool _isWire = false;
+
+        [ObservableProperty]
         private string _firmwarePath = "";
 
         [RelayCommand]
@@ -57,28 +61,89 @@ namespace EdaSimulator.UI.ViewModels
 
         partial void OnDesignatorChanged(string value)
         {
-            if (_isPopulating || _activeNode == null) return;
-            if (!string.IsNullOrWhiteSpace(value))
+            if (_isPopulating || _activeItem == null) return;
+            if (string.IsNullOrWhiteSpace(value)) return;
+
+            if (_activeItem is ComponentNodeViewModel compNode)
             {
                 try
                 {
-                    _activeNode.Designator = value.Trim();
+                    compNode.Designator = value.Trim();
                 }
-                catch { /* Ignore invalid designators in real-time */ }
+                catch { /* Ignore invalid designators */ }
+            }
+            else if (_activeItem is WireViewModel wireNode && _activeSchematic != null)
+            {
+                try
+                {
+                    string cleaned = value.Trim();
+                    if (System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"\s")) return; // No whitespace
+
+                    Guid survivingId = _activeSchematic.CoreSchematic.RenameNet(wireNode.TargetNetId, cleaned);
+                    var targetNet = _activeSchematic.CoreSchematic.GetNetById(survivingId);
+                    string finalName = targetNet?.Name ?? cleaned;
+
+                    Guid oldId = wireNode.TargetNetId;
+                    foreach (var item in _activeSchematic.Items)
+                    {
+                        if (item is WireViewModel w && (w.TargetNetId == oldId || w.TargetNetId == survivingId))
+                        {
+                            w.TargetNetId = survivingId;
+                            w.NetLabel = finalName;
+                        }
+                        else if (item is PinNodeViewModel p && p.CorePin.ConnectedNetId == survivingId)
+                        {
+                            p.ConnectedNetName = finalName;
+                        }
+                    }
+
+                    // Update local property state dynamically
+                    _isPopulating = true;
+                    try
+                    {
+                        SpiceModelName = $"Net GUID: {survivingId:B}";
+                        // Re-list pins
+                        var pinNames = new System.Collections.Generic.List<string>();
+                        if (targetNet != null)
+                        {
+                            foreach (var pinId in targetNet.ConnectedPinIds)
+                            {
+                                foreach (var comp in _activeSchematic.CoreSchematic.Components.Values)
+                                {
+                                    var pin = comp.Pins.FirstOrDefault(p => p.Id == pinId);
+                                    if (pin != null)
+                                    {
+                                        pinNames.Add($"{comp.Designator}.{pin.Name}");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        PinSummary = string.Join(", ", pinNames);
+                    }
+                    finally
+                    {
+                        _isPopulating = false;
+                    }
+                }
+                catch { /* Ignore invalid net renames */ }
             }
         }
 
         partial void OnValueChanged(string value)
         {
-            if (_isPopulating || _activeNode == null) return;
-            _activeNode.Value = value ?? "";
-            SpiceModelName = $"{_activeNode.CoreComponent.GetType().Name} ({_activeNode.Value})";
+            if (_isPopulating || _activeItem == null) return;
+            if (_activeItem is ComponentNodeViewModel compNode)
+            {
+                compNode.Value = value ?? "";
+                SpiceModelName = $"{compNode.CoreComponent.GetType().Name} ({compNode.Value})";
+            }
         }
 
         partial void OnFirmwarePathChanged(string value)
         {
-            if (_isPopulating || _activeNode == null) return;
-            if (_activeNode.CoreComponent is McuComponent mcu)
+            if (_isPopulating || _activeItem == null) return;
+            if (_activeItem is ComponentNodeViewModel compNode && compNode.CoreComponent is McuComponent mcu)
             {
                 mcu.FirmwarePath = value ?? "";
             }
@@ -86,20 +151,23 @@ namespace EdaSimulator.UI.ViewModels
 
         public void Clear()
         {
-            _activeNode    = null;
+            _activeItem    = null;
+            _activeSchematic = null;
             Designator     = "";
             Value          = "";
             ComponentType  = "";
             SpiceModelName = "";
             PinSummary     = "";
             IsMcu          = false;
+            IsWire         = false;
             FirmwarePath   = "";
             HasSelection   = false;
         }
 
         public void Populate(ComponentNodeViewModel node)
         {
-            _activeNode = node;
+            _activeItem = node;
+            _activeSchematic = null;
             if (node == null) { Clear(); return; }
 
             _isPopulating = true;
@@ -112,6 +180,7 @@ namespace EdaSimulator.UI.ViewModels
                 SpiceModelName = $"{component.GetType().Name} ({component.Value})";
                 PinSummary     = string.Join(", ", component.Pins.Select(p => $"{p.Name}:{p.SpiceNodeSequence}"));
                 
+                IsWire         = false;
                 if (component is McuComponent mcu)
                 {
                     IsMcu = true;
@@ -124,6 +193,49 @@ namespace EdaSimulator.UI.ViewModels
                 }
 
                 HasSelection   = true;
+            }
+            finally
+            {
+                _isPopulating = false;
+            }
+        }
+
+        public void PopulateWire(WireViewModel wire, SchematicViewModel schematic)
+        {
+            _activeItem = wire;
+            _activeSchematic = schematic;
+            if (wire == null || schematic == null) { Clear(); return; }
+
+            _isPopulating = true;
+            try
+            {
+                var net = schematic.CoreSchematic.GetNetById(wire.TargetNetId);
+                Designator     = wire.NetLabel;
+                Value          = "";
+                ComponentType  = "Wire / Net";
+                SpiceModelName = $"Net GUID: {wire.TargetNetId:B}";
+                IsMcu          = false;
+                IsWire         = true;
+                FirmwarePath   = "";
+
+                var pinNames = new System.Collections.Generic.List<string>();
+                if (net != null)
+                {
+                    foreach (var pinId in net.ConnectedPinIds)
+                    {
+                        foreach (var comp in schematic.CoreSchematic.Components.Values)
+                        {
+                            var pin = comp.Pins.FirstOrDefault(p => p.Id == pinId);
+                            if (pin != null)
+                            {
+                                pinNames.Add($"{comp.Designator}.{pin.Name}");
+                                break;
+                            }
+                        }
+                    }
+                }
+                PinSummary = string.Join(", ", pinNames);
+                HasSelection = true;
             }
             finally
             {

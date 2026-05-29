@@ -58,6 +58,57 @@ namespace EdaSimulator.UI.ViewModels
 
         public ObservableCollection<PcbFootprintVM> CanvasFootprints { get; } = new();
 
+        // ── Canvas Routing & Connection Elements ──────────────────────────────────────
+
+        public ObservableCollection<PcbRatsnestLineVM> CanvasRatsnestLines { get; } = new();
+        public ObservableCollection<PcbTraceVM> CanvasTraces { get; } = new();
+        public ObservableCollection<PcbViaVM> CanvasVias { get; } = new();
+
+        // ── Coordinate synchronization & rubber-banding ─────────────────────────────
+
+        public void UpdateRatsnestPositions()
+        {
+            foreach (var rVM in CanvasRatsnestLines)
+            {
+                var fromFp = CanvasFootprints.FirstOrDefault(f => f.Designator == rVM.FromDesignator);
+                var toFp = CanvasFootprints.FirstOrDefault(f => f.Designator == rVM.ToDesignator);
+                if (fromFp != null && toFp != null)
+                {
+                    var fromPad = fromFp.Model.Pads.FirstOrDefault(p => p.PadNumber == rVM.FromPadNumber);
+                    var toPad = toFp.Model.Pads.FirstOrDefault(p => p.PadNumber == rVM.ToPadNumber);
+
+                    double fromPadX = fromPad?.X ?? 0;
+                    double fromPadY = fromPad?.Y ?? 0;
+                    double toPadX = toPad?.X ?? 0;
+                    double toPadY = toPad?.Y ?? 0;
+
+                    // Pad coordinates in mm relative to footprint center
+                    double fromRad = fromFp.Model.Rotation * Math.PI / 180.0;
+                    double fromCos = Math.Cos(fromRad);
+                    double fromSin = Math.Sin(fromRad);
+                    double fx = fromPadX * fromCos - fromPadY * fromSin;
+                    double fy = fromPadX * fromSin + fromPadY * fromCos;
+
+                    double toRad = toFp.Model.Rotation * Math.PI / 180.0;
+                    double toCos = Math.Cos(toRad);
+                    double toSin = Math.Sin(toRad);
+                    double tx = toPadX * toCos - toPadY * toSin;
+                    double ty = toPadX * toSin + toPadY * toCos;
+
+                    // Absolute coordinates on screen (scaled by 5 px/mm)
+                    rVM.X1 = (fromFp.Model.X + fx) * 5.0;
+                    rVM.Y1 = (fromFp.Model.Y + fy) * 5.0;
+                    rVM.X2 = (toFp.Model.X + tx) * 5.0;
+                    rVM.Y2 = (toFp.Model.Y + ty) * 5.0;
+                }
+            }
+        }
+
+        private void OnFootprintMoved()
+        {
+            UpdateRatsnestPositions();
+        }
+
         // ── Commands ────────────────────────────────────────────────────────────────
 
         [RelayCommand]
@@ -77,6 +128,14 @@ namespace EdaSimulator.UI.ViewModels
             int spacing = 15; // 15mm component pitch
 
             CanvasFootprints.Clear();
+            CanvasRatsnestLines.Clear();
+            CanvasTraces.Clear();
+            CanvasVias.Clear();
+            _pcbDoc.Footprints.Clear();
+            _pcbDoc.Ratsnest.Clear();
+            _pcbDoc.Traces.Clear();
+            _pcbDoc.Vias.Clear();
+
             for (int i = 0; i < components.Count; i++)
             {
                 var comp = components[i];
@@ -119,15 +178,177 @@ namespace EdaSimulator.UI.ViewModels
                 fp.Pads.AddRange(GeneratePads(comp));
                 _pcbDoc.Footprints.Add(fp);
 
-                CanvasFootprints.Add(new PcbFootprintVM(fp));
+                var fpVM = new PcbFootprintVM(fp, OnFootprintMoved);
+                CanvasFootprints.Add(fpVM);
             }
+
+            // Generate Ratsnest from Schematic Nets
+            foreach (var net in schematic.Nets.Values)
+            {
+                var netPins = new List<(Component Component, Pin Pin)>();
+                foreach (var pinId in net.ConnectedPinIds)
+                {
+                    foreach (var comp in schematic.Components.Values)
+                    {
+                        var pin = comp.Pins.FirstOrDefault(p => p.Id == pinId);
+                        if (pin != null)
+                        {
+                            netPins.Add((comp, pin));
+                            break;
+                        }
+                    }
+                }
+
+                if (netPins.Count >= 2)
+                {
+                    for (int i = 0; i < netPins.Count - 1; i++)
+                    {
+                        var fromPin = netPins[i];
+                        var toPin = netPins[i + 1];
+
+                        var ratsnestLine = new PcbRatsnestLine
+                        {
+                            NetName = net.Name,
+                            FromDesignator = fromPin.Component.Designator,
+                            FromPadNumber = fromPin.Pin.SpiceNodeSequence.ToString(),
+                            ToDesignator = toPin.Component.Designator,
+                            ToPadNumber = toPin.Pin.SpiceNodeSequence.ToString()
+                        };
+                        _pcbDoc.Ratsnest.Add(ratsnestLine);
+
+                        var rVM = new PcbRatsnestLineVM
+                        {
+                            NetName = net.Name,
+                            FromDesignator = ratsnestLine.FromDesignator,
+                            FromPadNumber = ratsnestLine.FromPadNumber,
+                            ToDesignator = ratsnestLine.ToDesignator,
+                            ToPadNumber = ratsnestLine.ToPadNumber
+                        };
+                        CanvasRatsnestLines.Add(rVM);
+                    }
+                }
+            }
+
+            UpdateRatsnestPositions();
 
             BomOutput = GenerateBomText(schematic);
             DrcOutput = $"PCB imported from schematic '{schematic.Title}'.\n" +
                         $"{_pcbDoc.Footprints.Count} footprints placed in auto-grid layout.\n" +
-                        $"Drag components to reposition them.\n" +
+                        $"{CanvasRatsnestLines.Count} ratsnest routing lines generated.\n" +
+                        $"Drag components to reposition them and see ratsnest rubber-banding.\n" +
                         $"Run DRC to validate the design.";
             PcbTitle = _pcbDoc.Title;
+        }
+
+        [RelayCommand]
+        private void AutoRouteBoard()
+        {
+            if (_pcbDoc == null || _pcbDoc.Footprints.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Please import a schematic first.", "No Design", 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            // Clear existing traces/vias
+            _pcbDoc.Traces.Clear();
+            _pcbDoc.Vias.Clear();
+            CanvasTraces.Clear();
+            CanvasVias.Clear();
+
+            // Populate from ratsnest lines
+            foreach (var rLine in _pcbDoc.Ratsnest)
+            {
+                var fromFp = _pcbDoc.Footprints.FirstOrDefault(f => f.Designator == rLine.FromDesignator);
+                var toFp = _pcbDoc.Footprints.FirstOrDefault(f => f.Designator == rLine.ToDesignator);
+                if (fromFp == null || toFp == null) continue;
+
+                var fromPad = fromFp.Pads.FirstOrDefault(p => p.PadNumber == rLine.FromPadNumber);
+                var toPad = toFp.Pads.FirstOrDefault(p => p.PadNumber == rLine.ToPadNumber);
+                if (fromPad == null || toPad == null) continue;
+
+                // Calculate pad center coordinates in mm
+                double fromRad = fromFp.Rotation * Math.PI / 180.0;
+                double fx = fromPad.X * Math.Cos(fromRad) - fromPad.Y * Math.Sin(fromRad);
+                double fy = fromPad.X * Math.Sin(fromRad) + fromPad.Y * Math.Cos(fromRad);
+                double x1 = fromFp.X + fx;
+                double y1 = fromFp.Y + fy;
+
+                double toRad = toFp.Rotation * Math.PI / 180.0;
+                double tx = toPad.X * Math.Cos(toRad) - toPad.Y * Math.Sin(toRad);
+                double ty = toPad.X * Math.Sin(toRad) + toPad.Y * Math.Cos(toRad);
+                double x2 = toFp.X + tx;
+                double y2 = toFp.Y + ty;
+
+                // Route from (x1, y1) to (x2, y2)
+                if (Math.Abs(x1 - x2) < 0.1 || Math.Abs(y1 - y2) < 0.1)
+                {
+                    var trace = new PcbTrace
+                    {
+                        StartX = x1,
+                        StartY = y1,
+                        EndX = x2,
+                        EndY = y2,
+                        Width_mm = _pcbDoc.Rules.DefaultTraceWidth_mm,
+                        Layer = PcbLayerType.FCu,
+                        NetName = rLine.NetName
+                    };
+                    _pcbDoc.Traces.Add(trace);
+                    CanvasTraces.Add(new PcbTraceVM(trace));
+                }
+                else
+                {
+                    // L-bend routing: horizontal on F.Cu, vertical on B.Cu, connected with a via at (x2, y1)
+                    var traceH = new PcbTrace
+                    {
+                        StartX = x1,
+                        StartY = y1,
+                        EndX = x2,
+                        EndY = y1,
+                        Width_mm = _pcbDoc.Rules.DefaultTraceWidth_mm,
+                        Layer = PcbLayerType.FCu,
+                        NetName = rLine.NetName
+                    };
+                    _pcbDoc.Traces.Add(traceH);
+                    CanvasTraces.Add(new PcbTraceVM(traceH));
+
+                    var via = new PcbVia
+                    {
+                        X = x2,
+                        Y = y1,
+                        DrillDia_mm = _pcbDoc.Rules.DefaultViaDrill_mm,
+                        PadDia_mm = _pcbDoc.Rules.DefaultViaPad_mm,
+                        LayerFrom = PcbLayerType.FCu,
+                        LayerTo = PcbLayerType.BCu,
+                        NetName = rLine.NetName
+                    };
+                    _pcbDoc.Vias.Add(via);
+                    CanvasVias.Add(new PcbViaVM(via));
+
+                    var traceV = new PcbTrace
+                    {
+                        StartX = x2,
+                        StartY = y1,
+                        EndX = x2,
+                        EndY = y2,
+                        Width_mm = _pcbDoc.Rules.DefaultTraceWidth_mm,
+                        Layer = PcbLayerType.BCu,
+                        NetName = rLine.NetName
+                    };
+                    _pcbDoc.Traces.Add(traceV);
+                    CanvasTraces.Add(new PcbTraceVM(traceV));
+                }
+            }
+
+            // Clear the ratsnest as everything is now routed
+            _pcbDoc.Ratsnest.Clear();
+            CanvasRatsnestLines.Clear();
+
+            // Run DRC automatically
+            RunPcbDrc();
+
+            System.Windows.MessageBox.Show("PCB layout successfully auto-routed with dual-layer orthogonal tracks!", "Auto-Route Complete",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         }
 
         [RelayCommand]
@@ -289,10 +510,21 @@ namespace EdaSimulator.UI.ViewModels
         }
     }
 
+    public class PadVisualItem
+    {
+        public string Number { get; set; } = "";
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public string Color { get; set; } = "#FFCC3333";
+    }
+
     /// <summary>Simple display model for canvas-rendered footprint boxes.</summary>
     public partial class PcbFootprintVM : ObservableObject
     {
         public PcbFootprint Model { get; }
+        private readonly Action? _movedCallback;
 
         [ObservableProperty] private string _designator = "";
         [ObservableProperty] private string _value = "";
@@ -302,16 +534,102 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty] private double _height = 30;
         [ObservableProperty] private string _layerColor = "#FF007ACC";
 
-        public PcbFootprintVM(PcbFootprint model)
+        public List<PadVisualItem> VisualPads { get; } = new();
+
+        public PcbFootprintVM(PcbFootprint model, Action? movedCallback = null)
         {
             Model = model;
+            _movedCallback = movedCallback;
             _designator = model.Designator;
             _value = model.Value;
-            _canvasX = model.X * 5; // Scale 5px/mm for display
-            _canvasY = model.Y * 5;
-            _width = model.CrtYd_Width_mm * 8; // Scale for visual display
-            _height = model.CrtYd_Height_mm * 8;
+            _canvasX = (model.X - model.CrtYd_Width_mm / 2.0) * 5.0; // center to top-left translation
+            _canvasY = (model.Y - model.CrtYd_Height_mm / 2.0) * 5.0;
+            _width = model.CrtYd_Width_mm * 5.0;
+            _height = model.CrtYd_Height_mm * 5.0;
             _layerColor = "#FF007ACC";
+
+            double cx = model.CrtYd_Width_mm / 2.0;
+            double cy = model.CrtYd_Height_mm / 2.0;
+            foreach (var pad in model.Pads)
+            {
+                VisualPads.Add(new PadVisualItem
+                {
+                    Number = pad.PadNumber,
+                    Left = (cx + pad.X - pad.Width_mm / 2.0) * 5.0,
+                    Top = (cy + pad.Y - pad.Height_mm / 2.0) * 5.0,
+                    Width = pad.Width_mm * 5.0,
+                    Height = pad.Height_mm * 5.0,
+                    Color = pad.Type == PadType.SMD ? "#FFFF5555" : "#FFFFCC33" // Red for SMD pads, Yellow/Orange for THT pads
+                });
+            }
+        }
+
+        partial void OnCanvasXChanged(double value) => _movedCallback?.Invoke();
+        partial void OnCanvasYChanged(double value) => _movedCallback?.Invoke();
+    }
+
+    public partial class PcbRatsnestLineVM : ObservableObject
+    {
+        [ObservableProperty] private double _x1;
+        [ObservableProperty] private double _y1;
+        [ObservableProperty] private double _x2;
+        [ObservableProperty] private double _y2;
+
+        public string NetName { get; set; } = "";
+        public string FromDesignator { get; set; } = "";
+        public string FromPadNumber { get; set; } = "";
+        public string ToDesignator { get; set; } = "";
+        public string ToPadNumber { get; set; } = "";
+    }
+
+    public partial class PcbTraceVM : ObservableObject
+    {
+        public PcbTrace Model { get; }
+
+        [ObservableProperty] private double _x1;
+        [ObservableProperty] private double _y1;
+        [ObservableProperty] private double _x2;
+        [ObservableProperty] private double _y2;
+        [ObservableProperty] private double _thickness = 1.25;
+        [ObservableProperty] private string _layerColor = "#FFCC3333";
+        [ObservableProperty] private string _netName = "";
+
+        public PcbTraceVM(PcbTrace model)
+        {
+            Model = model;
+            _x1 = model.StartX * 5.0;
+            _y1 = model.StartY * 5.0;
+            _x2 = model.EndX * 5.0;
+            _y2 = model.EndY * 5.0;
+            _thickness = model.Width_mm * 5.0;
+            _netName = model.NetName;
+            _layerColor = model.Layer == PcbLayerType.FCu ? "#FFFF3333" : "#FF3333FF"; // Red for F.Cu, Blue for B.Cu
+        }
+    }
+
+    public partial class PcbViaVM : ObservableObject
+    {
+        public PcbVia Model { get; }
+
+        [ObservableProperty] private double _x;
+        [ObservableProperty] private double _y;
+        [ObservableProperty] private double _outerDia;
+        [ObservableProperty] private double _innerDia;
+        [ObservableProperty] private string _netName = "";
+
+        public double LeftOuter => X - OuterDia / 2.0;
+        public double TopOuter => Y - OuterDia / 2.0;
+        public double LeftInner => X - InnerDia / 2.0;
+        public double TopInner => Y - InnerDia / 2.0;
+
+        public PcbViaVM(PcbVia model)
+        {
+            Model = model;
+            _x = model.X * 5.0;
+            _y = model.Y * 5.0;
+            _outerDia = model.PadDia_mm * 5.0;
+            _innerDia = model.DrillDia_mm * 5.0;
+            _netName = model.NetName;
         }
     }
 }

@@ -58,10 +58,26 @@ namespace EdaSimulator.Engines.Models.Components
             }
         }
 
+        public string GetSubcircuitName()
+        {
+            var safeType = new string(McuType.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+            return $"McuModel_{safeType}";
+        }
+
+        public string GetSanitizedPinName(Pin pin)
+        {
+            var safe = new string(pin.Name.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+            if (safe.Length > 0 && char.IsDigit(safe[0]))
+            {
+                safe = "P_" + safe;
+            }
+            return safe;
+        }
+
         public override string GenerateSpiceNetlistLine(Schematic schematic)
         {
             var pinNets = string.Join(" ", Pins.Select(p => schematic.GetNetNameForPin(p)));
-            return $"X{Designator} {pinNets} McuBehavioralModel";
+            return $"X{Designator} {pinNets} {GetSubcircuitName()}";
         }
     }
 }

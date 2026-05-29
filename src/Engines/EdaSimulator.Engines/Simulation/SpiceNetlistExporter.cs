@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 
 using EdaSimulator.Engines.Models;
+using EdaSimulator.Engines.Models.Components;
 
 namespace EdaSimulator.Engines.Simulation
 {
@@ -101,7 +102,66 @@ namespace EdaSimulator.Engines.Simulation
                 }
             }
 
-            sb.AppendLine();
+            // 4.5 MCU Subcircuit Definitions
+            var mcus = schematic.Components.Values.OfType<McuComponent>().ToList();
+            if (mcus.Count > 0)
+            {
+                sb.AppendLine("* --- MCU Subcircuit Definitions ---");
+                var uniqueMcuTypes = mcus.GroupBy(m => m.GetSubcircuitName()).Select(g => g.First());
+                foreach (var mcu in uniqueMcuTypes)
+                {
+                    string subcktName = mcu.GetSubcircuitName();
+                    var pinNames = string.Join(" ", mcu.Pins.Select(p => mcu.GetSanitizedPinName(p)));
+                    sb.AppendLine($".SUBCKT {subcktName} {pinNames}");
+                    foreach (var pin in mcu.Pins)
+                    {
+                        string safePin = mcu.GetSanitizedPinName(pin);
+                        sb.AppendLine($"R_{safePin} {safePin} 0 1G");
+                    }
+                    sb.AppendLine($".ENDS {subcktName}");
+                    sb.AppendLine();
+                }
+            }
+
+            // 4.6 Mathematical Block Diagram Subcircuit Library
+            bool hasBlockComponents = schematic.Components.Values.Any(c => c is BlockComponent);
+            if (hasBlockComponents)
+            {
+                sb.AppendLine("* --- Mathematical Block Subcircuit Library ---");
+                
+                sb.AppendLine(".SUBCKT BlockGain IN OUT params: gain=1");
+                sb.AppendLine("Egain OUT 0 IN 0 {gain}");
+                sb.AppendLine(".ENDS BlockGain");
+                sb.AppendLine();
+
+                sb.AppendLine(".SUBCKT BlockIntegrator IN OUT params: ic=0");
+                sb.AppendLine("Gint 0 OUT value={ V(IN) }");
+                sb.AppendLine("Cint OUT 0 1.0 ic={ic}");
+                sb.AppendLine("Rint OUT 0 1G");
+                sb.AppendLine(".ENDS BlockIntegrator");
+                sb.AppendLine();
+
+                sb.AppendLine(".SUBCKT BlockSum2 IN1 IN2 OUT params: sign1=1 sign2=-1");
+                sb.AppendLine("Esum OUT 0 value={ sign1 * V(IN1) + sign2 * V(IN2) }");
+                sb.AppendLine(".ENDS BlockSum2");
+                sb.AppendLine();
+
+                sb.AppendLine(".SUBCKT BlockSourceConst OUT params: val=1");
+                sb.AppendLine("Vsrc OUT 0 DC {val}");
+                sb.AppendLine(".ENDS BlockSourceConst");
+                sb.AppendLine();
+
+                sb.AppendLine(".SUBCKT BlockSourceSine OUT params: offset=0 amp=1 freq=1k phase=0");
+                sb.AppendLine("Vsrc OUT 0 SIN({offset} {amp} {freq} 0 0 {phase})");
+                sb.AppendLine(".ENDS BlockSourceSine");
+                sb.AppendLine();
+
+                sb.AppendLine(".SUBCKT BlockSourceStep OUT params: offset=0 stepval=1 steptime=1");
+                sb.AppendLine("Vsrc OUT 0 PWL(0 {offset} {steptime-1u} {offset} {steptime} {stepval})");
+                sb.AppendLine(".ENDS BlockSourceStep");
+                sb.AppendLine();
+            }
+
             sb.AppendLine(".end");
             return sb.ToString();
         }

@@ -10,11 +10,130 @@ using EdaSimulator.Engines.Models;
 namespace EdaSimulator.UI.ViewModels
 {
     /// <summary>
-    /// ViewModel for the Phase 6 Physics tab (Thermal + RF/Transmission Line).
+    /// ViewModel for the Phase 6 Physics tab (Thermal + RF/Transmission Line + Consolidated Deep Research).
     /// </summary>
     public partial class PhysicsViewModel : ObservableObject
     {
         private readonly ThermalAnalysisEngine _thermalEngine = new();
+
+        public PhysicsViewModel()
+        {
+            // Select default items if loaded
+            if (ResearchDatabaseService.Instance.IsLoaded)
+            {
+                SelectedWbgMaterial = ResearchDatabaseService.Instance.Content.WideBandgapSemiconductors.FirstOrDefault();
+                SelectedBsimNode = ResearchDatabaseService.Instance.Content.BsimNodeStatistics.FirstOrDefault();
+                SelectedChipletProfile = ResearchDatabaseService.Instance.Content.ChipletThermalProfiles.FirstOrDefault();
+            }
+        }
+
+        // ── Consolidated Deep Research Database Bindings ─────────────────────────────
+
+        public List<WbgMaterial> WideBandgapSemiconductors => 
+            ResearchDatabaseService.Instance.Content.WideBandgapSemiconductors;
+
+        [ObservableProperty]
+        private WbgMaterial? _selectedWbgMaterial;
+
+        [ObservableProperty]
+        private string _wbgMaterialDetails = "Select a wide-bandgap material to inspect.";
+
+        partial void OnSelectedWbgMaterialChanged(WbgMaterial? value)
+        {
+            if (value == null)
+            {
+                WbgMaterialDetails = "Select a material to inspect.";
+                return;
+            }
+
+            WbgMaterialDetails =
+                $"WIDE BANDGAP MATERIAL PROPERTIES\n" +
+                $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                $"Material               = {value.Material}\n" +
+                $"Bandgap                = {value.Bandgap_eV:F2} eV\n" +
+                $"Critical E-Field       = {value.CriticalField_MV_cm:F2} MV/cm\n" +
+                $"Electron Mobility      = {value.ElectronMobility_cm2Vs:F0} cm²/V·s\n" +
+                $"Hole Mobility          = {value.HoleMobility_cm2Vs:F0} cm²/V·s\n" +
+                $"Thermal Conductivity   = {value.ThermalConductivity_W_mK:F0} W/m·K\n" +
+                $"Relative Permittivity  = {value.RelativePermittivity:F1}\n\n" +
+                $"Typical Applications:\n{value.TypicalApplication}\n\n" +
+                $"Source: Keysight & MOS-AK Wide-Bandgap Semiconductor Database";
+        }
+
+        public List<BsimNodeStat> BsimNodeStatistics => 
+            ResearchDatabaseService.Instance.Content.BsimNodeStatistics;
+
+        [ObservableProperty]
+        private BsimNodeStat? _selectedBsimNode;
+
+        [ObservableProperty]
+        private string _bsimNodeDetails = "Select a technology node to inspect.";
+
+        partial void OnSelectedBsimNodeChanged(BsimNodeStat? value)
+        {
+            if (value == null)
+            {
+                BsimNodeDetails = "Select a technology node to inspect.";
+                return;
+            }
+
+            BsimNodeDetails =
+                $"BSIM-CMG v107 GAAFET/FinFET CORNER\n" +
+                $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                $"Node Name              = {value.NodeNm} nm ({value.GeometryType})\n" +
+                $"Mean Channel Length    = {value.ChannelLengthNmMean:F3} nm\n" +
+                $"Mean Oxide Thickness   = {value.OxideThicknessNmMean:F3} nm\n" +
+                $"Mean Threshold Voltage = {value.Vth0_V_mean:F3} V\n" +
+                $"Mean Mobility (U0)     = {value.Mobility_cm2Vs_mean:F1} cm²/V·s\n" +
+                $"Subthreshold Slope (SS)= {value.SubthresholdSlopeMvDecMean:F1} mV/dec\n" +
+                $"Drive Current (Idsat)  = {value.DriveCurrentUaUmMean:F1} µA/µm\n" +
+                $"Estimated Yield Corner = {value.YieldPct:F2}%\n\n" +
+                $"Source: BSIM Group, UC Berkeley (CMC Standard GAAFET/FinFET Parameter Space)";
+        }
+
+        public List<ChipletThermalProfile> ChipletThermalProfiles => 
+            ResearchDatabaseService.Instance.Content.ChipletThermalProfiles;
+
+        [ObservableProperty]
+        private ChipletThermalProfile? _selectedChipletProfile;
+
+        [ObservableProperty]
+        private string _chipletProfileDetails = "Select a stack configuration to inspect.";
+
+        partial void OnSelectedChipletProfileChanged(ChipletThermalProfile? value)
+        {
+            if (value == null)
+            {
+                ChipletProfileDetails = "Select a stack configuration to inspect.";
+                return;
+            }
+
+            ChipletProfileDetails =
+                $"3D-IC THERMAL STCO PROFILE\n" +
+                $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                $"Stack Size             = {value.StackLayers}-layer HBM/Chiplet\n" +
+                $"Avg Thermal Resistance = {value.AvgThermalResistanceCW:F4} °C/W\n" +
+                $"Avg Junction Temp      = {value.AvgJunctionTempC:F1} °C\n" +
+                $"Junction Safety Yield  = {value.SafeYieldPct:F1}%\n" +
+                $"Max Safe TDP Capacity  = {value.MaxSafeTdpW:F1} W\n\n" +
+                $"Source: Siemens EDA STCO 2025 Thermal Modeling";
+        }
+
+        public Dictionary<string, PdkDistribution> OpenSourcePdkDistributions => 
+            ResearchDatabaseService.Instance.Content.OpenSourcePdkDistributions;
+
+        [RelayCommand]
+        private void ApplyChipletThermalParameters()
+        {
+            if (SelectedChipletProfile == null) return;
+
+            // Load values directly into the active Thermal Analysis solver
+            RJc_CW = Math.Round(SelectedChipletProfile.AvgThermalResistanceCW * 0.4, 3);
+            RCs_CW = Math.Round(SelectedChipletProfile.AvgThermalResistanceCW * 0.2, 3);
+            RSa_CW = Math.Round(SelectedChipletProfile.AvgThermalResistanceCW * 0.4, 3);
+            Power_W = SelectedChipletProfile.MaxSafeTdpW > 0 ? Math.Round(SelectedChipletProfile.MaxSafeTdpW * 0.8, 1) : 50.0;
+            RunThermalAnalysis();
+        }
 
         // ── Thermal Analysis ─────────────────────────────────────────────────────────
 

@@ -204,6 +204,66 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                 }
             }
             _registry[typeof(McuComponent)] = mcuSymbol;
+
+            // --- Mathematical Gain Block (Triangle pointing right) ---
+            _registry[typeof(BlockGainComponent)] = new ComponentSymbol
+            {
+                Width = 40, Height = 40,
+                PathData = "M -20,-20 L 20,0 L -20,20 Z",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-20, 0) }, // IN
+                    { 2, new Point(20, 0) }   // OUT
+                }
+            };
+
+            // --- Mathematical Integrator Block (Square with integral sign) ---
+            _registry[typeof(BlockIntegratorComponent)] = new ComponentSymbol
+            {
+                Width = 40, Height = 40,
+                PathData = "M -20,-20 L 20,-20 L 20,20 L -20,20 Z M -3,-10 C -3,-13 0,-13 0,-10 L 0,10 C 0,13 3,13 3,10",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-20, 0) }, // IN
+                    { 2, new Point(20, 0) }   // OUT
+                }
+            };
+
+            // --- Mathematical Sum Block (Circle summing junction) ---
+            _registry[typeof(BlockSumComponent)] = new ComponentSymbol
+            {
+                Width = 30, Height = 30,
+                PathData = "M -15,0 A 15,15 0 1,1 15,0 A 15,15 0 1,1 -15,0 M -8,-5 L -4,-5 M -6,-7 L -6,-3 M -8,5 L -4,5",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-15, -7) }, // IN1
+                    { 2, new Point(-15, 7) },  // IN2
+                    { 3, new Point(15, 0) }    // OUT
+                }
+            };
+
+            // --- Mathematical Source Block (Circle with wave symbol) ---
+            _registry[typeof(BlockSourceComponent)] = new ComponentSymbol
+            {
+                Width = 30, Height = 30,
+                PathData = "M -15,0 A 15,15 0 1,1 15,0 A 15,15 0 1,1 -15,0 M -10,0 Q -5,-8 0,0 Q 5,8 10,0",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(15, 0) }    // OUT
+                }
+            };
+
+            // --- Mathematical Transfer Function Block (Rectangular box with fraction line) ---
+            _registry[typeof(BlockTransferFunctionComponent)] = new ComponentSymbol
+            {
+                Width = 60, Height = 40,
+                PathData = "M -30,-20 L 30,-20 L 30,20 L -30,20 Z M -15,0 L 15,0",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-30, 0) }, // IN
+                    { 2, new Point(30, 0) }   // OUT
+                }
+            };
         }
 
         public static ComponentSymbol GetSymbol(Type componentType)

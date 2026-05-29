@@ -36,6 +36,9 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         [ObservableProperty]
         private ComponentNodeViewModel? _selectedComponent;
 
+        [ObservableProperty]
+        private WireViewModel? _selectedWire;
+
         public EdaSimulator.UI.Commands.CommandManager History { get; } = new EdaSimulator.UI.Commands.CommandManager();
 
         private ICanvasTool? _activeTool;

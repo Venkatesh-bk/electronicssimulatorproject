@@ -38,11 +38,24 @@ namespace EdaSimulator.UI.Tools
                 
                 _draggedComponent = comp;
                 _schematic.SelectedComponent = comp;
+                _schematic.SelectedWire = null;
                 _isDragging = true;
                 _lastMouseX = x;
                 _lastMouseY = y;
                 _totalDx = 0;
                 _totalDy = 0;
+            }
+            else if (target is WireViewModel wire)
+            {
+                if (!wire.IsSelected)
+                {
+                    foreach (var item in _schematic.Items)
+                        item.IsSelected = false;
+                    
+                    wire.IsSelected = true;
+                }
+                _schematic.SelectedWire = wire;
+                _schematic.SelectedComponent = null;
             }
             else
             {
@@ -52,6 +65,7 @@ namespace EdaSimulator.UI.Tools
                     item.IsSelected = false;
                 }
                 _schematic.SelectedComponent = null;
+                _schematic.SelectedWire = null;
                 
                 _isBoxSelecting = true;
                 _lastMouseX = x; // Serves as the anchor corner X

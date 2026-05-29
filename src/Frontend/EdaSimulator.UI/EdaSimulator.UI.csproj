@@ -22,6 +22,10 @@
       <Link>MasterComponentDatabase.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="..\..\..\resources\research\EdaDeepResearchDatabase.json">
+      <Link>EdaDeepResearchDatabase.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
