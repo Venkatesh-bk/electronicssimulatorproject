@@ -10,7 +10,8 @@ namespace EdaSimulator.Engines.PCB
     /// <summary>
     /// PCB Design Rule Checker (DRC).
     /// Validates the PcbDocument against the PcbDesignRules for manufacturing compliance.
-    /// Checks: clearance, trace width, via annular ring, edge clearance, unconnected nets.
+    /// Checks: clearance, trace width, via annular ring, edge clearance, unconnected nets,
+    /// courtyard overlaps, and out-of-board layout boundaries.
     /// Reference: IPC-2221B Generic Standard on Printed Board Design.
     /// </summary>
     public class PcbDrcEngine
@@ -26,6 +27,8 @@ namespace EdaSimulator.Engines.PCB
             CheckEdgeClearance(pcb, result);
             CheckUnrouted(pcb, result);
             CheckBoardOutline(pcb, result);
+            CheckFootprintOverlap(pcb, result);
+            CheckFootprintOutOfBounds(pcb, result);
 
             result.TotalErrors   = result.Violations.Count(v => v.Severity == DrcSeverity.Error);
             result.TotalWarnings = result.Violations.Count(v => v.Severity == DrcSeverity.Warning);
@@ -147,6 +150,63 @@ namespace EdaSimulator.Engines.PCB
                 });
             }
         }
+
+        private void CheckFootprintOverlap(PcbDocument pcb, PcbDrcResult result)
+        {
+            for (int i = 0; i < pcb.Footprints.Count; i++)
+            {
+                var fp1 = pcb.Footprints[i];
+                for (int j = i + 1; j < pcb.Footprints.Count; j++)
+                {
+                    var fp2 = pcb.Footprints[j];
+                    double dx = SMath.Abs(fp1.X - fp2.X);
+                    double dy = SMath.Abs(fp1.Y - fp2.Y);
+                    double minXDist = (fp1.CrtYd_Width_mm + fp2.CrtYd_Width_mm) / 2.0;
+                    double minYDist = (fp1.CrtYd_Height_mm + fp2.CrtYd_Height_mm) / 2.0;
+
+                    if (dx < minXDist && dy < minYDist)
+                    {
+                        result.Violations.Add(new DrcViolation
+                        {
+                            Severity = DrcSeverity.Error,
+                            Rule     = "Component Overlap",
+                            Message  = $"Footprints '{fp1.Designator}' and '{fp2.Designator}' overlap. Courtyards collide.",
+                            X        = (fp1.X + fp2.X) / 2.0,
+                            Y        = (fp1.Y + fp2.Y) / 2.0
+                        });
+                    }
+                }
+            }
+        }
+
+        private void CheckFootprintOutOfBounds(PcbDocument pcb, PcbDrcResult result)
+        {
+            var outline = pcb.Outline;
+            foreach (var fp in pcb.Footprints)
+            {
+                double left   = fp.X - fp.CrtYd_Width_mm / 2.0;
+                double right  = fp.X + fp.CrtYd_Width_mm / 2.0;
+                double top    = fp.Y + fp.CrtYd_Height_mm / 2.0;
+                double bottom = fp.Y - fp.CrtYd_Height_mm / 2.0;
+
+                bool outOfBounds = left < outline.CornerX || 
+                                   right > (outline.CornerX + outline.Width_mm) || 
+                                   bottom < outline.CornerY || 
+                                   top > (outline.CornerY + outline.Height_mm);
+
+                if (outOfBounds)
+                {
+                    result.Violations.Add(new DrcViolation
+                    {
+                        Severity = DrcSeverity.Error,
+                        Rule     = "Component Out of Bounds",
+                        Message  = $"Footprint '{fp.Designator}' is outside or overlaps the board boundary.",
+                        X        = fp.X,
+                        Y        = fp.Y
+                    });
+                }
+            }
+        }
     }
 
     public enum DrcSeverity { Info, Warning, Error }
@@ -172,4 +232,3 @@ namespace EdaSimulator.Engines.PCB
             : $"DRC FAILED — {TotalErrors} error(s), {TotalWarnings} warning(s)";
     }
 }
-

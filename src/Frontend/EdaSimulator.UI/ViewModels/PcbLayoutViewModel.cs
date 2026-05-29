@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EdaSimulator.Engines.Models;
+using EdaSimulator.Engines.Models.Components;
 using EdaSimulator.Engines.PCB;
 using Microsoft.Win32;
 
@@ -87,30 +88,44 @@ namespace EdaSimulator.UI.ViewModels
                     Designator  = comp.Designator,
                     Value       = comp.Value,
                     FootprintId = SuggestFootprintId(comp),
-                    X           = 10 + col * spacing,
-                    Y           = 10 + row * spacing,
+                    X           = 15 + col * spacing,
+                    Y           = 15 + row * spacing,
                     Rotation    = 0
                 };
+
+                // Suggest courtyard sizes
+                if (comp is Resistor || comp is Capacitor || comp is Inductor || comp is Diode)
+                {
+                    fp.CrtYd_Width_mm = 5.0;
+                    fp.CrtYd_Height_mm = 4.0;
+                }
+                else if (comp is BJT || comp is MOSFET)
+                {
+                    fp.CrtYd_Width_mm = 6.0;
+                    fp.CrtYd_Height_mm = 5.0;
+                }
+                else if (comp is OpAmp)
+                {
+                    fp.CrtYd_Width_mm = 10.0;
+                    fp.CrtYd_Height_mm = 8.0;
+                }
+                else
+                {
+                    fp.CrtYd_Width_mm = 8.0;
+                    fp.CrtYd_Height_mm = 8.0;
+                }
 
                 // Generate pads based on component type
                 fp.Pads.AddRange(GeneratePads(comp));
                 _pcbDoc.Footprints.Add(fp);
 
-                CanvasFootprints.Add(new PcbFootprintVM
-                {
-                    Designator  = fp.Designator,
-                    Value       = fp.Value,
-                    CanvasX     = fp.X * 5, // Scale 5px/mm for display
-                    CanvasY     = fp.Y * 5,
-                    Width       = 40,
-                    Height      = 30,
-                    LayerColor  = "#FF007ACC"
-                });
+                CanvasFootprints.Add(new PcbFootprintVM(fp));
             }
 
             BomOutput = GenerateBomText(schematic);
             DrcOutput = $"PCB imported from schematic '{schematic.Title}'.\n" +
                         $"{_pcbDoc.Footprints.Count} footprints placed in auto-grid layout.\n" +
+                        $"Drag components to reposition them.\n" +
                         $"Run DRC to validate the design.";
             PcbTitle = _pcbDoc.Title;
         }
@@ -275,14 +290,28 @@ namespace EdaSimulator.UI.ViewModels
     }
 
     /// <summary>Simple display model for canvas-rendered footprint boxes.</summary>
-    public class PcbFootprintVM : ObservableObject
+    public partial class PcbFootprintVM : ObservableObject
     {
-        public string Designator  { get; set; } = "";
-        public string Value       { get; set; } = "";
-        public double CanvasX     { get; set; }
-        public double CanvasY     { get; set; }
-        public double Width       { get; set; } = 40;
-        public double Height      { get; set; } = 30;
-        public string LayerColor  { get; set; } = "#FF007ACC";
+        public PcbFootprint Model { get; }
+
+        [ObservableProperty] private string _designator = "";
+        [ObservableProperty] private string _value = "";
+        [ObservableProperty] private double _canvasX;
+        [ObservableProperty] private double _canvasY;
+        [ObservableProperty] private double _width = 40;
+        [ObservableProperty] private double _height = 30;
+        [ObservableProperty] private string _layerColor = "#FF007ACC";
+
+        public PcbFootprintVM(PcbFootprint model)
+        {
+            Model = model;
+            _designator = model.Designator;
+            _value = model.Value;
+            _canvasX = model.X * 5; // Scale 5px/mm for display
+            _canvasY = model.Y * 5;
+            _width = model.CrtYd_Width_mm * 8; // Scale for visual display
+            _height = model.CrtYd_Height_mm * 8;
+            _layerColor = "#FF007ACC";
+        }
     }
 }

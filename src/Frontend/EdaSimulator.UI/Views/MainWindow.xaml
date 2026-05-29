@@ -733,7 +733,11 @@
                                                 <DataTemplate>
                                                     <Border Width="{Binding Width}" Height="{Binding Height}"
                                                             Background="#FF1E3A5A" BorderBrush="{Binding LayerColor}"
-                                                            BorderThickness="1" CornerRadius="2">
+                                                            BorderThickness="1" CornerRadius="2"
+                                                            Cursor="Hand" ToolTip="Drag to place footprint"
+                                                            MouseDown="PcbFootprint_MouseDown"
+                                                            MouseMove="PcbFootprint_MouseMove"
+                                                            MouseUp="PcbFootprint_MouseUp">
                                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
@@ -744,9 +748,19 @@
                                         </ItemsControl>
 
                                         <!-- Empty state -->
-                                        <TextBlock Text="Import schematic to begin PCB layout" Foreground="#FF444444"
-                                                   FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                   Visibility="{Binding CanvasFootprints.Count, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Text="Import schematic to begin PCB layout" Foreground="#FF555555"
+                                                   FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CanvasFootprints.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </Grid>
                                 </Border>
 

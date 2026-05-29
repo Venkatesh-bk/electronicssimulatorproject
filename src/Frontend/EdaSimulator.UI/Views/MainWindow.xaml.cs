@@ -56,6 +56,13 @@ namespace EdaSimulator.UI.Views
         private double _panStartX;
         private double _panStartY;
 
+        // PCB Footprint dragging state
+        private bool _isDraggingPcbFootprint;
+        private Point _pcbDragStartMouse;
+        private double _pcbDragStartCanvasX;
+        private double _pcbDragStartCanvasY;
+        private PcbFootprintVM? _draggedPcbFootprint;
+
         private void SchematicCanvas_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (CanvasViewModel == null) return;
@@ -421,6 +428,69 @@ namespace EdaSimulator.UI.Views
                 System.Diagnostics.Process.Start("explorer.exe", kbPath);
             else
                 MessageBox.Show($"Knowledge Base folder not found at:\n{kbPath}", "Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        // ── PCB Footprint Dragging Event Handlers ────────────────────────────────────
+
+        private void PcbFootprint_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is PcbFootprintVM fpVM)
+            {
+                _isDraggingPcbFootprint = true;
+                _draggedPcbFootprint = fpVM;
+                _pcbDragStartMouse = e.GetPosition(this);
+                _pcbDragStartCanvasX = fpVM.CanvasX;
+                _pcbDragStartCanvasY = fpVM.CanvasY;
+                fe.CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        private void PcbFootprint_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_isDraggingPcbFootprint && _draggedPcbFootprint != null && sender is FrameworkElement fe)
+            {
+                var curMouse = e.GetPosition(this);
+                double dx = curMouse.X - _pcbDragStartMouse.X;
+                double dy = curMouse.Y - _pcbDragStartMouse.Y;
+
+                double newCanvasX = _pcbDragStartCanvasX + dx;
+                double newCanvasY = _pcbDragStartCanvasY + dy;
+
+                // Snap to 1mm grid (which is 5px) for a professional layout feel
+                newCanvasX = Math.Round(newCanvasX / 5.0) * 5.0;
+                newCanvasY = Math.Round(newCanvasY / 5.0) * 5.0;
+
+                // Clamp to board boundary
+                if (DataContext is MainViewModel mainVM)
+                {
+                    double maxCanvasX = mainVM.PcbVM.BoardWidth * 5 - _draggedPcbFootprint.Width;
+                    double maxCanvasY = mainVM.PcbVM.BoardHeight * 5 - _draggedPcbFootprint.Height;
+                    newCanvasX = Math.Max(0, Math.Min(maxCanvasX, newCanvasX));
+                    newCanvasY = Math.Max(0, Math.Min(maxCanvasY, newCanvasY));
+                }
+
+                _draggedPcbFootprint.CanvasX = newCanvasX;
+                _draggedPcbFootprint.CanvasY = newCanvasY;
+
+                // Sync back to physical model coordinates (mm)
+                _draggedPcbFootprint.Model.X = newCanvasX / 5.0;
+                _draggedPcbFootprint.Model.Y = newCanvasY / 5.0;
+            }
+        }
+
+        private void PcbFootprint_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDraggingPcbFootprint)
+            {
+                if (sender is FrameworkElement fe)
+                {
+                    fe.ReleaseMouseCapture();
+                }
+                _isDraggingPcbFootprint = false;
+                _draggedPcbFootprint = null;
+                e.Handled = true;
+            }
         }
     }
 }
