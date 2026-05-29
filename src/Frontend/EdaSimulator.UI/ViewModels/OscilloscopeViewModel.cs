@@ -57,7 +57,7 @@ namespace EdaSimulator.UI.ViewModels
             => RenderTraceColored(traceName, x, y, OxyColors.Cyan);
 
         /// <summary>Adds a colored trace to the plot and registers metadata in the sidebar.</summary>
-        public void RenderTraceColored(string traceName, IList<double> x, IList<double> y, OxyColor color)
+        public void RenderTraceColored(string traceName, IList<double> x, IList<double> y, OxyColor color, string trackerFormat = "{0}\nTime: {2:0.000E+00} s\nValue: {4:0.000}")
         {
             var series = new LineSeries
             {
@@ -65,7 +65,7 @@ namespace EdaSimulator.UI.ViewModels
                 Color            = color,
                 MarkerType       = MarkerType.None,
                 StrokeThickness  = 2,
-                TrackerFormatString = "{0}\nTime: {2:0.000E+00} s\nValue: {4:0.000}"
+                TrackerFormatString = trackerFormat
             };
 
             int count = Math.Min(x.Count, y.Count);
@@ -89,6 +89,40 @@ namespace EdaSimulator.UI.ViewModels
             };
 
             TraceInfos.Add(info);
+            OnPropertyChanged(nameof(HasTraceData));
+        }
+
+        /// <summary>Configures the plot model axes for a custom swept parameter (e.g. DC sweep).</summary>
+        public void SetupSweepPlot(string xAxisTitle, string plotTitle)
+        {
+            SimPlotModel.Series.Clear();
+            SimPlotModel.Axes.Clear();
+
+            SimPlotModel.Axes.Add(new LinearAxis
+            {
+                Position           = AxisPosition.Bottom,
+                Title              = xAxisTitle,
+                MajorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromArgb(60, 80, 80, 140),
+                TicklineColor      = OxyColors.Gray,
+                AxislineColor      = OxyColors.Gray,
+                TextColor          = OxyColors.LightGray
+            });
+            SimPlotModel.Axes.Add(new LinearAxis
+            {
+                Position           = AxisPosition.Left,
+                Title              = "Voltage (V) / Current (A)",
+                MajorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromArgb(60, 80, 80, 140),
+                TicklineColor      = OxyColors.Gray,
+                AxislineColor      = OxyColors.Gray,
+                TextColor          = OxyColors.LightGray
+            });
+
+            SimPlotModel.Title = plotTitle;
+            SimPlotModel.InvalidatePlot(true);
+
+            TraceInfos.Clear();
             OnPropertyChanged(nameof(HasTraceData));
         }
 

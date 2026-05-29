@@ -310,10 +310,45 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                     }
                     scopeWindow.Show();
                 }
+                else if (data.Variables.Count > 0)
+                {
+                    // DC Sweep or other sweep analysis
+                    string sweepVar = data.Variables[0];
+                    if (data.DataPoints.ContainsKey(sweepVar))
+                    {
+                        var sweepAxis = data.DataPoints[sweepVar];
+                        scopeWindow.ViewModel.SetupSweepPlot(sweepVar.ToUpper(), $"DC Sweep Analysis — Sweeping {sweepVar.ToUpper()}");
+
+                        var waveformColors = new[]
+                        {
+                            OxyPlot.OxyColors.Cyan, OxyPlot.OxyColors.Yellow, OxyPlot.OxyColors.LimeGreen,
+                            OxyPlot.OxyColors.OrangeRed, OxyPlot.OxyColors.Violet, OxyPlot.OxyColors.DeepSkyBlue
+                        };
+                        int colorIdx = 0;
+
+                        foreach (var kv in data.DataPoints)
+                        {
+                            if (kv.Key == sweepVar) continue; // skip the independent variable
+                            string label = kv.Key.ToUpper();
+                            scopeWindow.ViewModel.RenderTraceColored(
+                                label, 
+                                sweepAxis, 
+                                kv.Value,
+                                waveformColors[colorIdx % waveformColors.Length],
+                                "{0}\n" + sweepVar.ToUpper() + ": {2:0.000}\nValue: {4:0.000}");
+                            colorIdx++;
+                        }
+                        scopeWindow.Show();
+                    }
+                    else
+                    {
+                        NetlistOutput += "\n[INFO] Simulation complete. Sweep variable data not found in .raw output.";
+                    }
+                }
                 else
                 {
-                    // DC sweep or operating point — show first non-sweep variable
-                    NetlistOutput += "\n[INFO] Simulation complete. No time/frequency axis found in .raw output.";
+                    // Operating point — show first non-sweep variable
+                    NetlistOutput += "\n[INFO] Simulation complete. No variable data found in .raw output.";
                 }
 
                 int traceCount = scopeWindow.ViewModel.TraceInfos.Count;
