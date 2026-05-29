@@ -108,6 +108,9 @@ namespace EdaSimulator.Engines.IO
                     nameof(BJT)           => new BJT(rec.Designator, rec.Value),
                     nameof(MOSFET)        => new MOSFET(rec.Designator, rec.Value),
                     nameof(OpAmp)         => new OpAmp(rec.Designator, rec.Value ?? "LM358"),
+                    nameof(GroundSymbol)  => new GroundSymbol(rec.Designator),
+                    nameof(PowerRail)     => new PowerRail(rec.Designator,
+                        double.TryParse(rec.Value.Replace("V",""), out double v) ? v : 5.0),
                     _ => throw new NotSupportedException($"Unknown component type: {rec.TypeName}")
                 };
 

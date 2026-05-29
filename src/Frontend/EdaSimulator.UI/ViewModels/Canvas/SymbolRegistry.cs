@@ -163,6 +163,24 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                 PathData = "M -20,-30 L 20,-30 L 20,30 L -20,30 Z M -20,-15 L -30,-15 M -20,15 L -30,15 M -20,10 L -10,15 L -20,20 M 20,-15 L 30,-15 M 20,15 L 30,15",
                 PinOffsets = new Dictionary<int, Point> { { 1, new Point(-30, -15) }, { 2, new Point(-30, 15) }, { 3, new Point(30, -15) }, { 4, new Point(30, 15) } }
             };
+
+            // === Power Symbols ===
+
+            // Ground: classic 3-line downward triangle (IEEE/ANSI standard)
+            _registry[typeof(GroundSymbol)] = new ComponentSymbol
+            {
+                Width = 30, Height = 24,
+                PathData = "M 0,-12 L 0,0 M -12,0 L 12,0 M -7,6 L 7,6 M -3,12 L 3,12",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(0, -12) } }
+            };
+
+            // Power Rail: upward arrow line with label above (VCC/VDD style)
+            _registry[typeof(PowerRail)] = new ComponentSymbol
+            {
+                Width = 20, Height = 30,
+                PathData = "M 0,15 L 0,-5 M -8,-5 L 8,-5 M -4,-12 L 0,-20 L 4,-12",
+                PinOffsets = new Dictionary<int, Point> { { 1, new Point(0, 15) } }
+            };
         }
 
         public static ComponentSymbol GetSymbol(Type componentType)

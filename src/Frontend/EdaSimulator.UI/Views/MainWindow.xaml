@@ -139,6 +139,14 @@
                     <ListBoxItem Content="OR Gate" Tag="OrGate" Foreground="#FF4EC9B0" />
                     <ListBoxItem Content="NOT Gate" Tag="NotGate" Foreground="#FF4EC9B0" />
                     <ListBoxItem Content="D Flip-Flop" Tag="DFlipFlop" Foreground="#FF4EC9B0" />
+
+                    <!-- Power Symbols -->
+                    <ListBoxItem Content="─────────" IsEnabled="False" Foreground="#FF555555"/>
+                    <ListBoxItem Content="⏚  Ground (GND)" Tag="Ground" Foreground="#FFFFCC00" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="↑  VCC  (+5V)"   Tag="VCC"    Foreground="#FFFF6060" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="↑  VDD  (+3.3V)" Tag="VDD"    Foreground="#FFFF6060" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="↑  +12V"         Tag="V12"    Foreground="#FFFF8C00" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="↓  -12V"         Tag="VN12"   Foreground="#FF87CEEB" FontWeight="SemiBold"/>
                 </ListBox>
                 
                 <Button Grid.Row="2" Content="Build Complex Circuit" Command="{Binding AddMockComponentsCommand}" Padding="5" Margin="0,10,0,0" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
@@ -164,6 +172,7 @@
                       MouseWheel="SchematicCanvas_MouseWheel"
                       AllowDrop="True"
                       Drop="SchematicCanvas_Drop">
+
                       
                     <Grid.RenderTransform>
                         <TransformGroup>
@@ -173,7 +182,8 @@
                     </Grid.RenderTransform>
 
                     <ItemsControl x:Name="SchematicItemsControl" 
-                                  ItemsSource="{Binding ActiveSchematicViewModel.Items}">
+                                  ItemsSource="{Binding ActiveSchematicViewModel.Items}"
+                                  MouseDoubleClick="SchematicCanvas_MouseDoubleClick">
                         
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

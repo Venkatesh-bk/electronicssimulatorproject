@@ -5,6 +5,7 @@ using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.Models.Components;
 using EdaSimulator.Engines.Simulation;
 using EdaSimulator.UI.ViewModels.Canvas;
+using OxyPlot;
 using System.Windows;
 using Microsoft.Win32;
 
@@ -237,29 +238,47 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 var scopeWindow = new Views.OscilloscopeWindow();
                 scopeWindow.ViewModel.ClearTraces();
 
-                // By default, SPICE time vector is usually var index 0 explicitly lowercase "time"
-                if (!data.DataPoints.ContainsKey("time"))
+                // Require a time axis — transient analysis
+                if (data.DataPoints.ContainsKey("time"))
                 {
-                    // Fallback to DC sweep or other axes later
-                    return;
-                }
-                
-                var timeAxis = data.DataPoints["time"];
+                    var timeAxis = data.DataPoints["time"];
 
-                // Intersect targeted Probes
-                var probes = System.Linq.Enumerable.OfType<VoltageProbeItemViewModel>(ActiveSchematicViewModel.Items);
-                foreach (var probe in probes)
-                {
-                    // Ngspice labels variables compactly without spaces, e.g., v(net_id)
-                    string traceKey = $"v({probe.TargetNetName})".ToLower();
-                    
-                    if (data.DataPoints.ContainsKey(traceKey))
+                    // Auto-display ALL signal vectors (voltages, currents) — not just named probes
+                    // Skip "time" itself and internal branch currents that start with "i("
+                    var waveformColors = new[]
                     {
-                        scopeWindow.ViewModel.RenderTrace($"V(Net {probe.TargetNetName})", timeAxis, data.DataPoints[traceKey]);
+                        OxyPlot.OxyColors.Cyan, OxyPlot.OxyColors.Yellow, OxyPlot.OxyColors.LimeGreen,
+                        OxyPlot.OxyColors.OrangeRed, OxyPlot.OxyColors.Violet, OxyPlot.OxyColors.DeepSkyBlue
+                    };
+                    int colorIdx = 0;
+
+                    foreach (var kv in data.DataPoints)
+                    {
+                        if (kv.Key == "time") continue; // skip X axis itself
+                        string label = kv.Key.ToUpper();
+                        scopeWindow.ViewModel.RenderTraceColored(label, timeAxis, kv.Value,
+                            waveformColors[colorIdx % waveformColors.Length]);
+                        colorIdx++;
                     }
+
+                    scopeWindow.Show();
                 }
-                
-                scopeWindow.Show();
+                else if (data.DataPoints.ContainsKey("frequency"))
+                {
+                    // AC analysis — frequency domain (Bode plot)
+                    var freqAxis = data.DataPoints["frequency"];
+                    foreach (var kv in data.DataPoints)
+                    {
+                        if (kv.Key == "frequency") continue;
+                        scopeWindow.ViewModel.RenderBodePlot(kv.Key.ToUpper(), freqAxis, kv.Value);
+                    }
+                    scopeWindow.Show();
+                }
+                else
+                {
+                    // DC sweep or operating point — show first non-sweep variable
+                    NetlistOutput += "\n[INFO] Simulation complete. No time/frequency axis found in .raw output.";
+                }
             }
         }
 

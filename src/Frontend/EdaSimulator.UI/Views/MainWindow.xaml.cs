@@ -203,22 +203,47 @@ namespace EdaSimulator.UI.Views
                     case "MOSFET": coreComponent = new MOSFET(GetNextDesignator("M"), "2N7002"); break;
                     case "OpAmp": coreComponent = new OpAmp(GetNextDesignator("X"), "LM358"); break;
 
-                    // Note: Digital components will need an adapter if they are to be placed directly as Component.
-                    // For now, we will map them using a mock/dummy SPICE representation until the MixedSignalBridge
-                    // is fully wired into the Canvas ViewModel layer.
+                    // === Power Symbols ===
+                    case "Ground": coreComponent = new GroundSymbol(GetNextDesignator("GND")); break;
+                    case "VCC":    coreComponent = new PowerRail(GetNextDesignator("VCC"), 5.0); break;
+                    case "VDD":    coreComponent = new PowerRail(GetNextDesignator("VDD"), 3.3); break;
+                    case "V12":    coreComponent = new PowerRail(GetNextDesignator("V12"), 12.0); break;
+                    case "VN12":   coreComponent = new PowerRail(GetNextDesignator("VN"), -12.0); break;
+
+
                 }
 
                 if (coreComponent != null && CanvasViewModel != null)
                 {
                     var vm = new ViewModels.Canvas.ComponentNodeViewModel(coreComponent)
                     {
-                        X = Snap(pos.X - 25), // Basic center alignment
+                        X = Snap(pos.X - 25),
                         Y = Snap(pos.Y - 25)
                     };
+
+                    // Ground symbols auto-connect their single pin to net "0"
+                    if (coreComponent is GroundSymbol gnd)
+                    {
+                        CanvasViewModel.CoreSchematic.ConnectPinToNet(
+                            gnd.Pins[0], CanvasViewModel.CoreSchematic.MasterGroundNet.Id);
+                    }
 
                     CanvasViewModel.AddComponentNode(vm);
                 }
             }
+        }
+
+        private void SchematicCanvas_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (CanvasViewModel == null) return;
+            var target = (e.OriginalSource as System.Windows.FrameworkElement)?.DataContext
+                         as ViewModels.Canvas.ComponentNodeViewModel;
+            if (target == null) return;
+
+            // Open inline property editor popup
+            var dlg = new ComponentPropertyDialog(target);
+            dlg.Owner = this;
+            dlg.ShowDialog();
         }
 
         private void SelectTool_Click(object sender, RoutedEventArgs e)
