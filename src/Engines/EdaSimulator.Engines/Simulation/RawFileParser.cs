@@ -84,7 +84,26 @@ namespace EdaSimulator.Engines.Simulation
                     
                     string valString = parts.Length == 2 ? parts[1] : parts[0];
 
-                    if (double.TryParse(valString, NumberStyles.Float, CultureInfo.InvariantCulture, out double traceVal))
+                    double traceVal = 0;
+                    bool parsedSuccess = false;
+
+                    if (valString.Contains(','))
+                    {
+                        var complexParts = valString.Split(',');
+                        if (complexParts.Length == 2 &&
+                            double.TryParse(complexParts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double real) &&
+                            double.TryParse(complexParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double imag))
+                        {
+                            traceVal = System.Math.Sqrt(real * real + imag * imag);
+                            parsedSuccess = true;
+                        }
+                    }
+                    else
+                    {
+                        parsedSuccess = double.TryParse(valString, NumberStyles.Float, CultureInfo.InvariantCulture, out traceVal);
+                    }
+
+                    if (parsedSuccess)
                     {
                         string targetVar = varNames[currentVarIndex];
                         result.DataPoints[targetVar].Add(traceVal);
