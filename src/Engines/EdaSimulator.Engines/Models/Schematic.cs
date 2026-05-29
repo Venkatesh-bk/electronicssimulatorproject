@@ -105,6 +105,12 @@ namespace EdaSimulator.Engines.Models
         }
 
         /// <summary>
+        /// Retrieves a net by its GUID. Returns null if not found.
+        /// </summary>
+        public Net? GetNetById(Guid netId)
+            => _nets.TryGetValue(netId, out var net) ? net : null;
+
+        /// <summary>
         /// Removes a net from the schematic, first disconnecting all pins attached to it.
         /// The master ground net cannot be removed.
         /// </summary>

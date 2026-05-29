@@ -1,0 +1,149 @@
+<Window x:Class="EdaSimulator.UI.Views.ComponentHubWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewmodels="clr-namespace:EdaSimulator.UI.ViewModels"
+        Title="Component Library Hub" Height="560" Width="860"
+        WindowStartupLocation="CenterOwner" Background="#FF1B1B2F" Foreground="White"
+        FontFamily="Segoe UI">
+
+    <Window.DataContext>
+        <viewmodels:ComponentHubViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <Style TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="#FF252540"/>
+            <Setter Property="Foreground" Value="#FF9DCBF5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderBrush" Value="#FF3A3A5C"/>
+        </Style>
+        <Style TargetType="ListViewItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFDEDEDE"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF2A2A4A"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FF1A4A8A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#FF252540"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF3A3A6C"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#FF252540"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF3A3A6C"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+            <TextBlock Text="🔌" FontSize="26" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <StackPanel>
+                <TextBlock Text="Component Library Hub" FontSize="22" FontWeight="Bold" Foreground="#FF5BB4FF"/>
+                <TextBlock Text="SparkFun · Adafruit · Eagle · Custom IoT  —  686 Components" FontSize="11" Foreground="#FF888AAA"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Search Bar -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                     VerticalContentAlignment="Center" FontSize="13">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                </TextBox.InputBindings>
+            </TextBox>
+            <ComboBox Grid.Column="1" Margin="8,0" ItemsSource="{Binding Categories}" 
+                      SelectedItem="{Binding SelectedCategory}" VerticalContentAlignment="Center"/>
+            <Button Grid.Column="2" Content="🔍 Search" Command="{Binding SearchCommand}"
+                    Background="#FF2563EB" Foreground="White" BorderThickness="0"
+                    Padding="16,7" FontWeight="Bold" FontSize="13"/>
+        </Grid>
+
+        <!-- Loading Spinner -->
+        <TextBlock Grid.Row="2" Text="⏳  Loading component database..." Foreground="#FFAAAACC"
+                   FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <!-- Results Grid -->
+        <ListView Grid.Row="2" ItemsSource="{Binding Components}" SelectedItem="{Binding SelectedComponent}"
+                  Background="#FF1E1E38" BorderBrush="#FF3A3A5C" BorderThickness="1">
+            <ListView.Style>
+                <Style TargetType="ListView">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListView.Style>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="IoT" DisplayMemberBinding="{Binding IotBadge}" Width="45"/>
+                    <GridViewColumn Header="Part Name" DisplayMemberBinding="{Binding Name}" Width="160"/>
+                    <GridViewColumn Header="Category" DisplayMemberBinding="{Binding Category}" Width="130"/>
+                    <GridViewColumn Header="Manufacturer" DisplayMemberBinding="{Binding Manufacturer}" Width="150"/>
+                    <GridViewColumn Header="Description" DisplayMemberBinding="{Binding Description}" Width="220"/>
+                    <GridViewColumn Header="Pins" DisplayMemberBinding="{Binding Pins}" Width="45"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- Footer -->
+        <Grid Grid.Row="3" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#FF7A9EC8" VerticalAlignment="Center" FontSize="11"/>
+            <Button Grid.Column="1" Content="⬇ Install to Library" Command="{Binding InstallComponentCommand}"
+                    Background="#FF16A34A" Foreground="White" BorderThickness="0"
+                    Padding="18,8" FontWeight="Bold" FontSize="13">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="IsEnabled" Value="True"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedComponent}" Value="{x:Null}">
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>

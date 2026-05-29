@@ -15,7 +15,7 @@ namespace EdaSimulator.Engines.Simulation.Digital
     public class DigitalEvent
     {
         public long TimeTicks { get; set; }
-        public Action Action { get; set; }
+        public Action? Action { get; set; }
     }
 
     /// <summary>

@@ -10,7 +10,7 @@ namespace EdaSimulator.UI.Tools
         public string ToolName => "Selection Tool";
         
         private SchematicViewModel _schematic;
-        private ComponentNodeViewModel _draggedComponent;
+        private ComponentNodeViewModel? _draggedComponent;
         private double _lastMouseX;
         private double _lastMouseY;
         private double _totalDx;
@@ -87,6 +87,25 @@ namespace EdaSimulator.UI.Tools
                 else
                 {
                     _draggedComponent.MoveBy(dx, dy);
+                }
+
+                // ── Wire drag-follow: update any wire endpoint that belongs to a moved pin ──
+                foreach (var item in _schematic.Items)
+                {
+                    if (item is WireViewModel wire)
+                    {
+                        foreach (var canvasItem in _schematic.Items)
+                        {
+                            if (canvasItem is ComponentNodeViewModel comp && 
+                                (comp.IsSelected || comp == _draggedComponent))
+                            {
+                                foreach (var pin in comp.Pins)
+                                {
+                                    wire.UpdateEndpoint(pin.CorePin.Id, pin.X, pin.Y);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 _lastMouseX = x;

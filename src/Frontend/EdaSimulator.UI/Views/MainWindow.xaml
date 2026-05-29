@@ -55,9 +55,19 @@
                 <MenuItem Header="Reset Zoom" Click="MenuZoomReset_Click"/>
             </MenuItem>
 
+            <MenuItem Header="_Tools">
+                <MenuItem Header="⚡  _Component Hub..." Click="MenuComponentHub_Click" InputGestureText="Ctrl+Shift+H"/>
+                <Separator/>
+                <MenuItem Header="⚙️  _Preferences..." Click="MenuSettings_Click" InputGestureText="Ctrl+,"/>
+            </MenuItem>
+
             <MenuItem Header="_Help">
-                <MenuItem Header="About EDA Simulator" Click="MenuAbout_Click"/>
+                <MenuItem Header="📖  _Help &amp; Shortcuts" Click="MenuHelp_Click" InputGestureText="F1"/>
+                <Separator/>
+                <MenuItem Header="License Activation..." Click="MenuActivation_Click"/>
                 <MenuItem Header="Open Knowledge Base..." Click="MenuKnowledgeBase_Click"/>
+                <Separator/>
+                <MenuItem Header="About EDA Simulator" Click="MenuAbout_Click"/>
             </MenuItem>
         </Menu>
 
@@ -215,10 +225,9 @@
                         </Style>
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.Resources>
-                        <!-- Basic generic fallback component renderer for now -->
+                        <!-- Proper layered component symbol renderer -->
                         <DataTemplate DataType="{x:Type canvasVm:ComponentNodeViewModel}">
-                            <!-- We center the drawing origin so rotation happens mathematically around the center -->
-                            <Grid Width="{Binding BoundsWidth}" Height="{Binding BoundsHeight}" Margin="0,0,0,0">
+                            <Grid Width="{Binding BoundsWidth}" Height="{Binding BoundsHeight}">
                                 <Grid.RenderTransform>
                                     <RotateTransform Angle="{Binding RotationAngle}" />
                                 </Grid.RenderTransform>
@@ -226,39 +235,87 @@
                                     <Point X="0.5" Y="0.5" />
                                 </Grid.RenderTransformOrigin>
 
-                                <!-- Selection Highlight bounds -->
-                                <Rectangle Stroke="Yellow" StrokeThickness="1" StrokeDashArray="2,2" 
-                                           Fill="Transparent" Visibility="Hidden" x:Name="SelectionHighlight" />
+                                <!-- ① Selection Highlight border -->
+                                <Rectangle x:Name="SelectionHighlight"
+                                           Stroke="#FFFFFF00" StrokeThickness="1.5"
+                                           StrokeDashArray="3,2" Fill="Transparent"
+                                           Visibility="Hidden" RadiusX="2" RadiusY="2"/>
 
-                                <!-- Draw the actual electrical symbol from the Registry PathData -->
-                                <Path Data="{Binding PathData}" Stroke="#FF007ACC" StrokeThickness="2" Fill="Transparent" 
-                                      HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Margin="2">
-                                    <Path.RenderTransform>
-                                        <ScaleTransform ScaleX="{Binding ScaleX}" ScaleY="{Binding ScaleY}" CenterX="20" CenterY="20" />
-                                    </Path.RenderTransform>
-                                </Path>
-                                
-                                <TextBlock Text="{Binding Designator}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top" FontWeight="Bold" Margin="0,-20,0,0" />
-                                <TextBlock Text="{Binding Value}" Foreground="#FFAAAAAA" HorizontalAlignment="Center" VerticalAlignment="Bottom" FontSize="10" Margin="0,0,0,-20" />
+                                <!-- ② Symbol: fixed ViewBox so the PathData fills the bounds cleanly -->
+                                <Viewbox Stretch="Uniform" Margin="4">
+                                    <Canvas Width="{Binding BoundsWidth}" Height="{Binding BoundsHeight}">
+                                        <Path Data="{Binding PathData}"
+                                              Stroke="#FF4FC3F7" StrokeThickness="2"
+                                              Fill="Transparent"
+                                              Canvas.Left="{Binding BoundsWidth, Converter={x:Static canvasVm:HalfValueConverter.Instance}}"
+                                              Canvas.Top="{Binding BoundsHeight, Converter={x:Static canvasVm:HalfValueConverter.Instance}}">
+                                            <Path.RenderTransform>
+                                                <ScaleTransform ScaleX="{Binding ScaleX}" ScaleY="{Binding ScaleY}"/>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Canvas>
+                                </Viewbox>
+
+                                <!-- ③ Designator label — above the symbol -->
+                                <TextBlock Text="{Binding Designator}"
+                                           Foreground="#FFFFFFFF"
+                                           FontFamily="Consolas" FontSize="10" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Top"
+                                           Margin="0,-16,0,0"/>
+
+                                <!-- ④ Value label — below the symbol -->
+                                <TextBlock Text="{Binding Value}"
+                                           Foreground="#FF90CAF9"
+                                           FontFamily="Consolas" FontSize="9"
+                                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                           Margin="0,0,0,-15"/>
                             </Grid>
-                            
-                            <!-- Trigger the transforms based on state machine properties -->
+
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                     <Setter TargetName="SelectionHighlight" Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
-                        
+
                         <DataTemplate DataType="{x:Type canvasVm:WireViewModel}">
                             <!-- Renders a multi-point sequence of wires orthogonally -->
-                            <Polyline Points="{Binding Points}" Stroke="#FF00FF00" StrokeThickness="2" />
+                            <Canvas>
+                                <Polyline Points="{Binding Points}" Stroke="#FF00FF00" StrokeThickness="2" />
+                                <!-- Net name label at wire midpoint, subtle badge style -->
+                                <Border Canvas.Left="0" Canvas.Top="-10"
+                                        Background="#AA1E1E1E" BorderBrush="#4400FF00" BorderThickness="1"
+                                        CornerRadius="2" Padding="2,0"
+                                        Visibility="{Binding NetLabel, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding NetLabel}" Foreground="#FF00BB00"
+                                               FontFamily="Consolas" FontSize="9"/>
+                                </Border>
+                            </Canvas>
                         </DataTemplate>
 
                         <DataTemplate DataType="{x:Type canvasVm:PinNodeViewModel}">
-                            <Grid Margin="-4,-4,0,0">
-                                <!-- Visual connector pin (drawn centered on its X/Y absolute coordinate) -->
-                                <Ellipse Width="8" Height="8" Fill="Red" Stroke="White" StrokeThickness="1" ToolTip="{Binding Name}" />
+                            <Grid Margin="-5,-5,0,0">
+                                <!-- Visual connector pin: GREEN when wired, RED when floating -->
+                                <Ellipse Width="10" Height="10" StrokeThickness="1.5"
+                                         ToolTip="{Binding ConnectedNetName, StringFormat='Net: {0}'}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <!-- Default: floating = red -->
+                                            <Setter Property="Fill"   Value="#FFCC2222"/>
+                                            <Setter Property="Stroke" Value="#FFFF4444"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                    <Setter Property="Fill"   Value="#FF00CC44"/>
+                                                    <Setter Property="Stroke" Value="#FF00FF66"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsHovered}" Value="True">
+                                                    <Setter Property="Fill"   Value="#FFFFE066"/>
+                                                    <Setter Property="Stroke" Value="#FFFFFFFF"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
                                 
                                 <!-- Engine DRC Floating Validation Visual ('Red X' overlay) -->
                                 <Path x:Name="ErrorCross" Data="M -4,-4 L 4,4 M -4,4 L 4,-4" Stroke="Red" StrokeThickness="2" 

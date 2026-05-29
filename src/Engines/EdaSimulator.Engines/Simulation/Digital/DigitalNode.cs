@@ -8,7 +8,7 @@ namespace EdaSimulator.Engines.Simulation.Digital
         public string Name { get; }
         private LogicState _state = LogicState.Undefined;
 
-        public event Action<LogicState> OnStateChanged;
+        public event Action<LogicState>? OnStateChanged;
 
         public DigitalNode(string name)
         {

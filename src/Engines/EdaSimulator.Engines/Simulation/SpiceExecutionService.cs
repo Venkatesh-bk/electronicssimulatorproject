@@ -18,19 +18,46 @@ namespace EdaSimulator.Engines.Simulation
     /// <summary>
     /// Thread-safe wrapper responsible for dispatching Math Execution queries natively 
     /// to a compiled SPICE backend binary via System.Diagnostics.
+    /// Uses NgSpiceLocator to auto-discover the binary across common install paths.
     /// </summary>
     public class SpiceExecutionService
     {
-        private readonly string _ngspicePath;
+        private readonly string? _resolvedNgSpicePath;
 
-        public SpiceExecutionService(string ngspicePath = "ngspice_con.exe")
+        /// <summary>
+        /// Creates an execution service. If userConfiguredPath is null or empty,
+        /// NgSpiceLocator searches common install locations automatically.
+        /// </summary>
+        public SpiceExecutionService(string? userConfiguredPath = null)
         {
-            _ngspicePath = ngspicePath;
+            _resolvedNgSpicePath = NgSpiceLocator.FindNgSpice(userConfiguredPath);
         }
+
+        /// <summary>True when ngspice was found on this system.</summary>
+        public bool IsNgSpiceAvailable => !string.IsNullOrEmpty(_resolvedNgSpicePath);
+
+        /// <summary>The full path to ngspice_con.exe, or null if not found.</summary>
+        public string? NgSpicePath => _resolvedNgSpicePath;
 
         public async Task<SpiceExecutionResult> RunSimulationAsync(string netlistContent, CancellationToken cancellationToken = default)
         {
             var result = new SpiceExecutionResult();
+
+            // Guard: ngspice must be installed/discoverable before we can run
+            if (!IsNgSpiceAvailable)
+            {
+                string vendorPath = NgSpiceLocator.GetRecommendedVendorPath();
+                result.Success = false;
+                result.ErrorMessage =
+                    "ngspice simulation engine not found.\n\n" +
+                    "To enable simulation, choose ONE of:\n" +
+                    "  A) Install ngspice from https://ngspice.sourceforge.io/download.html\n" +
+                    "  B) Place ngspice_con.exe in:\n" +
+                    $"     {vendorPath}\n" +
+                    "  C) Set the custom path via Tools → Preferences → Simulation\n\n" +
+                    "ngspice is free, open-source, and takes ~30 seconds to install.";
+                return result;
+            }
 
             string tempDir = Path.Combine(Path.GetTempPath(), "EdaSimulatorSims");
             if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
@@ -47,7 +74,7 @@ namespace EdaSimulator.Engines.Simulation
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ngspicePath,
+                    FileName = _resolvedNgSpicePath!,
                     Arguments = $"-b \"{cirFileName}\"", // -b indicates batch mode without GUI execution
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -70,7 +97,7 @@ namespace EdaSimulator.Engines.Simulation
                 catch (Exception ex)
                 {
                     result.Success = false;
-                    result.ErrorMessage = $"Failed to spin up SPICE Kernel at '{_ngspicePath}'. Ensure the binary exists natively inside the Environment path or execution directory. \nDetails: {ex.Message}";
+                    result.ErrorMessage = $"Failed to spin up SPICE Kernel at '{_resolvedNgSpicePath}'. Ensure the binary exists natively inside the Environment path or execution directory. \nDetails: {ex.Message}";
                     return result;
                 }
 

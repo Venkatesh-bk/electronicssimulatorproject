@@ -13,14 +13,15 @@ namespace EdaSimulator.UI.ViewModels
 
         public OscilloscopeViewModel()
         {
-            _simPlotModel = new PlotModel 
-            { 
+            // MVVMTK0034: Use the generated property 'SimPlotModel' for all post-construction mutation,
+            // but direct field access is safe in the constructor before source-generators hook in.
+            _simPlotModel = new PlotModel
+            {
                 Title = "SPICE Trace Viewer",
                 TextColor = OxyColors.LightGray,
                 PlotAreaBorderColor = OxyColors.Gray
             };
 
-            // Overlay a transparent Legend Box identically to MATLAB defaults
             _simPlotModel.Legends.Add(new OxyPlot.Legends.Legend
             {
                 LegendPosition = OxyPlot.Legends.LegendPosition.TopRight,
@@ -28,10 +29,10 @@ namespace EdaSimulator.UI.ViewModels
                 LegendBorder = OxyColors.DimGray,
                 LegendTextColor = OxyColors.LightGray
             });
-            
-            _simPlotModel.Axes.Add(new LinearAxis 
-            { 
-                Position = AxisPosition.Bottom, 
+
+            _simPlotModel.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
                 Title = "Time (s)",
                 MajorGridlineStyle = LineStyle.Dot,
                 MajorGridlineColor = OxyColors.DarkGray,
@@ -39,9 +40,9 @@ namespace EdaSimulator.UI.ViewModels
                 AxislineColor = OxyColors.Gray
             });
 
-            _simPlotModel.Axes.Add(new LinearAxis 
-            { 
-                Position = AxisPosition.Left, 
+            _simPlotModel.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Left,
                 Title = "Voltage (V)",
                 MajorGridlineStyle = LineStyle.Dot,
                 MajorGridlineColor = OxyColors.DarkGray,
@@ -52,29 +53,27 @@ namespace EdaSimulator.UI.ViewModels
 
         public void RenderTrace(string traceName, IList<double> x, IList<double> y)
         {
-            var series = new LineSeries 
-            { 
-                Title = traceName, 
+            var series = new LineSeries
+            {
+                Title = traceName,
                 MarkerType = MarkerType.None,
                 StrokeThickness = 2,
-                TrackerFormatString = "{0}\nTime: {2:0.000E+00} s\nValue: {4:0.000} U"
+                TrackerFormatString = "{0}\nTime: {2:0.000E+00} s\nValue: {4:0.000} V"
             };
 
             int count = System.Math.Min(x.Count, y.Count);
-
-            for(int i = 0; i < count; i++)
-            {
+            for (int i = 0; i < count; i++)
                 series.Points.Add(new DataPoint(x[i], y[i]));
-            }
 
-            _simPlotModel.Series.Add(series);
-            _simPlotModel.InvalidatePlot(true);
+            // Use the generated observable property so WPF bindings update correctly
+            SimPlotModel.Series.Add(series);
+            SimPlotModel.InvalidatePlot(true);
         }
 
         public void ClearTraces()
         {
-            _simPlotModel.Series.Clear();
-            _simPlotModel.InvalidatePlot(true);
+            SimPlotModel.Series.Clear();
+            SimPlotModel.InvalidatePlot(true);
         }
     }
 }

@@ -34,12 +34,12 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         private bool _isSelectionBoundsVisible;
 
         [ObservableProperty]
-        private ComponentNodeViewModel _selectedComponent;
+        private ComponentNodeViewModel? _selectedComponent;
 
         public EdaSimulator.UI.Commands.CommandManager History { get; } = new EdaSimulator.UI.Commands.CommandManager();
 
-        private ICanvasTool _activeTool;
-        public ICanvasTool ActiveTool
+        private ICanvasTool? _activeTool;
+        public ICanvasTool? ActiveTool
         {
             get => _activeTool;
             set

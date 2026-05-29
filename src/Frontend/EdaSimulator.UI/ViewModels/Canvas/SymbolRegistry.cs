@@ -18,13 +18,13 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         /// The WPF Geometry path data used to uniquely draw the shape. 
         /// Coordinates are expected to be mapped to the Width/Height bounds.
         /// </summary>
-        public string PathData { get; init; } 
+        public required string PathData { get; init; } 
         
         /// <summary>
         /// Maps a SPICE sequence (1-indexed) to its local X,Y physical offset.
         /// Coordinate (0,0) represents the center of the component body.
         /// </summary>
-        public Dictionary<int, Point> PinOffsets { get; init; }
+        public required Dictionary<int, Point> PinOffsets { get; init; }
     }
 
     /// <summary>

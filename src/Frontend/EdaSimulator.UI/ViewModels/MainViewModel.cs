@@ -116,7 +116,7 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
 ";
 
         [ObservableProperty]
-        private string _pythonScriptOutput;
+        private string _pythonScriptOutput = string.Empty;
 
         private string _lastExecutedNetlistHash = string.Empty;
         private System.Windows.Threading.DispatcherTimer _liveTunerTimer;
@@ -206,7 +206,8 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             IsSimulating = true;
             _simCancellationTokenSource = new System.Threading.CancellationTokenSource();
 
-            var executionSvc = new SpiceExecutionService();
+            var executionSvc = new SpiceExecutionService(
+                EdaSimulator.Engines.Settings.SettingsManager.Instance.Current.NgSpicePath);
             EdaSimulator.Engines.Simulation.SpiceExecutionResult result;
             
             try

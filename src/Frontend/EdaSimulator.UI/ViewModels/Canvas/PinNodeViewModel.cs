@@ -32,6 +32,19 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         [ObservableProperty]
         private bool _hasError;
 
+        /// <summary>
+        /// Name of the net this pin is connected to; empty if floating.
+        /// Updated by WiringTool after each successful connection.
+        /// </summary>
+        [ObservableProperty]
+        private string _connectedNetName = string.Empty;
+
+        /// <summary>True when this pin is part of a net (not floating).</summary>
+        public bool IsConnected => !string.IsNullOrEmpty(ConnectedNetName);
+
+        partial void OnConnectedNetNameChanged(string value)
+            => OnPropertyChanged(nameof(IsConnected));
+
         public PinNodeViewModel(Pin corePin)
         {
             CorePin = corePin ?? throw new ArgumentNullException(nameof(corePin));

@@ -79,17 +79,17 @@ namespace EdaSimulator.Engines.Simulation
             sb.AppendLine("* --- Simulation Control ---");
             if (!string.IsNullOrWhiteSpace(simulationDirective))
             {
+                // Explicit directive from caller takes priority (e.g., .tran, .ac dec, .dc)
                 sb.AppendLine(simulationDirective);
             }
-            
-            sb.AppendLine();
-            
-            // --- Analysis Directives ---
-            string directive = schematic.SimConfig.GetSpiceDirective();
-            if (!string.IsNullOrEmpty(directive))
+            else
             {
-                sb.AppendLine(" * Analysis Configuration");
-                sb.AppendLine(directive);
+                // Fall back to schematic-embedded SimConfig directive
+                string configDirective = schematic.SimConfig.GetSpiceDirective();
+                if (!string.IsNullOrEmpty(configDirective))
+                {
+                    sb.AppendLine(configDirective);
+                }
             }
 
             sb.AppendLine();

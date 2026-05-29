@@ -4,9 +4,9 @@ namespace EdaSimulator.Engines.Simulation.Digital
 {
     public class AndGate : DigitalComponent
     {
-        public DigitalNode InputA { get; set; }
-        public DigitalNode InputB { get; set; }
-        public DigitalNode Output { get; set; }
+        public DigitalNode? InputA { get; set; }
+        public DigitalNode? InputB { get; set; }
+        public DigitalNode? Output { get; set; }
 
         public AndGate(string designator, DigitalSimulator sim) : base(designator, sim) { }
 
@@ -27,9 +27,9 @@ namespace EdaSimulator.Engines.Simulation.Digital
 
     public class OrGate : DigitalComponent
     {
-        public DigitalNode InputA { get; set; }
-        public DigitalNode InputB { get; set; }
-        public DigitalNode Output { get; set; }
+        public DigitalNode? InputA { get; set; }
+        public DigitalNode? InputB { get; set; }
+        public DigitalNode? Output { get; set; }
 
         public OrGate(string designator, DigitalSimulator sim) : base(designator, sim) { }
 
@@ -49,8 +49,8 @@ namespace EdaSimulator.Engines.Simulation.Digital
 
     public class NotGate : DigitalComponent
     {
-        public DigitalNode Input { get; set; }
-        public DigitalNode Output { get; set; }
+        public DigitalNode? Input { get; set; }
+        public DigitalNode? Output { get; set; }
 
         public NotGate(string designator, DigitalSimulator sim) : base(designator, sim) { }
 
@@ -68,10 +68,10 @@ namespace EdaSimulator.Engines.Simulation.Digital
 
     public class DFlipFlop : DigitalComponent
     {
-        public DigitalNode D { get; set; }
-        public DigitalNode Clk { get; set; }
-        public DigitalNode Q { get; set; }
-        public DigitalNode QNot { get; set; }
+        public DigitalNode? D { get; set; }
+        public DigitalNode? Clk { get; set; }
+        public DigitalNode? Q { get; set; }
+        public DigitalNode? QNot { get; set; }
 
         private LogicState _lastClk = LogicState.Undefined;
 

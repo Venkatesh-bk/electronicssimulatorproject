@@ -12,8 +12,8 @@ namespace EdaSimulator.UI.Tools
         public string ToolName => "Wiring Tool";
 
         private SchematicViewModel _schematic;
-        private PinNodeViewModel _startPin;
-        private WireViewModel _currentWire;
+        private PinNodeViewModel? _startPin;
+        private WireViewModel? _currentWire;
 
         public WiringTool(SchematicViewModel schematic)
         {
@@ -54,20 +54,27 @@ namespace EdaSimulator.UI.Tools
                     
                     // BRIDGING THE VISUAL TO THE CORE LOGIC:
                     Guid activeNetId;
+                    string netName;
                     
                     // Does the start pin already connect to a simulated net?
                     if (_startPin.CorePin.ConnectedNetId.HasValue && _startPin.CorePin.ConnectedNetId.Value != Guid.Empty)
                     {
                         activeNetId = _startPin.CorePin.ConnectedNetId.Value;
+                        var existingNet = _schematic.CoreSchematic.GetNetById(activeNetId);
+                        netName = existingNet?.Name ?? activeNetId.ToString("N")[..6];
                     }
                     else if (endPin.CorePin.ConnectedNetId.HasValue && endPin.CorePin.ConnectedNetId.Value != Guid.Empty)
                     {
                         activeNetId = endPin.CorePin.ConnectedNetId.Value;
+                        var existingNet = _schematic.CoreSchematic.GetNetById(activeNetId);
+                        netName = existingNet?.Name ?? activeNetId.ToString("N")[..6];
                     }
                     else 
                     {
-                        // Generate a physical electrical simulation net
-                        var newNet = _schematic.CoreSchematic.CreateNet("N_" + Guid.NewGuid().ToString().Substring(0, 4));
+                        // Generate a unique net name. Using 8 chars (not 4) avoids realistic collision.
+                        string uniqueSuffix = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+                        netName = "N_" + uniqueSuffix;
+                        var newNet = _schematic.CoreSchematic.CreateNet(netName);
                         activeNetId = newNet.Id;
                     }
 
@@ -75,7 +82,15 @@ namespace EdaSimulator.UI.Tools
                     _schematic.CoreSchematic.ConnectPinToNet(_startPin.CorePin, activeNetId);
                     _schematic.CoreSchematic.ConnectPinToNet(endPin.CorePin, activeNetId);
                     
-                    _currentWire.TargetNetId = activeNetId;
+                    // ── Step 1: Stamp wire metadata for drag-tracking and net labeling ──
+                    _currentWire.TargetNetId  = activeNetId;
+                    _currentWire.StartPinId   = _startPin.CorePin.Id;
+                    _currentWire.EndPinId     = endPin.CorePin.Id;
+                    _currentWire.NetLabel     = netName;
+
+                    // ── Step 2: Update visual pin state so dots turn green immediately ──
+                    _startPin.ConnectedNetName = netName;
+                    endPin.ConnectedNetName    = netName;
 
                     // Clean state machine back to empty wiring ready for next line
                     _startPin = null;

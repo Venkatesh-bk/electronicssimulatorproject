@@ -348,6 +348,34 @@ namespace EdaSimulator.UI.Views
                 "About EDA Simulator", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private void MenuSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.Owner = this;
+            settingsWindow.ShowDialog();
+        }
+
+        private void MenuHelp_Click(object sender, RoutedEventArgs e)
+        {
+            var helpWindow = new HelpWindow();
+            helpWindow.Owner = this;
+            helpWindow.ShowDialog();
+        }
+
+        private void MenuActivation_Click(object sender, RoutedEventArgs e)
+        {
+            var activationWindow = new ActivationWindow();
+            activationWindow.Owner = this;
+            activationWindow.ShowDialog();
+        }
+
+        private void MenuComponentHub_Click(object sender, RoutedEventArgs e)
+        {
+            var hubWindow = new ComponentHubWindow();
+            hubWindow.Owner = this;
+            hubWindow.ShowDialog();
+        }
+
         private void MenuKnowledgeBase_Click(object sender, RoutedEventArgs e)
         {
             var kbPath = System.IO.Path.Combine(
