@@ -29,7 +29,16 @@ namespace EdaSimulator.Engines.Simulation
             sb.AppendLine(".options savecurrents");
             sb.AppendLine();
 
-            // 1.5 Includes
+            // 1.5 Includes — bundled model library first, then user includes
+            sb.AppendLine("* --- Model Libraries ---");
+
+            // Auto-inject bundled SPICE model library if available
+            var modelLib = ModelLibraryService.Instance;
+            if (modelLib.IsLoaded && !string.IsNullOrEmpty(modelLib.LibraryFilePath))
+            {
+                sb.AppendLine($".include \"{modelLib.LibraryFilePath}\"");
+            }
+
             if (schematic.SpiceIncludes.Count > 0)
             {
                 sb.AppendLine("* --- Includes ---");

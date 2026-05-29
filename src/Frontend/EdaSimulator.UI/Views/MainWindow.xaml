@@ -432,6 +432,62 @@
                                 </Style>
                             </ToggleButton.Style>
                         </ToggleButton>
+
+                        <!-- ═══ Simulation Analysis Type Selector ═══ -->
+                        <Separator Margin="12,0" Background="#FF3F3F46"/>
+                        <TextBlock Text="Analysis:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
+                        <ComboBox SelectedItem="{Binding SimulationType}" Width="110" VerticalAlignment="Center"
+                                  Background="#FF3F3F46" Foreground="White" BorderBrush="#FF5F5F66">
+                            <ComboBoxItem Content="Transient"/>
+                            <ComboBoxItem Content="AC Sweep"/>
+                            <ComboBoxItem Content="DC Sweep"/>
+                        </ComboBox>
+
+                        <!-- Transient params (shown only for Transient) -->
+                        <StackPanel Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="AC Sweep">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="DC Sweep">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="Step:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="0,0,4,0"/>
+                            <TextBox Text="{Binding TransientStepTime, UpdateSourceTrigger=PropertyChanged}" Width="55"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Stop:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding TransientStopTime, UpdateSourceTrigger=PropertyChanged}" Width="55"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- AC params (shown only for AC Sweep) -->
+                        <StackPanel Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="AC Sweep">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="From:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="0,0,4,0"/>
+                            <TextBox Text="{Binding AcStartFreq, UpdateSourceTrigger=PropertyChanged}" Width="55"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="To:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding AcStopFreq, UpdateSourceTrigger=PropertyChanged}" Width="60"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Dec:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding AcPointsPerDecade, UpdateSourceTrigger=PropertyChanged}" Width="40"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                     
                     <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
@@ -775,6 +831,25 @@
                         Margin="0,8,0,4" Padding="8,5" Background="#FF3F3F46" Foreground="White" BorderThickness="0"/>
                 <Button Content="Run Simulation ▶" Command="{Binding SimulateCommand}"
                         Margin="0,0,0,4" Padding="8,5" Background="#FF2E8B57" Foreground="White" BorderThickness="0"/>
+
+                <Separator Background="#FF3F3F46" Margin="0,12,0,8"/>
+
+                <!-- Section: SPICE Model Library -->
+                <TextBlock Text="📚 SPICE Models" FontWeight="Bold" FontSize="13" Foreground="#FFFF8C00" Margin="0,0,0,6"/>
+
+                <!-- Status indicator -->
+                <Border Background="#FF1E2A1E" BorderBrush="#FF2E8B57" BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,0,0,8">
+                    <TextBlock Foreground="#FF4EC9B0" FontSize="10" TextWrapping="Wrap"
+                               Text="✔ eda_components.lib loaded&#x0a;Diodes • BJT NPN/PNP • MOSFET • Op-Amps&#x0a;Regulators • LEDs • Crystal&#x0a;&#x0a;All models auto-included in netlists."/>
+                </Border>
+
+                <!-- Quick reference -->
+                <TextBlock Text="Available Models:" Foreground="#FFAAAAAA" FontSize="11" Margin="0,0,0,4"/>
+                <Border Background="#FF1E1E1E" BorderBrush="#FF3F3F46" BorderThickness="1" Padding="6" CornerRadius="3">
+                    <TextBox IsReadOnly="True" Background="Transparent" Foreground="#FF888888"
+                             FontFamily="Consolas" FontSize="9" BorderThickness="0" TextWrapping="Wrap"
+                             Text="Diodes: 1N4148, 1N4007, 1N5817&#x0a;Schottky: BAT54&#x0a;Zener: BZX79C5V1, BZX79C12&#x0a;NPN: 2N2222, 2N3904, BC547B&#x0a;PNP: 2N3906, BC557B&#x0a;N-MOS: 2N7002, IRF540N, BS170&#x0a;P-MOS: IRF9540N, BS250&#x0a;Op-Amp: LM358, LM741, TL071&#x0a;         LM324, NE5532&#x0a;Reg: LM7805, LM7812, LM317&#x0a;LED: LED_RED, LED_GREEN, LED_BLUE"/>
+                </Border>
 
             </StackPanel>
             </ScrollViewer>

@@ -46,7 +46,7 @@ namespace EdaSimulator.UI.Tools
                 if (target is PinNodeViewModel endPin && endPin != _startPin)
                 {
                     // Snap the final trackers strictly to the physical endpoint
-                    var pts = new System.Windows.Media.PointCollection(_currentWire.Points);
+                    var pts = new System.Windows.Media.PointCollection(_currentWire!.Points);
                     int count = pts.Count;
                     pts[count - 2] = new System.Windows.Point(endPin.X, pts[count - 3].Y);
                     pts[count - 1] = new System.Windows.Point(endPin.X, endPin.Y);
@@ -79,7 +79,7 @@ namespace EdaSimulator.UI.Tools
                     }
 
                     // Perform the actual physics routing
-                    _schematic.CoreSchematic.ConnectPinToNet(_startPin.CorePin, activeNetId);
+                    _schematic.CoreSchematic.ConnectPinToNet(_startPin!.CorePin, activeNetId);
                     _schematic.CoreSchematic.ConnectPinToNet(endPin.CorePin, activeNetId);
                     
                     // ── Step 1: Stamp wire metadata for drag-tracking and net labeling ──
@@ -89,7 +89,7 @@ namespace EdaSimulator.UI.Tools
                     _currentWire.NetLabel     = netName;
 
                     // ── Step 2: Update visual pin state so dots turn green immediately ──
-                    _startPin.ConnectedNetName = netName;
+                    _startPin!.ConnectedNetName = netName;
                     endPin.ConnectedNetName    = netName;
 
                     // Clean state machine back to empty wiring ready for next line
@@ -100,7 +100,7 @@ namespace EdaSimulator.UI.Tools
                 {
                     // User clicked in empty canvas space to place an absolute corner anchor
                     // Lock the current corner and tracking end
-                    var pts = new System.Windows.Media.PointCollection(_currentWire.Points);
+                    var pts = new System.Windows.Media.PointCollection(_currentWire!.Points);
                     var n = pts.Count;
                     var lockedEnd = pts[n - 1];
 

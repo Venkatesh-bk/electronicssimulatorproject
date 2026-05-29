@@ -22,8 +22,8 @@ namespace EdaSimulator.UI.Views
             DataContext = new MainViewModel();
         }
 
-        private MainViewModel ViewModel => DataContext as MainViewModel;
-        private ViewModels.Canvas.SchematicViewModel CanvasViewModel => ViewModel?.ActiveSchematicViewModel;
+        private MainViewModel? ViewModel => DataContext as MainViewModel;
+        private ViewModels.Canvas.SchematicViewModel? CanvasViewModel => ViewModel?.ActiveSchematicViewModel;
 
         // --- Viewport Physics and Routing Intercepts ---
         private const double GRID_SIZE = 10.0;
@@ -77,7 +77,7 @@ namespace EdaSimulator.UI.Views
 
             // Enforce Grid Snapping natively against the core abstraction layer
             var grav = ApplyGravity(pos);
-            CanvasViewModel.ActiveTool.OnPointerDown(grav.X, grav.Y, target);
+            CanvasViewModel.ActiveTool.OnPointerDown(grav.X, grav.Y, target!);
         }
 
         private void SchematicCanvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -152,7 +152,7 @@ namespace EdaSimulator.UI.Views
                 {
                     if (ToolboxList.SelectedItem is ListBoxItem item)
                     {
-                        string componentType = item.Tag as string;
+                        string? componentType = item.Tag as string;
                         if (!string.IsNullOrEmpty(componentType))
                         {
                             DragDrop.DoDragDrop(ToolboxList, componentType, DragDropEffects.Copy);
@@ -188,7 +188,7 @@ namespace EdaSimulator.UI.Views
                 string componentType = (string)e.Data.GetData(DataFormats.StringFormat);
                 var pos = e.GetPosition(SchematicItemsControl);
 
-                Component coreComponent = null;
+                Component? coreComponent = null;
 
                 switch (componentType)
                 {

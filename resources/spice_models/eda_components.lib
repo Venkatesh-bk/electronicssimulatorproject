@@ -1,0 +1,164 @@
+* ============================================================
+* EDA Simulator Platform — Built-in SPICE Model Library
+* Source: Industry-standard parameters from manufacturer datasheets
+* Compatible with ngspice 26+
+* ============================================================
+
+* ─── Diodes ─────────────────────────────────────────────────
+
+* 1N4148 — Small Signal Switching Diode
+* Source: Vishay datasheet, standard Berkley SPICE model
+.MODEL 1N4148 D(IS=2.52e-9 RS=0.568 N=1.752 CJO=4e-12 M=0.4 TT=20e-9 BV=100 IBV=100e-6 TNOM=27)
+
+* 1N4007 — 1A General Purpose Rectifier
+* Source: ON Semiconductor, ngspice built-in compatible
+.MODEL 1N4007 D(IS=7.02e-9 RS=0.042 N=1.994 BV=1000 IBV=5e-8 CJO=13.1e-12 M=0.333 FC=0.5 TT=5.76e-6 TNOM=27)
+
+* 1N5817 — 1A Schottky Barrier Rectifier
+.MODEL 1N5817 D(IS=3.14e-6 RS=0.035 N=1.020 BV=20 IBV=1e-4 CJO=150e-12 M=0.333 FC=0.5 TT=5e-9 TNOM=27)
+
+* BAT54 — Small Signal Schottky Diode
+.MODEL BAT54 D(IS=2.5e-8 RS=0.1 N=1.05 BV=30 IBV=2e-5 CJO=10e-12 M=0.334 TT=0 TNOM=27)
+
+* BZX79-C5V1 — 5.1V Zener Diode
+.MODEL BZX79C5V1 D(IS=1e-14 RS=10 N=1 BV=5.1 IBV=5e-3 CJO=10e-12 TNOM=27)
+
+* BZX79-C12 — 12V Zener Diode
+.MODEL BZX79C12 D(IS=1e-14 RS=10 N=1 BV=12 IBV=1e-3 CJO=10e-12 TNOM=27)
+
+* ─── BJT NPN ─────────────────────────────────────────────────
+
+* 2N2222A — NPN General Purpose Amplifier
+* Source: Motorola/ON Semi datasheet
+.MODEL 2N2222 NPN(IS=3.108e-14 BF=255.9 NF=1 VAF=161.7 IKF=0.3 ISE=4.439e-14 NE=1.5 BR=6.092 NR=1 VAR=18.2 IKR=12e-3 ISC=2.458e-13 NC=2 RC=0.3 CJE=22.01e-12 VJE=0.7 MJE=0.377 CJC=7.306e-12 VJC=0.5 MJC=0.3018 TF=411.1e-12 XTF=3 VTF=1.7 ITF=0.6 TR=46.91e-9 TNOM=27)
+
+* 2N3904 — NPN General Purpose Amplifier (TO-92)
+.MODEL 2N3904 NPN(IS=6.734e-15 XTI=3 EG=1.11 VAF=74.03 BF=416.4 NE=1.259 ISE=6.734e-15 IKF=66.78e-3 XTB=1.5 BR=0.7371 NC=2 ISC=0 IKR=0 RC=1 CJC=3.638e-12 MJC=0.3085 VJC=0.75 FC=0.5 CJE=4.493e-12 MJE=0.2593 VJE=0.75 TR=239.5e-9 TF=301.2e-12 ITF=0.4 VTF=4 XTF=2 RB=10 TNOM=27)
+
+* BC547B — NPN Small Signal Transistor
+.MODEL BC547B NPN(IS=1.8e-14 BF=400 VAF=80 IKF=0.1 NE=1.4 ISE=5e-14 BR=3.5 RC=0.5 RE=0.4 RB=30 CJC=4.5e-12 MJC=0.48 VJC=0.5 CJE=13e-12 VJE=0.5 MJE=0.55 TF=500e-12 TT=10e-9 XTF=6 VTF=3 ITF=30e-3 TNOM=27)
+
+* BC817 — NPN Small Signal Transistor (SMD)
+.MODEL BC817 NPN(IS=5e-14 BF=300 NF=1 VAF=50 IKF=0.2 NE=1.5 ISE=1e-13 BR=5 RC=0.5 CJC=3e-12 CJE=10e-12 TF=450e-12 TNOM=27)
+
+* ─── BJT PNP ─────────────────────────────────────────────────
+
+* 2N3906 — PNP General Purpose Amplifier (TO-92)
+.MODEL 2N3906 PNP(IS=1.41e-15 XTI=3 EG=1.11 VAF=18.7 BF=180.7 NE=1.3 ISE=0 IKF=80e-3 XTB=1.5 BR=4.977 NC=2 ISC=0 IKR=0 RC=2.5 CJC=9.728e-12 MJC=0.5776 VJC=0.75 FC=0.5 CJE=8.063e-12 MJE=0.3677 VJE=0.75 TR=33.42e-9 TF=179.3e-12 ITF=0.4 VTF=4 XTF=6 RB=10 TNOM=27)
+
+* BC557B — PNP Small Signal Transistor
+.MODEL BC557B PNP(IS=6.5e-15 BF=400 VAF=50 IKF=0.1 NE=1.4 ISE=2e-14 BR=4 RC=0.5 RE=0.4 RB=30 CJC=4.5e-12 CJE=13e-12 TF=500e-12 TNOM=27)
+
+* ─── MOSFET N-Channel ─────────────────────────────────────────
+
+* 2N7002 — N-Channel Enhancement MOSFET (Small Signal, TO-236)
+.MODEL 2N7002 NMOS(VTO=2.5 KP=80e-3 GAMMA=0 PHI=0.6 LAMBDA=0.017 CGSO=50e-12 CGDO=5e-12 TNOM=27)
+
+* IRF540N — N-Channel Power MOSFET (TO-220, 100V 33A)
+.MODEL IRF540N NMOS(VTO=3.7 KP=10 GAMMA=0 PHI=0.6 LAMBDA=0.01 CGSO=1.9e-9 CGDO=70e-12 RDS=0.044 TNOM=27)
+
+* BS170 — N-Channel Enhancement MOSFET (Signal)
+.MODEL BS170 NMOS(VTO=2.0 KP=60e-3 LAMBDA=0.02 CGSO=30e-12 CGDO=3e-12 TNOM=27)
+
+* ─── MOSFET P-Channel ─────────────────────────────────────────
+
+* IRF9540N — P-Channel Power MOSFET (TO-220)
+.MODEL IRF9540N PMOS(VTO=-3.8 KP=5 LAMBDA=0.02 CGSO=1.8e-9 CGDO=60e-12 RDS=0.117 TNOM=27)
+
+* BS250 — P-Channel Enhancement MOSFET
+.MODEL BS250 PMOS(VTO=-3.5 KP=40e-3 LAMBDA=0.01 CGSO=20e-12 CGDO=2e-12 TNOM=27)
+
+* ─── Op-Amps (Subcircuit Models) ─────────────────────────────
+
+* LM358 — Dual General Purpose Op-Amp (simplified behavioral)
+.SUBCKT LM358 IN+ IN- V+ V- OUT
++ params: avol=100k rin=1Meg rout=100 voh=2 vol=0.02 isc=40m
+Rin  IN+ IN- {rin}
+Ediff vdiff 0 IN+ IN- 1
+Aout out 0 vdiff 0 0 0 0 0 AOUT=-{avol} OUTH={v+-voh} OUTL={v-+vol}
+Rout vdiff out {rout}
+.ENDS LM358
+
+* LM741 — Classic Op-Amp (simplified)
+.SUBCKT LM741 IN+ IN- V+ V- OUT
+Rin  IN+ IN- 2Meg
+Ediff VDIFF 0 IN+ IN- 100k
+Rout VDIFF OUT 75
+Cout OUT 0 30p
+.ENDS LM741
+
+* TL071 — JFET Input Op-Amp
+.SUBCKT TL071 IN+ IN- V+ V- OUT
+Rin  IN+ IN- 1T
+Ediff VDIFF 0 IN+ IN- 200k
+Rout VDIFF OUT 100
+Cout OUT 0 10p
+.ENDS TL071
+
+* LM324 — Quad Op-Amp (single section)
+.SUBCKT LM324 IN+ IN- V+ V- OUT
+Rin  IN+ IN- 1Meg
+Ediff VDIFF 0 IN+ IN- 100k
+Rout VDIFF OUT 50
+.ENDS LM324
+
+* NE5532 — Low Noise Op-Amp
+.SUBCKT NE5532 IN+ IN- V+ V- OUT
+Rin  IN+ IN- 300k
+Ediff VDIFF 0 IN+ IN- 100k
+Rout VDIFF OUT 0.3
+Cout OUT 0 5p
+.ENDS NE5532
+
+* ─── Voltage Regulators ─────────────────────────────────────
+
+* 7805 — +5V Positive Voltage Regulator
+.SUBCKT LM7805 IN GND OUT
+Rin IN GND 100k
+Vref vref GND DC 5.0
+Eout OUT GND vref GND 1.0
+Rout OUT GND 1k
+.ENDS LM7805
+
+* 7812 — +12V Positive Voltage Regulator
+.SUBCKT LM7812 IN GND OUT
+Rin IN GND 100k
+Vref vref GND DC 12.0
+Eout OUT GND vref GND 1.0
+Rout OUT GND 1k
+.ENDS LM7812
+
+* 7905 — -5V Negative Voltage Regulator
+.SUBCKT LM7905 IN GND OUT
+Rin IN GND 100k
+Vref vref GND DC -5.0
+Eout OUT GND vref GND 1.0
+Rout OUT GND 1k
+.ENDS LM7905
+
+* LM317 — Adjustable Positive Voltage Regulator
+.SUBCKT LM317 IN ADJ OUT
+Rin IN OUT 1k
+Vref vref ADJ DC 1.25
+Eout OUT ADJ vref ADJ 1.0
+.ENDS LM317
+
+* ─── Miscellaneous ──────────────────────────────────────────
+
+* LED Red — Typical forward voltage ~2.0V
+.MODEL LED_RED D(IS=1e-20 RS=5 N=2 BV=5 CJO=10p M=0.333 TT=5n TNOM=27)
+
+* LED Green — Typical forward voltage ~2.2V
+.MODEL LED_GREEN D(IS=1e-22 RS=5 N=2.2 BV=5 CJO=10p M=0.333 TT=5n TNOM=27)
+
+* LED Blue/White — Typical forward voltage ~3.0V
+.MODEL LED_BLUE D(IS=1e-24 RS=5 N=3 BV=5 CJO=10p M=0.333 TT=5n TNOM=27)
+
+* Crystal Oscillator — 16 MHz (for MCU circuits)
+.SUBCKT XTAL 1 2
+* Equivalent circuit: Rs, Ls, Cs series branch || Cp parallel
+Rs 1 n1 12
+Ls n1 n2 0.015
+Cs n2 2 7e-15
+Cp 1 2 4.5p
+.ENDS XTAL

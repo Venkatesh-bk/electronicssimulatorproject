@@ -48,7 +48,7 @@ namespace EdaSimulator.Engines.Physics
 
             // Linear interpolation of real and imaginary parts
             double lowerFreq = -1, upperFreq = -1;
-            Complex[,] lowerMat = null, upperMat = null;
+            Complex[,]? lowerMat = null, upperMat = null;
 
             foreach (var kvp in DataMatrix)
             {

@@ -36,7 +36,7 @@ namespace EdaSimulator.Engines.Simulation
             var models = new List<SpiceLibraryModel>();
             var lines = File.ReadAllLines(filePath);
             
-            SpiceLibraryModel currentModel = null;
+            SpiceLibraryModel? currentModel = null;
             
             for (int i = 0; i < lines.Length; i++)
             {

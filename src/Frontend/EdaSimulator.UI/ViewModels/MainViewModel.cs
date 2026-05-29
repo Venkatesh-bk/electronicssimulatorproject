@@ -199,7 +199,8 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             }
 
             var exporter = new SpiceNetlistExporter();
-            var netlist = exporter.GenerateNetlist(ActiveSchematicViewModel.CoreSchematic);
+            var directive = BuildSimDirective();
+            var netlist = exporter.GenerateNetlist(ActiveSchematicViewModel.CoreSchematic, directive);
             NetlistOutput = drcResult.logOutput + netlist;
 
             _lastExecutedNetlistHash = netlist; // Anchor the graph hash for Live Tuning

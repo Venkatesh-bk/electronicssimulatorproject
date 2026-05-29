@@ -9,7 +9,7 @@ namespace EdaSimulator.UI.Views
 {
     public partial class SplashWindow : Window
     {
-        private DispatcherTimer _timer;
+        private DispatcherTimer _timer = null!;
         private int _progressValue = 0;
 
         public SplashWindow()

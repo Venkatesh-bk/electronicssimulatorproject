@@ -99,18 +99,18 @@ namespace EdaSimulator.Engines.IO
             {
                 Component comp = rec.TypeName switch
                 {
-                    nameof(Resistor)      => new Resistor(rec.Designator, rec.Value),
-                    nameof(Capacitor)     => new Capacitor(rec.Designator, rec.Value),
-                    nameof(Inductor)      => new Inductor(rec.Designator, rec.Value),
-                    nameof(VoltageSource) => new VoltageSource(rec.Designator, rec.Value),
-                    nameof(CurrentSource) => new CurrentSource(rec.Designator, rec.Value),
-                    nameof(Diode)         => new Diode(rec.Designator, rec.Value),
-                    nameof(BJT)           => new BJT(rec.Designator, rec.Value),
-                    nameof(MOSFET)        => new MOSFET(rec.Designator, rec.Value),
+                    nameof(Resistor)      => new Resistor(rec.Designator, rec.Value ?? "1k"),
+                    nameof(Capacitor)     => new Capacitor(rec.Designator, rec.Value ?? "1u"),
+                    nameof(Inductor)      => new Inductor(rec.Designator, rec.Value ?? "1m"),
+                    nameof(VoltageSource) => new VoltageSource(rec.Designator, rec.Value ?? "DC 5"),
+                    nameof(CurrentSource) => new CurrentSource(rec.Designator, rec.Value ?? "DC 1m"),
+                    nameof(Diode)         => new Diode(rec.Designator, rec.Value ?? "1N4148"),
+                    nameof(BJT)           => new BJT(rec.Designator, rec.Value ?? "2N2222"),
+                    nameof(MOSFET)        => new MOSFET(rec.Designator, rec.Value ?? "2N7002"),
                     nameof(OpAmp)         => new OpAmp(rec.Designator, rec.Value ?? "LM358"),
                     nameof(GroundSymbol)  => new GroundSymbol(rec.Designator),
                     nameof(PowerRail)     => new PowerRail(rec.Designator,
-                        double.TryParse(rec.Value.Replace("V",""), out double v) ? v : 5.0),
+                        double.TryParse((rec.Value ?? "5V").Replace("V",""), out double v) ? v : 5.0),
                     _ => throw new NotSupportedException($"Unknown component type: {rec.TypeName}")
                 };
 

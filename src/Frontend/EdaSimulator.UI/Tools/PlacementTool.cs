@@ -12,7 +12,7 @@ namespace EdaSimulator.UI.Tools
         public string ToolName => "Placement Tool";
 
         private SchematicViewModel _schematic;
-        private ComponentNodeViewModel _ghostComponent;
+        private ComponentNodeViewModel? _ghostComponent;
 
         public PlacementTool(SchematicViewModel schematic, Component coreComponentToPlace)
         {
