@@ -68,6 +68,18 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private string _transientStepTime = "1u";
 
+        // DC Sweep parameters
+        [ObservableProperty]
+        private string _dcSweepComponent = "V1";
+
+        [ObservableProperty]
+        private string _dcSweepStart = "0";
+
+        [ObservableProperty]
+        private string _dcSweepStop = "5";
+
+        [ObservableProperty]
+        private string _dcSweepStep = "0.1";
 
         [ObservableProperty]
         private string _pythonScriptCode = @"import cupy as cp
@@ -129,6 +141,15 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
 
         // ── Phase 7: PCB Layout ViewModel ──────────────────────────────────────────
         public PcbLayoutViewModel PcbVM { get; } = new PcbLayoutViewModel();
+
+        // ── Oscilloscope: persistent singleton window ────────────────────────────────
+        private Views.OscilloscopeWindow? _scopeWindow;
+        private Views.OscilloscopeWindow GetScopeWindow()
+        {
+            if (_scopeWindow == null || !_scopeWindow.IsLoaded)
+                _scopeWindow = new Views.OscilloscopeWindow();
+            return _scopeWindow;
+        }
 
         public MainViewModel()
         {
@@ -250,7 +271,7 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             {
                 var data = RawFileParser.Parse(result.RawFilePath);
 
-                var scopeWindow = new Views.OscilloscopeWindow();
+                var scopeWindow = GetScopeWindow();
                 scopeWindow.ViewModel.ClearTraces();
 
                 // Require a time axis — transient analysis
@@ -294,6 +315,13 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                     // DC sweep or operating point — show first non-sweep variable
                     NetlistOutput += "\n[INFO] Simulation complete. No time/frequency axis found in .raw output.";
                 }
+
+                int traceCount = scopeWindow.ViewModel.TraceInfos.Count;
+                StatusText = $"Simulation complete — {traceCount} trace(s) plotted  |  Mode: {SimulationType}";
+            }
+            else
+            {
+                StatusText = $"Simulation complete — no .raw data output (check netlist for errors)";
             }
         }
 
@@ -537,7 +565,7 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             return SimulationType switch
             {
                 "AC Sweep"  => $".ac dec {AcPointsPerDecade} {AcStartFreq} {AcStopFreq}",
-                "DC Sweep"  => ".dc V1 0 5 0.1",
+                "DC Sweep"  => $".dc {DcSweepComponent} {DcSweepStart} {DcSweepStop} {DcSweepStep}",
                 _           => $".tran {TransientStepTime} {TransientStopTime}"
             };
         }

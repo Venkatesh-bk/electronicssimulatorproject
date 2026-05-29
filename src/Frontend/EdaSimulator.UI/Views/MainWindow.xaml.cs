@@ -203,6 +203,15 @@ namespace EdaSimulator.UI.Views
                     case "MOSFET": coreComponent = new MOSFET(GetNextDesignator("M"), "2N7002"); break;
                     case "OpAmp": coreComponent = new OpAmp(GetNextDesignator("X"), "LM358"); break;
 
+                    // Sinusoidal voltage source: SIN(offset amplitude frequency)
+                    case "SinVSource": coreComponent = new VoltageSource(GetNextDesignator("V"), "SIN(0 5 1k)"); break;
+
+                    // Digital gates — mapped to generic 2-input logic gate subcircuit
+                    // In SPICE they can reference 74HC logic family subcircuits
+                    case "NandGate": coreComponent = new OpAmp(GetNextDesignator("U"), "74HC00"); break;
+                    case "NorGate":  coreComponent = new OpAmp(GetNextDesignator("U"), "74HC02"); break;
+                    case "XorGate":  coreComponent = new OpAmp(GetNextDesignator("U"), "74HC86"); break;
+
                     // === Power Symbols ===
                     case "Ground": coreComponent = new GroundSymbol(GetNextDesignator("GND")); break;
                     case "VCC":    coreComponent = new PowerRail(GetNextDesignator("VCC"), 5.0); break;

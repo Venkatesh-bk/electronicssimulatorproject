@@ -137,10 +137,17 @@
                     <ListBoxItem Content="Op-Amp" Tag="OpAmp" Foreground="#FF569CD6" />
 
                     <!-- Phase 4 Digital Gates -->
-                    <ListBoxItem Content="AND Gate" Tag="AndGate" Foreground="#FF4EC9B0" />
-                    <ListBoxItem Content="OR Gate" Tag="OrGate" Foreground="#FF4EC9B0" />
-                    <ListBoxItem Content="NOT Gate" Tag="NotGate" Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="AND Gate"  Tag="AndGate"  Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="OR Gate"   Tag="OrGate"   Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="NAND Gate" Tag="NandGate" Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="NOR Gate"  Tag="NorGate"  Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="NOT Gate"  Tag="NotGate"  Foreground="#FF4EC9B0" />
+                    <ListBoxItem Content="XOR Gate"  Tag="XorGate"  Foreground="#FF4EC9B0" />
                     <ListBoxItem Content="D Flip-Flop" Tag="DFlipFlop" Foreground="#FF4EC9B0" />
+
+                    <!-- Sources -->
+                    <ListBoxItem Content="─────────" IsEnabled="False" Foreground="#FF555555"/>
+                    <ListBoxItem Content="~ SIN Source" Tag="SinVSource" Foreground="#FFFFD700" FontWeight="SemiBold"/>
 
                     <!-- Power Symbols -->
                     <ListBoxItem Content="─────────" IsEnabled="False" Foreground="#FF555555"/>
@@ -488,6 +495,32 @@
                                      Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
                             <TextBlock Text="Dec:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
                             <TextBox Text="{Binding AcPointsPerDecade, UpdateSourceTrigger=PropertyChanged}" Width="40"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- DC Sweep params (shown only for DC Sweep) -->
+                        <StackPanel Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="DC Sweep">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="Src:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="0,0,4,0"/>
+                            <TextBox Text="{Binding DcSweepComponent, UpdateSourceTrigger=PropertyChanged}" Width="35"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Start:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding DcSweepStart, UpdateSourceTrigger=PropertyChanged}" Width="40"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Stop:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding DcSweepStop, UpdateSourceTrigger=PropertyChanged}" Width="40"
+                                     Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
+                            <TextBlock Text="Step:" Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" Margin="8,0,4,0"/>
+                            <TextBox Text="{Binding DcSweepStep, UpdateSourceTrigger=PropertyChanged}" Width="40"
                                      Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,1" FontSize="11" VerticalContentAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
