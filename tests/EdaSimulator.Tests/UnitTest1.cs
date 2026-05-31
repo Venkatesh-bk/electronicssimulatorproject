@@ -680,6 +680,28 @@ namespace EdaSimulator.Tests
             var gnd = new Net("0");
             Assert.Throws<InvalidOperationException>(() => gnd.Name = "GND");
         }
+
+        [Fact]
+        public void CentroidExporter_GeneratePickAndPlace_ExportsValidCsv()
+        {
+            var pcb = new EdaSimulator.Engines.PCB.PcbDocument();
+            pcb.Title = "TestBoard";
+            pcb.Footprints.Add(new EdaSimulator.Engines.PCB.PcbFootprint
+            {
+                Designator = "R1",
+                Value = "10k",
+                FootprintId = "R_0805",
+                X = 12.3456,
+                Y = 56.789,
+                Rotation = 90.0,
+                Layer = EdaSimulator.Engines.PCB.PcbLayerType.FCu
+            });
+
+            string csv = EdaSimulator.Engines.PCB.CentroidExporter.GeneratePickAndPlace(pcb);
+
+            Assert.Contains("Designator,Value,Package,MidX,MidY,Rotation,Layer", csv);
+            Assert.Contains("R1,10k,R_0805,12.346,56.789,90.0,FCu", csv);
+        }
     }
 }
 

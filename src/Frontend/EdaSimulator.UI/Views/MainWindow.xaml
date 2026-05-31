@@ -983,6 +983,11 @@
                                                 Command="{Binding ExportBomCommand}"
                                                 CommandParameter="{Binding DataContext.ActiveSchematicViewModel.CoreSchematic, RelativeSource={RelativeSource AncestorType=Grid}}"
                                                 Background="#FF007ACC" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
+                                        <Button Content="Export Pick &amp; Place (CSV)"
+                                                Command="{Binding ExportPickAndPlaceCommand}"
+                                                Background="#FF8E2D" Foreground="White" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,8"/>
 
                                         <Separator Background="#FF3F3F46" Margin="0,0,0,8"/>

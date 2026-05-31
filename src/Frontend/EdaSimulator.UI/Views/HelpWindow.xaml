@@ -136,6 +136,31 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- FreeRouting Setup -->
+            <TabItem Header="🛠  FreeRouting">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="FreeRouting Auto-Router Setup" FontSize="16" FontWeight="Bold"
+                                   Foreground="#FF5BB4FF" Margin="0,0,0,14"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#FFCCCCCC" LineHeight="22" FontSize="13">
+                            <Run>The platform includes a built-in Specctra DSN exporter and SES importer to integrate with FreeRouting, an industry-standard open-source auto-router.</Run>
+                            <LineBreak/><LineBreak/>
+                            <Run FontWeight="Bold" Foreground="#FF9DCBF5">1. Download FreeRouting</Run>
+                            <LineBreak/>
+                            <Run>Download the executable jar or app from the official repository (https://github.com/freerouting/freerouting).</Run>
+                            <LineBreak/><LineBreak/>
+                            <Run FontWeight="Bold" Foreground="#FF9DCBF5">2. Configure Path in Preferences</Run>
+                            <LineBreak/>
+                            <Run>Open Preferences (Ctrl+,), locate the "FreeRouting Path" setting under the PCB section, and click "Browse" to select your downloaded FreeRouting executable/JAR.</Run>
+                            <LineBreak/><LineBreak/>
+                            <Run FontWeight="Bold" Foreground="#FF9DCBF5">3. Run the Auto-Router</Run>
+                            <LineBreak/>
+                            <Run>Once configured, click "Auto-Route" in the PCB Layout toolbar. The platform will automatically export the Specctra DSN netlist, launch FreeRouting in the background to calculate the trace topology, and import the resulting Specctra SES file back onto your PCB canvas.</Run>
+                        </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <!-- About -->
             <TabItem Header="ℹ  About">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="30">

@@ -614,6 +614,36 @@ namespace EdaSimulator.UI.ViewModels
                 System.Windows.MessageBoxImage.Information);
         }
 
+        [RelayCommand]
+        private void ExportPickAndPlace()
+        {
+            var dlg = new SaveFileDialog
+            {
+                Title      = "Export Pick and Place Centroid File",
+                Filter     = "CSV (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = ".csv",
+                FileName   = _pcbDoc.Title + "_PickAndPlace"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var csv = CentroidExporter.GeneratePickAndPlace(_pcbDoc);
+                System.IO.File.WriteAllText(dlg.FileName, csv);
+
+                System.Windows.MessageBox.Show(
+                    $"Pick & Place data exported successfully:\n{dlg.FileName}",
+                    "Export Complete", System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Export failed:\n{ex.Message}", "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
         // ── Helpers ──────────────────────────────────────────────────────────────────
 
         private string SuggestFootprintId(Component comp) => comp.GetType().Name switch
