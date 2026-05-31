@@ -516,6 +516,78 @@ namespace EdaSimulator.UI.ViewModels
             }
         }
 
+        /// <summary>Imports a KiCad PCB layout file (.kicad_pcb).</summary>
+        [RelayCommand]
+        private void ImportKicad()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Import KiCad PCB Layout (.kicad_pcb)",
+                Filter = "KiCad PCB Layout (*.kicad_pcb)|*.kicad_pcb|All Files (*.*)|*.*"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var doc = EdaSimulator.Engines.IO.KiCadImporter.Import(dlg.FileName);
+                _pcbDoc = doc;
+
+                PcbTitle    = _pcbDoc.Title;
+                BoardWidth  = _pcbDoc.Outline.Width_mm;
+                BoardHeight = _pcbDoc.Outline.Height_mm;
+
+                CanvasFootprints.Clear();
+                CanvasTraces.Clear();
+                CanvasVias.Clear();
+                CanvasRatsnestLines.Clear();
+
+                foreach (var fp in _pcbDoc.Footprints)
+                {
+                    CanvasFootprints.Add(new PcbFootprintVM(fp, OnFootprintMoved));
+                }
+
+                foreach (var trace in _pcbDoc.Traces)
+                {
+                    CanvasTraces.Add(new PcbTraceVM(trace));
+                }
+
+                foreach (var via in _pcbDoc.Vias)
+                {
+                    CanvasVias.Add(new PcbViaVM(via));
+                }
+
+                foreach (var rats in _pcbDoc.Ratsnest)
+                {
+                    CanvasRatsnestLines.Add(new PcbRatsnestLineVM
+                    {
+                        NetName = rats.NetName,
+                        FromDesignator = rats.FromDesignator,
+                        FromPadNumber = rats.FromPadNumber,
+                        ToDesignator = rats.ToDesignator,
+                        ToPadNumber = rats.ToPadNumber
+                    });
+                }
+
+                UpdateRatsnestPositions();
+                RunPcbDrc();
+
+                System.Windows.MessageBox.Show(
+                    $"KiCad PCB layout successfully imported!\n" +
+                    $"- {_pcbDoc.Footprints.Count} footprints loaded\n" +
+                    $"- {_pcbDoc.Traces.Count} tracks loaded\n" +
+                    $"- {_pcbDoc.Vias.Count} vias loaded",
+                    "Import Complete",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"KiCad PCB import failed:\n{ex.Message}", "Import Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
         [RelayCommand]
         private void RunPcbDrc()
         {
@@ -612,6 +684,38 @@ namespace EdaSimulator.UI.ViewModels
                 $"BOM exported: {bom.Count} line items\n{dlg.FileName}",
                 "BOM Exported", System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
+        }
+
+        [RelayCommand]
+        private void ExportBomPdf(Schematic? schematic)
+        {
+            if (schematic == null) return;
+
+            var dlg = new SaveFileDialog
+            {
+                Title      = "Export Bill of Materials to PDF",
+                Filter     = "PDF Documents (*.pdf)|*.pdf|All Files (*.*)|*.*",
+                DefaultExt = ".pdf",
+                FileName   = schematic.Title + "_BOM"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var bom = BomGenerator.GenerateBom(schematic);
+                BomGenerator.ExportBomToPdf(bom, schematic.Title, dlg.FileName);
+
+                System.Windows.MessageBox.Show(
+                    $"BOM exported to PDF: {bom.Count} line items\n{dlg.FileName}",
+                    "BOM Export Complete", System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"BOM PDF export failed:\n{ex.Message}", "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]

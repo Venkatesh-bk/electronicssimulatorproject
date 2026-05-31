@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EdaSimulator.UI.Views"
         xmlns:canvasVm="clr-namespace:EdaSimulator.UI.ViewModels.Canvas"
+        xmlns:helix="http://helix-toolkit.org/wpf"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="800" Width="1280"
         Background="#FF1E1E1E" Foreground="White"
@@ -975,6 +976,13 @@
                                                 Padding="6,4" Margin="0,0,0,8" FontSize="11"
                                                 ToolTip="Import the .ses session file output by FreeRouting"/>
 
+                                         <Button Content="Import KiCad PCB Layout…"
+                                                 Command="{Binding ImportKicadCommand}"
+                                                 Background="#FF2C3E50" Foreground="#FF3498DB"
+                                                 BorderBrush="#FF3498DB" BorderThickness="1"
+                                                 Padding="6,4" Margin="0,0,0,8" FontSize="11"
+                                                 ToolTip="Import footprints, tracks, vias, and outlines from a .kicad_pcb file"/>
+
                                         <Separator Background="#FF3F3F46" Margin="0,0,0,8"/>
 
                                         <Button Content="Run DRC" Command="{Binding RunPcbDrcCommand}"
@@ -992,6 +1000,12 @@
                                                 Background="#FF007ACC" Foreground="White" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
 
+                                        <Button Content="Export BOM (PDF)"
+                                                Command="{Binding ExportBomPdfCommand}"
+                                                CommandParameter="{Binding DataContext.ActiveSchematicViewModel.CoreSchematic, RelativeSource={RelativeSource AncestorType=Grid}}"
+                                                Background="#FF8E44AD" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
                                         <Button Content="Export Pick &amp; Place (CSV)"
                                                 Command="{Binding ExportPickAndPlaceCommand}"
                                                 Background="#FF8E2D" Foreground="White" FontWeight="Bold"
@@ -1001,139 +1015,160 @@
                                         <TextBlock Text="DESIGN RULES" FontWeight="Bold" Foreground="#FF4EC9B0" Margin="0,0,0,4"/>
                                         <TextBlock Text="IPC-2221B Standard" Foreground="#FF888888" FontSize="10" Margin="0,0,0,4"/>
                                         <TextBlock Text="Min Trace: 0.15mm" Foreground="#FFAAAAAA" FontSize="10"/>
-                                        <TextBlock Text="Min Clearance: 0.15mm" Foreground="#FFAAAAAA" FontSize="10"/>
-                                        <TextBlock Text="Min Via Drill: 0.2mm" Foreground="#FFAAAAAA" FontSize="10"/>
-                                        <TextBlock Text="Annular Ring: 0.125mm" Foreground="#FFAAAAAA" FontSize="10"/>
+                                                                      <TextBlock Text="Annular Ring: 0.125mm" Foreground="#FFAAAAAA" FontSize="10"/>
                                         <TextBlock Text="Edge Clearance: 0.5mm" Foreground="#FFAAAAAA" FontSize="10"/>
                                     </StackPanel>
                                 </ScrollViewer>
 
                                 <!-- PCB Canvas -->
-                                <Border Grid.Column="1" Background="#FF1A1A2E" BorderBrush="#FF3F3F46" BorderThickness="1">
-                                    <Grid>
-                                        <!-- Ratsnest Layer -->
-                                        <ItemsControl ItemsSource="{Binding CanvasRatsnestLines}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
-                                                          Stroke="#FF888888" StrokeThickness="1" StrokeDashArray="3 3"
-                                                          Opacity="0.75" ToolTip="{Binding NetName, StringFormat='Net: {0} (Unrouted)'}"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                <TabControl Grid.Column="1" Background="#FF1A1A2E" BorderBrush="#FF3F3F46" BorderThickness="1"
+                                            SelectionChanged="PcbTabControl_SelectionChanged" x:Name="PcbTabControl">
+                                    <!-- 2D View Tab -->
+                                    <TabItem Header="2D Editor" Foreground="#FF4EC9B0" Background="#FF252526">
+                                        <Grid>
+                                            <!-- Ratsnest Layer -->
+                                            <ItemsControl ItemsSource="{Binding CanvasRatsnestLines}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                                              Stroke="#FF888888" StrokeThickness="1" StrokeDashArray="3 3"
+                                                              Opacity="0.75" ToolTip="{Binding NetName, StringFormat='Net: {0} (Unrouted)'}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
 
-                                        <!-- Traces Layer -->
-                                        <ItemsControl ItemsSource="{Binding CanvasTraces}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
-                                                          Stroke="{Binding LayerColor}" StrokeThickness="{Binding Thickness}"
-                                                          StrokeEndLineCap="Round" StrokeStartLineCap="Round"
-                                                          ToolTip="{Binding NetName, StringFormat='Net: {0}'}"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            <!-- Traces Layer -->
+                                            <ItemsControl ItemsSource="{Binding CanvasTraces}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                                              Stroke="{Binding LayerColor}" StrokeThickness="{Binding Thickness}"
+                                                              StrokeEndLineCap="Round" StrokeStartLineCap="Round"
+                                                              ToolTip="{Binding NetName, StringFormat='Net: {0}'}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
 
-                                        <!-- Vias Layer -->
-                                        <ItemsControl ItemsSource="{Binding CanvasVias}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Canvas>
-                                                        <!-- Outer copper annular ring (Gold) -->
-                                                        <Ellipse Width="{Binding OuterDia}" Height="{Binding OuterDia}"
-                                                                 Fill="#FFD7A15C" Stroke="#FFA07030" StrokeThickness="1"
-                                                                 Canvas.Left="{Binding LeftOuter}" Canvas.Top="{Binding TopOuter}"
-                                                                 ToolTip="{Binding NetName, StringFormat='Via Net: {0}'}"/>
-                                                        <!-- Inner drill hole (Black) -->
-                                                        <Ellipse Width="{Binding InnerDia}" Height="{Binding InnerDia}"
-                                                                 Fill="#FF1A1A2E"
-                                                                 Canvas.Left="{Binding LeftInner}" Canvas.Top="{Binding TopInner}"/>
-                                                    </Canvas>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            <!-- Vias Layer -->
+                                            <ItemsControl ItemsSource="{Binding CanvasVias}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Canvas>
+                                                            <!-- Outer copper annular ring (Gold) -->
+                                                            <Ellipse Width="{Binding OuterDia}" Height="{Binding OuterDia}"
+                                                                     Fill="#FFD7A15C" Stroke="#FFA07030" StrokeThickness="1"
+                                                                     Canvas.Left="{Binding LeftOuter}" Canvas.Top="{Binding TopOuter}"
+                                                                     ToolTip="{Binding NetName, StringFormat='Via Net: {0}'}"/>
+                                                            <!-- Inner drill hole (Black) -->
+                                                            <Ellipse Width="{Binding InnerDia}" Height="{Binding InnerDia}"
+                                                                     Fill="#FF1A1A2E"
+                                                                     Canvas.Left="{Binding LeftInner}" Canvas.Top="{Binding TopInner}"/>
+                                                        </Canvas>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
 
-                                        <!-- Footprints Layer -->
-                                        <ItemsControl ItemsSource="{Binding CanvasFootprints}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <Canvas ClipToBounds="True" Background="Transparent"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemContainerStyle>
-                                                <Style TargetType="ContentPresenter">
-                                                    <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
-                                                    <Setter Property="Canvas.Top"  Value="{Binding CanvasY}"/>
-                                                </Style>
-                                            </ItemsControl.ItemContainerStyle>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Width="{Binding Width}" Height="{Binding Height}"
-                                                            Background="#FF1E3A5A" BorderBrush="{Binding LayerColor}"
-                                                            BorderThickness="1" CornerRadius="2"
-                                                            Cursor="Hand" ToolTip="Drag to place footprint"
-                                                            MouseDown="PcbFootprint_MouseDown"
-                                                            MouseMove="PcbFootprint_MouseMove"
-                                                            MouseUp="PcbFootprint_MouseUp">
-                                                        <Grid>
-                                                            <!-- Center text -->
-                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5">
-                                                                <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
-                                                                <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
-                                                            </StackPanel>
+                                            <!-- Footprints Layer -->
+                                            <ItemsControl ItemsSource="{Binding CanvasFootprints}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas ClipToBounds="True" Background="Transparent"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                                                        <Setter Property="Canvas.Top"  Value="{Binding CanvasY}"/>
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding Width}" Height="{Binding Height}"
+                                                                Background="#FF1E3A5A" BorderBrush="{Binding LayerColor}"
+                                                                BorderThickness="1" CornerRadius="2"
+                                                                Cursor="Hand" ToolTip="Drag to place footprint"
+                                                                MouseDown="PcbFootprint_MouseDown"
+                                                                MouseMove="PcbFootprint_MouseMove"
+                                                                MouseUp="PcbFootprint_MouseUp">
+                                                            <Grid>
+                                                                <!-- Center text -->
+                                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5">
+                                                                    <TextBlock Text="{Binding Designator}" Foreground="#FF4EC9B0" FontWeight="Bold" FontSize="9" HorizontalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding Value}" Foreground="#FF888888" FontSize="7" HorizontalAlignment="Center"/>
+                                                                </StackPanel>
 
-                                                            <!-- Individual pads -->
-                                                            <ItemsControl ItemsSource="{Binding VisualPads}">
-                                                                <ItemsControl.ItemsPanel>
-                                                                    <ItemsPanelTemplate>
-                                                                        <Canvas Background="Transparent" IsHitTestVisible="False"/>
-                                                                    </ItemsPanelTemplate>
-                                                                </ItemsControl.ItemsPanel>
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <Border Width="{Binding Width}" Height="{Binding Height}"
-                                                                                Background="{Binding Color}" CornerRadius="1"
-                                                                                Canvas.Left="{Binding Left}" Canvas.Top="{Binding Top}"
-                                                                                ToolTip="{Binding Number, StringFormat='Pad {0}'}">
-                                                                            <TextBlock Text="{Binding Number}" Foreground="Black" FontSize="6" 
-                                                                                       FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                        </Border>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                                                <!-- Individual pads -->
+                                                                <ItemsControl ItemsSource="{Binding VisualPads}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <Canvas Background="Transparent" IsHitTestVisible="False"/>
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Border Width="{Binding Width}" Height="{Binding Height}"
+                                                                                    Background="{Binding Color}" CornerRadius="1"
+                                                                                    Canvas.Left="{Binding Left}" Canvas.Top="{Binding Top}"
+                                                                                    ToolTip="{Binding Number, StringFormat='Pad {0}'}">
+                                                                                <TextBlock Text="{Binding Number}" Foreground="Black" FontSize="6" 
+                                                                                           FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                            </Border>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
 
-                                        <!-- Empty state -->
-                                        <TextBlock Text="Import schematic to begin PCB layout" Foreground="#FF555555"
-                                                   FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding CanvasFootprints.Count}" Value="0">
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
+                                            <!-- Empty state -->
+                                            <TextBlock Text="Import schematic to begin PCB layout" Foreground="#FF555555"
+                                                       FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanvasFootprints.Count}" Value="0">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </TabItem>
+
+                                    <!-- 3D View Tab -->
+                                    <TabItem Header="3D Board View" Foreground="#FFFF8C00" Background="#FF252526">
+                                        <Grid>
+                                            <helix:HelixViewport3D x:Name="PcbViewport3D" ZoomExtentsWhenLoaded="True" Background="#FF1E1E24"
+                                                                  ShowCoordinateSystem="True" ShowFrameRate="False">
+                                                <!-- Default Lights -->
+                                                <helix:DefaultLights/>
+                                            </helix:HelixViewport3D>
+                                            
+                                            <Button Content="Reset Camera" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
+                                                    Padding="8,4" Background="#FF007ACC" Foreground="White" BorderThickness="0"
+                                                    Click="ResetCamera_Click"/>
+                                        </Grid>
+                                    </TabItem>
+                                </TabControl>bControl>le>
                                             </TextBlock.Style>
                                         </TextBlock>
                                     </Grid>

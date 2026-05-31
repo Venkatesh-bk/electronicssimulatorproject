@@ -767,6 +767,143 @@ namespace EdaSimulator.Tests
                 if (File.Exists(sandboxTargetFile)) File.Delete(sandboxTargetFile);
             }
         }
+
+        [Fact]
+        public void KiCadImporter_CanParseKicadPcbFile()
+        {
+            string kicadPcbContent = @"(kicad_pcb (version 20211014) (generator pcbnew)
+  (net 0 """")
+  (net 1 ""GND"")
+  (net 2 ""+5V"")
+  (net 3 ""Net-(R1-Pad2)"")
+
+  (gr_line (start 10 20) (end 110 20) (stroke (width 0.1)) (layer ""Edge.Cuts""))
+  (gr_line (start 110 20) (end 110 100) (stroke (width 0.1)) (layer ""Edge.Cuts""))
+  (gr_line (start 110 100) (end 10 100) (stroke (width 0.1)) (layer ""Edge.Cuts""))
+  (gr_line (start 10 100) (end 10 20) (stroke (width 0.1)) (layer ""Edge.Cuts""))
+
+  (footprint ""Resistor_SMD:R_0805_2012Metric"" (at 50 60 90)
+    (descr ""Resistor SMD 0805 (2012 Metric)"")
+    (property ""Reference"" ""R1"" (at 0 -1.65 90))
+    (property ""Value"" ""10k"" (at 0 1.65 90))
+    (pad ""1"" smd roundrect (at -0.95 0 90) (size 0.7 1.3) (drill 0.2) (layers ""F.Cu"" ""F.Paste"" ""F.Mask"") (net 2 ""+5V""))
+    (pad ""2"" smd roundrect (at 0.95 0 90) (size 0.7 1.3) (layers ""F.Cu"" ""F.Paste"" ""F.Mask"") (net 3 ""Net-(R1-Pad2)""))
+  )
+
+  (segment (start 50 60) (end 75 60) (width 0.25) (layer ""F.Cu"") (net 2))
+  (segment (start 75 60) (end 75 80) (width 0.25) (layer ""B.Cu"") (net 2))
+
+  (via (at 75 60) (size 0.6) (drill 0.3) (layers ""F.Cu"" ""B.Cu"") (net 2))
+)";
+
+            string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".kicad_pcb");
+            try
+            {
+                File.WriteAllText(tempPath, kicadPcbContent);
+                var pcb = KiCadImporter.Import(tempPath);
+
+                Assert.NotNull(pcb);
+                
+                // Verify Outline
+                Assert.Equal(10, pcb.Outline.CornerX);
+                Assert.Equal(20, pcb.Outline.CornerY);
+                Assert.Equal(100, pcb.Outline.Width_mm);
+                Assert.Equal(80, pcb.Outline.Height_mm);
+
+                // Verify Footprint
+                Assert.Single(pcb.Footprints);
+                var fp = pcb.Footprints[0];
+                Assert.Equal("Resistor_SMD", fp.Library);
+                Assert.Equal("R_0805_2012Metric", fp.FootprintId);
+                Assert.Equal("R1", fp.Designator);
+                Assert.Equal("10k", fp.Value);
+                Assert.Equal(50, fp.X);
+                Assert.Equal(60, fp.Y);
+                Assert.Equal(90, fp.Rotation);
+
+                // Verify Pads (with rotation logic)
+                Assert.Equal(2, fp.Pads.Count);
+                
+                // Pad 1 relative position is (-0.95, 0).
+                // Footprint rotation is 90 degrees.
+                // Rotated offset: dx * cos(90) - dy * sin(90) = 0 - 0 = 0.
+                // dy: dx * sin(90) + dy * cos(90) = -0.95 * 1 + 0 = -0.95.
+                // So absolute position should be (50, 60 - 0.95) = (50, 59.05).
+                var pad1 = fp.Pads.First(p => p.PadNumber == "1");
+                Assert.Equal(50.0, pad1.X, 3);
+                Assert.Equal(59.05, pad1.Y, 3);
+                Assert.Equal(PadType.SMD, pad1.Type);
+                Assert.Equal("+5V", pad1.NetName);
+
+                // Verify Traces
+                Assert.Equal(2, pcb.Traces.Count);
+                var trace1 = pcb.Traces[0];
+                Assert.Equal(50, trace1.StartX);
+                Assert.Equal(60, trace1.StartY);
+                Assert.Equal(75, trace1.EndX);
+                Assert.Equal(60, trace1.EndY);
+                Assert.Equal(0.25, trace1.Width_mm);
+                Assert.Equal(PcbLayerType.FCu, trace1.Layer);
+                Assert.Equal("+5V", trace1.NetName);
+
+                // Verify Vias
+                Assert.Single(pcb.Vias);
+                var via = pcb.Vias[0];
+                Assert.Equal(75, via.X);
+                Assert.Equal(60, via.Y);
+                Assert.Equal(0.6, via.PadDia_mm);
+                Assert.Equal(0.3, via.DrillDia_mm);
+                Assert.Equal(PcbLayerType.FCu, via.LayerFrom);
+                Assert.Equal(PcbLayerType.BCu, via.LayerTo);
+                Assert.Equal("+5V", via.NetName);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+        }
+
+        [Fact]
+        public void BomGenerator_ExportBomToPdf_CanGeneratePdfFile()
+        {
+            var schematic = new Schematic("PDF Test Project");
+            
+            var r1 = new Resistor("R1", "10k");
+            var r2 = new Resistor("R2", "10k");
+            var c1 = new Capacitor("C1", "100nF");
+            
+            schematic.AddComponent(r1);
+            schematic.AddComponent(r2);
+            schematic.AddComponent(c1);
+
+            var bom = BomGenerator.GenerateBom(schematic);
+            string tempPdfPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".pdf");
+
+            try
+            {
+                BomGenerator.ExportBomToPdf(bom, schematic.Title, tempPdfPath);
+
+                Assert.True(File.Exists(tempPdfPath));
+                
+                string content = File.ReadAllText(tempPdfPath);
+                Assert.StartsWith("%PDF-1.4", content);
+                Assert.Contains("PDF Test Project", content);
+                Assert.Contains("BILL OF MATERIALS", content);
+                Assert.Contains("R1, R2", content);
+                Assert.Contains("C1", content);
+                Assert.Contains("%%EOF", content);
+            }
+            finally
+            {
+                if (File.Exists(tempPdfPath))
+                {
+                    File.Delete(tempPdfPath);
+                }
+            }
+        }
     }
 }
 
