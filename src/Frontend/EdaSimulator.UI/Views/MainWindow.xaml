@@ -382,7 +382,7 @@
                         <DataTemplate DataType="{x:Type canvasVm:WireViewModel}">
                             <!-- Renders a multi-point sequence of wires orthogonally -->
                             <Canvas>
-                                <Polyline Points="{Binding Points}" Stroke="#FF00FF00" StrokeThickness="2" />
+                                <Polyline x:Name="WirePolyline" Points="{Binding Points}" Stroke="#FF00FF00" StrokeThickness="2" />
                                 <!-- Net name label at wire midpoint, subtle badge style -->
                                 <Border Canvas.Left="0" Canvas.Top="-10"
                                         Background="#AA1E1E1E" BorderBrush="#4400FF00" BorderThickness="1"
@@ -392,6 +392,12 @@
                                                FontFamily="Consolas" FontSize="9"/>
                                 </Border>
                             </Canvas>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="WirePolyline" Property="Stroke" Value="#FFFFD700" />
+                                    <Setter TargetName="WirePolyline" Property="StrokeThickness" Value="3.5" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
 
                         <DataTemplate DataType="{x:Type canvasVm:PinNodeViewModel}">

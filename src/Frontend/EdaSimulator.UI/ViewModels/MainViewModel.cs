@@ -268,6 +268,42 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             if (!result.Success)
             {
                 NetlistOutput += $"\n\n--- SIMULATION FAILED ---\n{result.ErrorMessage}";
+
+                // Reset selections first
+                foreach (var item in ActiveSchematicViewModel.Items)
+                {
+                    item.IsSelected = false;
+                }
+
+                if (!string.IsNullOrEmpty(result.AffectedDesignator))
+                {
+                    var comp = ActiveSchematicViewModel.Items
+                        .OfType<ComponentNodeViewModel>()
+                        .FirstOrDefault(c => string.Equals(c.Designator, result.AffectedDesignator, StringComparison.OrdinalIgnoreCase));
+                    if (comp != null)
+                    {
+                        comp.IsSelected = true;
+                        NetlistOutput += $"\n>>> Highlighted offending component on canvas: {result.AffectedDesignator} <<<";
+                    }
+                }
+                else if (!string.IsNullOrEmpty(result.AffectedNetName))
+                {
+                    var netName = result.AffectedNetName;
+                    var wires = ActiveSchematicViewModel.Items
+                        .OfType<WireViewModel>()
+                        .Where(w => w.NetLabel != null && string.Equals(w.NetLabel, netName, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    foreach (var w in wires)
+                    {
+                        w.IsSelected = true;
+                    }
+
+                    if (wires.Count > 0)
+                    {
+                        NetlistOutput += $"\n>>> Highlighted offending net on canvas: {netName} <<<";
+                    }
+                }
                 return;
             }
             

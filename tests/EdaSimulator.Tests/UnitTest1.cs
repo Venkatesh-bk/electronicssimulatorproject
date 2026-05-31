@@ -702,6 +702,31 @@ namespace EdaSimulator.Tests
             Assert.Contains("Designator,Value,Package,MidX,MidY,Rotation,Layer", csv);
             Assert.Contains("R1,10k,R_0805,12.346,56.789,90.0,FCu", csv);
         }
+
+        [Fact]
+        public void SpiceExecutionService_ParseSpiceErrors_ParsesDiagnosticsCorrectly()
+        {
+            var netlist = "* Test Netlist\n.options savecurrents\nR1 N_1 0 10k\nV1 N_1 0 DC 5\n.tran 1n 10n\n.end";
+            
+            // Test 1: Line number syntax error
+            var result1 = new EdaSimulator.Engines.Simulation.SpiceExecutionResult();
+            var output1 = "Error on line 3 : r1 n_1 0 10k\nUnknown device parameter";
+            EdaSimulator.Engines.Simulation.SpiceExecutionService.ParseSpiceErrors(output1, "", netlist, result1);
+            Assert.Equal(3, result1.ErrorLineNumber);
+            Assert.Equal("R1", result1.AffectedDesignator);
+
+            // Test 2: Singular matrix check node
+            var result2 = new EdaSimulator.Engines.Simulation.SpiceExecutionResult();
+            var output2 = "Warning: singular matrix:  check node N_1\nSimulation aborted";
+            EdaSimulator.Engines.Simulation.SpiceExecutionService.ParseSpiceErrors(output2, "", netlist, result2);
+            Assert.Equal("N_1", result2.AffectedNetName);
+
+            // Test 3: Unknown device type
+            var result3 = new EdaSimulator.Engines.Simulation.SpiceExecutionResult();
+            var output3 = "Error: Unknown device type - X123\nCould not compile netlist";
+            EdaSimulator.Engines.Simulation.SpiceExecutionService.ParseSpiceErrors(output3, "", netlist, result3);
+            Assert.Equal("X123", result3.AffectedDesignator);
+        }
     }
 }
 

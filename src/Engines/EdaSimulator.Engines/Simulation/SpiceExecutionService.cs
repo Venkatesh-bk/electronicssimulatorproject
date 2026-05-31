@@ -13,6 +13,11 @@ namespace EdaSimulator.Engines.Simulation
         public string OutputLog { get; set; } = string.Empty;
         public string RawFilePath { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
+
+        // Diagnostic information parsed from SPICE outputs
+        public int? ErrorLineNumber { get; set; }
+        public string? AffectedDesignator { get; set; }
+        public string? AffectedNetName { get; set; }
     }
 
     /// <summary>
@@ -136,6 +141,8 @@ namespace EdaSimulator.Engines.Simulation
                     {
                         result.ErrorMessage = "Simulation failed silently. Check the full output log for math convergence issues.";
                     }
+
+                    ParseSpiceErrors(result.OutputLog, result.ErrorMessage, netlistContent, result);
                 }
                 else
                 {
@@ -164,6 +171,58 @@ namespace EdaSimulator.Engines.Simulation
             }
 
             return result;
+        }
+
+        public static void ParseSpiceErrors(string outputLog, string errorLog, string netlistContent, SpiceExecutionResult result)
+        {
+            var combinedLog = outputLog + "\n" + errorLog;
+            
+            // 1. Try to find "Error on line XY : ..."
+            var lineMatch = System.Text.RegularExpressions.Regex.Match(combinedLog, @"Error on line (\d+)\s*:\s*(.*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (lineMatch.Success)
+            {
+                if (int.TryParse(lineMatch.Groups[1].Value, out int lineNum))
+                {
+                    result.ErrorLineNumber = lineNum;
+                    
+                    // Retrieve that line from the netlist
+                    var netlistLines = netlistContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                    // lineNum is 1-based index
+                    if (lineNum >= 1 && lineNum <= netlistLines.Length)
+                    {
+                        var badLine = netlistLines[lineNum - 1].Trim();
+                        // Find the first token (usually the designator)
+                        var parts = badLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length > 0)
+                        {
+                            var token = parts[0].Trim();
+                            // Standard designators match standard alphanumeric identifier (e.g. R1, V_V1, etc.)
+                            if (System.Text.RegularExpressions.Regex.IsMatch(token, @"^[a-zA-Z][a-zA-Z0-9_]*$"))
+                            {
+                                result.AffectedDesignator = token;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Try to find singular matrix node
+            var nodeMatch = System.Text.RegularExpressions.Regex.Match(combinedLog, @"singular matrix:\s*check node\s*([a-zA-Z0-9_#]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!nodeMatch.Success)
+            {
+                nodeMatch = System.Text.RegularExpressions.Regex.Match(combinedLog, @"check node\s*([a-zA-Z0-9_#]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            if (nodeMatch.Success)
+            {
+                result.AffectedNetName = nodeMatch.Groups[1].Value;
+            }
+
+            // 3. Try to find unknown device designator
+            var deviceMatch = System.Text.RegularExpressions.Regex.Match(combinedLog, @"Unknown device type\s*-\s*([a-zA-Z0-9_]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (deviceMatch.Success)
+            {
+                result.AffectedDesignator = deviceMatch.Groups[1].Value;
+            }
         }
     }
 }
