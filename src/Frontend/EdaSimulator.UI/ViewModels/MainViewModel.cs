@@ -253,10 +253,18 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 EdaSimulator.Engines.Settings.SettingsManager.Instance.Current.NgSpicePath);
             EdaSimulator.Engines.Simulation.SpiceExecutionResult result;
             
+            var progress = new Progress<string>(line =>
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    StatusText = $"Simulation: {line.Trim()}";
+                }
+            });
+
             try
             {
                 // Push the UI cancellation token completely down into the native OS Process Wrapper
-                result = await executionSvc.RunSimulationAsync(netlist, _simCancellationTokenSource.Token);
+                result = await executionSvc.RunSimulationAsync(netlist, _simCancellationTokenSource.Token, progress);
             }
             finally
             {

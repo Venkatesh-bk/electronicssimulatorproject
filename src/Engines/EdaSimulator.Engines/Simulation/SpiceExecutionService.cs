@@ -44,7 +44,10 @@ namespace EdaSimulator.Engines.Simulation
         /// <summary>The full path to ngspice_con.exe, or null if not found.</summary>
         public string? NgSpicePath => _resolvedNgSpicePath;
 
-        public async Task<SpiceExecutionResult> RunSimulationAsync(string netlistContent, CancellationToken cancellationToken = default)
+        public async Task<SpiceExecutionResult> RunSimulationAsync(
+            string netlistContent,
+            CancellationToken cancellationToken = default,
+            IProgress<string>? progress = null)
         {
             var result = new SpiceExecutionResult();
 
@@ -91,8 +94,22 @@ namespace EdaSimulator.Engines.Simulation
                 var outputBuilder = new StringBuilder();
                 var errorBuilder = new StringBuilder();
 
-                process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                process.OutputDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        outputBuilder.AppendLine(e.Data);
+                        progress?.Report(e.Data);
+                    }
+                };
+                process.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        errorBuilder.AppendLine(e.Data);
+                        progress?.Report(e.Data);
+                    }
+                };
 
                 // Catch scenarios where the kernel isn't installed yet
                 try
