@@ -139,6 +139,7 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
 
         private string _lastExecutedNetlistHash = string.Empty;
         private System.Windows.Threading.DispatcherTimer _liveTunerTimer;
+        private System.Windows.Threading.DispatcherTimer _autoSaveTimer;
 
         private System.Threading.CancellationTokenSource? _simCancellationTokenSource;
 
@@ -166,6 +167,11 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             _liveTunerTimer = new System.Windows.Threading.DispatcherTimer();
             _liveTunerTimer.Interval = System.TimeSpan.FromSeconds(1);
             _liveTunerTimer.Tick += HandleLiveTuningTick;
+
+            _autoSaveTimer = new System.Windows.Threading.DispatcherTimer();
+            _autoSaveTimer.Interval = System.TimeSpan.FromMinutes(2); // Auto-save every 2 minutes
+            _autoSaveTimer.Tick += HandleAutoSaveTick;
+            _autoSaveTimer.Start();
         }
 
         partial void OnIsLiveTuningEnabledChanged(bool value)
@@ -194,6 +200,36 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             {
                 _lastExecutedNetlistHash = currentNetlist;
                 SimulateCommand.Execute(null);
+            }
+        }
+
+        private void HandleAutoSaveTick(object? sender, System.EventArgs e)
+        {
+            if (string.IsNullOrEmpty(CurrentProjectPath)) return;
+            if (IsSimulating) return;
+
+            try
+            {
+                var placements = ActiveSchematicViewModel.Items
+                    .OfType<ComponentNodeViewModel>()
+                    .Select(n => new ComponentPlacementRecord
+                    {
+                        Designator = n.CoreComponent.Designator,
+                        X          = n.X,
+                        Y          = n.Y
+                    });
+
+                var doc = ProjectFileService.ToDocument(
+                    ActiveSchematicViewModel.CoreSchematic,
+                    placements,
+                    ActiveSchematicViewModel.CoreSchematic.Title);
+
+                ProjectFileService.Save(doc, CurrentProjectPath);
+                StatusText = $"Project auto-saved  |  {System.IO.Path.GetFileName(CurrentProjectPath)}  |  {System.DateTime.Now:HH:mm:ss}";
+            }
+            catch
+            {
+                // Quiet fail for background auto-saves
             }
         }
 

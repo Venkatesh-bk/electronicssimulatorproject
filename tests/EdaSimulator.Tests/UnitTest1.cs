@@ -727,6 +727,46 @@ namespace EdaSimulator.Tests
             EdaSimulator.Engines.Simulation.SpiceExecutionService.ParseSpiceErrors(output3, "", netlist, result3);
             Assert.Equal("X123", result3.AffectedDesignator);
         }
+
+        [Fact]
+        public void ModelLibraryService_ImportLibrary_LoadsModelsCorrectly()
+        {
+            var tempLibFile = Path.Combine(Path.GetTempPath(), "temp_test_lib.lib");
+            var sandboxTargetFile = Path.Combine(Path.GetTempPath(), "sandbox_eda_components.lib");
+            
+            var libContent = ".model TEST_DIODE D(Is=1e-14 Rs=0.1 Cjo=2p)\n.subckt TEST_OPAMP IN+ IN- OUT\n.ends TEST_OPAMP";
+            File.WriteAllText(tempLibFile, libContent);
+            File.WriteAllText(sandboxTargetFile, "* Sandbox Library");
+
+            var service = EdaSimulator.Engines.Simulation.ModelLibraryService.Instance;
+            var originalPath = service.LibraryFilePath;
+            service.OverrideLibraryFilePath(sandboxTargetFile);
+
+            try
+            {
+                var initialCount = service.Models.Count;
+
+                service.ImportLibrary(tempLibFile);
+
+                var newCount = service.Models.Count;
+                Assert.True(newCount > initialCount);
+
+                var diodeModel = service.FindModel("TEST_DIODE");
+                Assert.NotNull(diodeModel);
+                Assert.Equal(EdaSimulator.Engines.Simulation.SpiceModelType.Model, diodeModel.Type);
+
+                var opampModel = service.FindModel("TEST_OPAMP");
+                Assert.NotNull(opampModel);
+                Assert.Equal(EdaSimulator.Engines.Simulation.SpiceModelType.Subcircuit, opampModel.Type);
+                Assert.Equal(3, opampModel.Pins.Count);
+            }
+            finally
+            {
+                service.OverrideLibraryFilePath(originalPath);
+                if (File.Exists(tempLibFile)) File.Delete(tempLibFile);
+                if (File.Exists(sandboxTargetFile)) File.Delete(sandboxTargetFile);
+            }
+        }
     }
 }
 

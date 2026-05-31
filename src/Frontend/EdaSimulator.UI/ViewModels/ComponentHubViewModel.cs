@@ -211,5 +211,37 @@ namespace EdaSimulator.UI.ViewModels
                 }
             }
         }
+
+        [RelayCommand]
+        private void ImportSpiceLibrary()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Import SPICE Model Library",
+                Filter = "SPICE Library Files (*.lib;*.mod;*.txt)|*.lib;*.mod;*.txt|All Files (*.*)|*.*"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                try
+                {
+                    ModelLibraryService.Instance.ImportLibrary(dlg.FileName);
+                    LoadSpiceModels();
+                    System.Windows.MessageBox.Show(
+                        $"SPICE library successfully imported from '{System.IO.Path.GetFileName(dlg.FileName)}'. Models are now available.",
+                        "Import Complete",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                }
+                catch (System.Exception ex)
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Failed to import library: {ex.Message}",
+                        "Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
     }
 }

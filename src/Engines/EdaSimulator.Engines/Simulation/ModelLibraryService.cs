@@ -29,6 +29,12 @@ namespace EdaSimulator.Engines.Simulation
         /// <summary>Full path to the .lib file, or null if not found.</summary>
         public string? LibraryFilePath => _libraryFilePath;
 
+        /// <summary>Redirects the library path for sandboxed testing.</summary>
+        public void OverrideLibraryFilePath(string? path)
+        {
+            _libraryFilePath = path;
+        }
+
         /// <summary>True when the library was located and successfully loaded.</summary>
         public bool IsLoaded => _libraryFilePath != null && _models.Count > 0;
 
@@ -57,6 +63,37 @@ namespace EdaSimulator.Engines.Simulation
         {
             return _models.FirstOrDefault(m =>
                 string.Equals(m.Name, modelName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Imports models/subcircuits from a external .lib or .mod file,
+        /// registers them in-memory, and appends them to the persistent library database.
+        /// </summary>
+        public void ImportLibrary(string filePath)
+        {
+            if (!File.Exists(filePath)) return;
+
+            var parser = new SpiceLibParser();
+            var newModels = parser.ParseLibrary(filePath);
+            if (newModels.Count == 0) return;
+
+            // In-memory update
+            _models.AddRange(newModels);
+
+            // Persist to default library file
+            if (_libraryFilePath != null && File.Exists(_libraryFilePath))
+            {
+                try
+                {
+                    var textToAppend = "\n\n* --- Imported custom library from " + Path.GetFileName(filePath) + " on " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " ---\n" +
+                                       File.ReadAllText(filePath);
+                    File.AppendAllText(_libraryFilePath, textToAppend);
+                }
+                catch
+                {
+                    // Catch permissions/locking exceptions
+                }
+            }
         }
 
         /// <summary>
