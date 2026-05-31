@@ -90,7 +90,7 @@ scratch/
 
 ## ── Large Research Databases (~274 MB total) ────────────────────────
 ## Regenerate via: python scripts/GenerateEdaDeepResearch_v3.py
-resources/research/*.pkl.gz
+## resources/research/*.pkl.gz
 resources/research/*.pkl
 
 ## ── ngspice Engine Binaries (~25 MB) ────────────────────────────────
