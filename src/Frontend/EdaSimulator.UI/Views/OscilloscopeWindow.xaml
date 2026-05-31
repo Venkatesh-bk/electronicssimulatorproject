@@ -79,6 +79,16 @@
 
                 <Separator Width="1" Background="#FF2A2A42" Margin="10,6"/>
 
+                <!-- Math Channel Input -->
+                <TextBlock Text="Math:" Foreground="#FF666688" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
+                <TextBox x:Name="MathExpressionTxt" Width="130" Height="22" 
+                         Background="#FF12121E" Foreground="White" BorderBrush="#FF2A2A42" BorderThickness="1"
+                         VerticalAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,4,0"
+                         FontFamily="Consolas" FontSize="11" Text="V(V_OUT)-V(V_IN)"/>
+                <Button x:Name="AddMathBtn" Content="Add ƒ" Style="{StaticResource ToolBtn}" Margin="0,0,10,0" Click="AddMathBtn_Click"/>
+
+                <Separator Width="1" Background="#FF2A2A42" Margin="10,6"/>
+
                 <!-- Export -->
                 <Button x:Name="ExportCsvBtn" Content="📊 Export CSV" Style="{StaticResource ToolBtn}" Margin="0,0,2,0" Click="ExportCsvBtn_Click"/>
                 <Button x:Name="ExportPngBtn" Content="🖼 Save PNG"   Style="{StaticResource ToolBtn}" Margin="0,0,16,0" Click="ExportPngBtn_Click"/>

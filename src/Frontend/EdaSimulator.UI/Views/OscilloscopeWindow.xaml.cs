@@ -171,5 +171,20 @@ namespace EdaSimulator.UI.Views
             MeasurementText.Text = "Click 📏 to measure";
             StatusText.Text = "Traces cleared.";
         }
+
+        private void AddMathBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var expr = MathExpressionTxt.Text;
+            if (ViewModel.AddMathChannel(expr, out string error))
+            {
+                StatusText.Text = $"Math channel added successfully: {expr}";
+                PlotView.InvalidatePlot();
+            }
+            else
+            {
+                MessageBox.Show($"Could not add math channel:\n{error}", "Math Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
     }
 }

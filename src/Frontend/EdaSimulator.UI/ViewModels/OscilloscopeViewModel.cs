@@ -309,5 +309,167 @@ namespace EdaSimulator.UI.ViewModels
 
         private static string ColorToHex(OxyColor c)
             => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+
+        /// <summary>
+        /// Evaluates a math channel expression and appends the computed trace to the scope.
+        /// Supports differential traces (e.g. V(N1)-V(N2)) and Fast Fourier Transforms (e.g. FFT(V(N1))).
+        /// </summary>
+        public bool AddMathChannel(string expression, out string error)
+        {
+            error = string.Empty;
+            expression = expression.Trim().Replace(" ", "");
+
+            if (string.IsNullOrEmpty(expression))
+            {
+                error = "Expression is empty.";
+                return false;
+            }
+
+            // Case 1: FFT(V(NET))
+            if (expression.StartsWith("FFT(", StringComparison.OrdinalIgnoreCase) && expression.EndsWith(")"))
+            {
+                string inner = expression.Substring(4, expression.Length - 5);
+                var sourceTrace = TraceInfos.FirstOrDefault(t => string.Equals(t.Name, inner, StringComparison.OrdinalIgnoreCase));
+                if (sourceTrace == null)
+                {
+                    error = $"Source trace '{inner}' not found.";
+                    return false;
+                }
+
+                int n = sourceTrace.Y.Count;
+                if (n < 4)
+                {
+                    error = "Not enough data points to compute FFT.";
+                    return false;
+                }
+
+                // Find largest power of 2 <= n
+                int fftSize = 1;
+                while (fftSize * 2 <= n) fftSize *= 2;
+
+                var complexData = new System.Numerics.Complex[fftSize];
+                for (int i = 0; i < fftSize; i++)
+                {
+                    complexData[i] = new System.Numerics.Complex(sourceTrace.Y[i], 0);
+                }
+
+                // Run FFT
+                FftHelper.Fft(complexData);
+
+                // Calculate average dt
+                double totalTime = sourceTrace.X[fftSize - 1] - sourceTrace.X[0];
+                double dt = totalTime / (fftSize - 1);
+                if (dt <= 0)
+                {
+                    error = "Invalid time step for frequency calculation.";
+                    return false;
+                }
+                double samplingFreq = 1.0 / dt;
+
+                var freqs = new List<double>();
+                var magnitudes = new List<double>();
+
+                // Single-sided spectrum
+                int halfSize = fftSize / 2;
+                for (int k = 0; k < halfSize; k++)
+                {
+                    double freq = k * samplingFreq / fftSize;
+                    double mag = complexData[k].Magnitude / fftSize;
+                    // Double all AC components to account for negative frequencies
+                    if (k > 0) mag *= 2.0;
+
+                    freqs.Add(freq);
+                    magnitudes.Add(mag);
+                }
+
+                RenderBodePlot($"FFT({sourceTrace.Name})", freqs, magnitudes);
+                return true;
+            }
+
+            // Case 2: V(A)-V(B) or similar differential math
+            char[] operators = new[] { '-', '+', '*', '/' };
+            int opIdx = expression.IndexOfAny(operators);
+            if (opIdx > 0)
+            {
+                char op = expression[opIdx];
+                string leftName = expression.Substring(0, opIdx);
+                string rightName = expression.Substring(opIdx + 1);
+
+                var leftTrace = TraceInfos.FirstOrDefault(t => string.Equals(t.Name, leftName, StringComparison.OrdinalIgnoreCase));
+                var rightTrace = TraceInfos.FirstOrDefault(t => string.Equals(t.Name, rightName, StringComparison.OrdinalIgnoreCase));
+
+                if (leftTrace == null)
+                {
+                    error = $"Left trace '{leftName}' not found.";
+                    return false;
+                }
+                if (rightTrace == null)
+                {
+                    error = $"Right trace '{rightName}' not found.";
+                    return false;
+                }
+
+                int count = Math.Min(leftTrace.X.Count, rightTrace.X.Count);
+                if (count == 0)
+                {
+                    error = "One of the source traces has no data.";
+                    return false;
+                }
+
+                var newX = new List<double>();
+                var newY = new List<double>();
+
+                for (int i = 0; i < count; i++)
+                {
+                    newX.Add(leftTrace.X[i]);
+                    double yVal = 0;
+                    switch (op)
+                    {
+                        case '+': yVal = leftTrace.Y[i] + rightTrace.Y[i]; break;
+                        case '-': yVal = leftTrace.Y[i] - rightTrace.Y[i]; break;
+                        case '*': yVal = leftTrace.Y[i] * rightTrace.Y[i]; break;
+                        case '/': yVal = rightTrace.Y[i] != 0 ? leftTrace.Y[i] / rightTrace.Y[i] : 0; break;
+                    }
+                    newY.Add(yVal);
+                }
+
+                RenderTraceColored($"{leftTrace.Name}{op}{rightTrace.Name}", newX, newY, OxyColors.Violet);
+                return true;
+            }
+
+            error = "Unsupported expression format. Use e.g. V(N1)-V(N2) or FFT(V(N1)).";
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Radix-2 decimation-in-time FFT helper.
+    /// </summary>
+    public static class FftHelper
+    {
+        public static void Fft(System.Numerics.Complex[] a)
+        {
+            int n = a.Length;
+            if (n <= 1) return;
+
+            var even = new System.Numerics.Complex[n / 2];
+            var odd = new System.Numerics.Complex[n / 2];
+            for (int i = 0; i < n / 2; i++)
+            {
+                even[i] = a[2 * i];
+                odd[i] = a[2 * i + 1];
+            }
+
+            Fft(even);
+            Fft(odd);
+
+            for (int k = 0; k < n / 2; k++)
+            {
+                double theta = -2.0 * Math.PI * k / n;
+                var w = new System.Numerics.Complex(Math.Cos(theta), Math.Sin(theta)) * odd[k];
+                a[k] = even[k] + w;
+                a[k + n / 2] = even[k] - w;
+            }
+        }
     }
 }
