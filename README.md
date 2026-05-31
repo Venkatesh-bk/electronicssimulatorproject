@@ -87,6 +87,8 @@ Due to the extreme complexity of this platform — spanning circuit theory, FEM 
 
 ---
 
-## 🗺️ Roadmap
+## 📖 Documentation
 
-See the detailed phase-by-phase development plan: [docs/ROADMAP.md](docs/ROADMAP.md)
+* **User Reference Manual**: [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — Comprehensive guide on canvas controls, wiring, simulation configuration, PCB design rules (DRC), FreeRouting auto-routing, manufacturing export, and Python automation.
+* **Architecture Specifications**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+* **Detailed Development Roadmap**: [docs/ROADMAP.md](docs/ROADMAP.md)
