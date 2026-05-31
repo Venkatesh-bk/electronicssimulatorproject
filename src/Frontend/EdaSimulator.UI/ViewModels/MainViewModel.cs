@@ -659,10 +659,20 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             {
                 oldValue.Items.CollectionChanged -= HandleSchematicItemsChanged;
                 oldValue.PropertyChanged -= HandleSchematicPropertyChanged;
+                oldValue.NetProbed -= HandleNetProbed;
             }
             newValue.Items.CollectionChanged += HandleSchematicItemsChanged;
             newValue.PropertyChanged += HandleSchematicPropertyChanged;
+            newValue.NetProbed += HandleNetProbed;
             RunLiveDRC();
+        }
+
+        private void HandleNetProbed(string netName)
+        {
+            if (_scopeWindow != null && _scopeWindow.IsVisible)
+            {
+                _scopeWindow.ViewModel.HighlightTrace(netName);
+            }
         }
 
         private void HandleSchematicPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

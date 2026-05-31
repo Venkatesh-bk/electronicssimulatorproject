@@ -2,6 +2,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EdaSimulator.Engines.Settings;
+using Microsoft.Win32;
 
 namespace EdaSimulator.UI.ViewModels
 {
@@ -22,6 +23,10 @@ namespace EdaSimulator.UI.ViewModels
         // ── File ─────────────────────────────────────────────────────────────────────
         [ObservableProperty] private bool _autoSaveEnabled;
         [ObservableProperty] private int _autoSaveIntervalMinutes;
+
+        // ── PCB Autorouter ───────────────────────────────────────────────────────────
+        [ObservableProperty] private string _freeRoutingJarPath = string.Empty;
+        [ObservableProperty] private bool   _freeRoutingFound   = false;
 
         // ── Display ──────────────────────────────────────────────────────────────────
         [ObservableProperty] private double _wireThickness;
@@ -51,6 +56,8 @@ namespace EdaSimulator.UI.ViewModels
             WireColor = s.WireColor;
             ShowComponentValues = s.ShowComponentValues;
             ShowDesignators = s.ShowDesignators;
+            FreeRoutingJarPath = s.FreeRoutingJarPath;
+            FreeRoutingFound = EdaSimulator.Engines.PCB.FreeRoutingService.IsFreeRoutingAvailable();
         }
 
         [RelayCommand]
@@ -70,11 +77,46 @@ namespace EdaSimulator.UI.ViewModels
             s.WireColor = WireColor;
             s.ShowComponentValues = ShowComponentValues;
             s.ShowDesignators = ShowDesignators;
+            s.FreeRoutingJarPath = FreeRoutingJarPath;
 
             if (System.Enum.TryParse<ApplicationTheme>(SelectedTheme, out var theme))
                 s.Theme = theme;
 
             SettingsManager.Instance.Save();
+
+            // Refresh FreeRouting availability indicator after saving JAR path
+            FreeRoutingFound = EdaSimulator.Engines.PCB.FreeRoutingService.IsFreeRoutingAvailable();
+        }
+
+        [RelayCommand]
+        private void BrowseFreeRoutingJar()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Locate FreeRouting Executable JAR",
+                Filter = "Java Archive (*.jar)|*.jar|All Files (*.*)|*.*",
+                InitialDirectory = System.IO.Path.GetDirectoryName(FreeRoutingJarPath)
+                                   .NullIfEmpty() ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                FreeRoutingJarPath = dlg.FileName;
+                FreeRoutingFound   = System.IO.File.Exists(dlg.FileName);
+            }
+        }
+
+        [RelayCommand]
+        private void BrowseNgSpice()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Locate ngspice Executable",
+                Filter = "Executable (*.exe)|*.exe|All Files (*.*)|*.*",
+                InitialDirectory = System.IO.Path.GetDirectoryName(NgSpicePath).NullIfEmpty()
+                                   ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFiles)
+            };
+            if (dlg.ShowDialog() == true)
+                NgSpicePath = dlg.FileName;
         }
 
         [RelayCommand]
@@ -85,5 +127,11 @@ namespace EdaSimulator.UI.ViewModels
             SettingsManager.Instance.Reset();
             LoadFromSettings();
         }
+    }
+
+    internal static class StringExtensions
+    {
+        public static string? NullIfEmpty(this string? s)
+            => string.IsNullOrEmpty(s) ? null : s;
     }
 }

@@ -514,5 +514,173 @@ namespace EdaSimulator.Tests
             Assert.NotNull(pdkSky);
             Assert.True(pdkSky.Vth0Mean > 0);
         }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // Phase 9: FreeRouting / Specctra Integration Tests
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void SpecctraDsnExporter_GeneratesValidDsnHeader()
+        {
+            var pcb = new EdaSimulator.Engines.PCB.PcbDocument
+            {
+                Title   = "TestBoard",
+                Outline = new EdaSimulator.Engines.PCB.PcbBoardOutline { Width_mm = 100, Height_mm = 80 }
+            };
+
+            string dsn = EdaSimulator.Engines.PCB.SpecctraDsnExporter.Export(pcb);
+
+            Assert.NotNull(dsn);
+            // Must start with (pcb …) block
+            Assert.Contains("(pcb TestBoard", dsn);
+            // Must contain resolution declaration in micrometers
+            Assert.Contains("(resolution um 1)", dsn);
+            // Must contain F.Cu and B.Cu layer definitions
+            Assert.Contains("(layer F.Cu", dsn);
+            Assert.Contains("(layer B.Cu", dsn);
+            // Must contain board boundary
+            Assert.Contains("(boundary", dsn);
+            Assert.Contains("(rect pcb", dsn);
+        }
+
+        [Fact]
+        public void SpecctraDsnExporter_EmitsNetworkAndPinsForRatsnest()
+        {
+            var pcb = new EdaSimulator.Engines.PCB.PcbDocument
+            {
+                Title   = "NetBoard",
+                Outline = new EdaSimulator.Engines.PCB.PcbBoardOutline { Width_mm = 50, Height_mm = 40 }
+            };
+
+            // Add two footprints with one pad each
+            var fp1 = new EdaSimulator.Engines.PCB.PcbFootprint { Designator = "R1", FootprintId = "R_0402", X = 10, Y = 10 };
+            fp1.Pads.Add(new EdaSimulator.Engines.PCB.PcbPad { PadNumber = "1", X = 0, Y = 0 });
+            pcb.Footprints.Add(fp1);
+
+            var fp2 = new EdaSimulator.Engines.PCB.PcbFootprint { Designator = "R2", FootprintId = "R_0402", X = 30, Y = 10 };
+            fp2.Pads.Add(new EdaSimulator.Engines.PCB.PcbPad { PadNumber = "1", X = 0, Y = 0 });
+            pcb.Footprints.Add(fp2);
+
+            // Ratsnest connection between R1-pad1 and R2-pad1 on net "VCC"
+            pcb.Ratsnest.Add(new EdaSimulator.Engines.PCB.PcbRatsnestLine
+            {
+                NetName        = "VCC",
+                FromDesignator = "R1",
+                FromPadNumber  = "1",
+                ToDesignator   = "R2",
+                ToPadNumber    = "1"
+            });
+
+            string dsn = EdaSimulator.Engines.PCB.SpecctraDsnExporter.Export(pcb);
+
+            // Network section must appear
+            Assert.Contains("(network", dsn);
+            // Net name VCC must be declared
+            Assert.Contains("(net VCC", dsn);
+            // Both pins must appear inside the net
+            Assert.Contains("R1-1", dsn);
+            Assert.Contains("R2-1", dsn);
+            // Placement section must appear with both footprints
+            Assert.Contains("(placement", dsn);
+            Assert.Contains("R1", dsn);
+            Assert.Contains("R2", dsn);
+        }
+
+        [Fact]
+        public void SpecctraSessionImporter_ParsesRoutedTracesAndVias()
+        {
+            // Simulate a minimal FreeRouting .ses output
+            const string sesContent =
+                "(session board\n" +
+                "  (base_design board.dsn)\n" +
+                "  (routes\n" +
+                "    (resolution um 1)\n" +
+                "    (parser\n" +
+                "      (host_cad \"FreeRouting\")\n" +
+                "    )\n" +
+                "    (library_out)\n" +
+                "    (network_out\n" +
+                "      (net VCC\n" +
+                "        (route\n" +
+                "          (wire (path F.Cu 250 10000 10000 30000 10000) (net VCC) (type route))\n" +
+                "          (via \"Via[0-1]_800:400\" 30000 15000 (net VCC) (type route))\n" +
+                "        )\n" +
+                "      )\n" +
+                "    )\n" +
+                "  )\n" +
+                ")\n";
+
+            string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".ses");
+            try
+            {
+                File.WriteAllText(tempPath, sesContent);
+
+                var pcb = new EdaSimulator.Engines.PCB.PcbDocument();
+                // Pre-populate ratsnest to verify it gets cleared
+                pcb.Ratsnest.Add(new EdaSimulator.Engines.PCB.PcbRatsnestLine { NetName = "VCC" });
+
+                int count = EdaSimulator.Engines.PCB.SpecctraSessionImporter.Import(tempPath, pcb);
+
+                // 1 trace should be imported
+                Assert.True(count >= 1, $"Expected at least 1 segment, got {count}");
+                Assert.NotEmpty(pcb.Traces);
+
+                // The trace coordinates should be converted from µm to mm correctly
+                var trace = pcb.Traces[0];
+                Assert.Equal(10.0, trace.StartX, 3);  // 10000 µm = 10 mm
+                Assert.Equal(10.0, trace.StartY, 3);
+                Assert.Equal(30.0, trace.EndX,   3);  // 30000 µm = 30 mm
+                Assert.Equal(10.0, trace.EndY,   3);
+                Assert.Equal("VCC", trace.NetName);
+                Assert.Equal(EdaSimulator.Engines.PCB.PcbLayerType.FCu, trace.Layer);
+
+                // Via should be imported
+                Assert.NotEmpty(pcb.Vias);
+                var via = pcb.Vias[0];
+                Assert.Equal(30.0, via.X, 3);  // 30000 µm = 30 mm
+                Assert.Equal(15.0, via.Y, 3);  // 15000 µm = 15 mm
+
+                // Ratsnest must be cleared after routing
+                Assert.Empty(pcb.Ratsnest);
+            }
+            finally
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            }
+        }
+
+        [Fact]
+        public void Schematic_GetNetById_ReturnsCorrectNet()
+        {
+            var schematic = new Schematic("Test Schematic");
+            var resistor = new Resistor("R1", "1k");
+            schematic.AddComponent(resistor);
+            var net = schematic.CreateNet("VCC");
+            schematic.ConnectPinToNet(resistor.Pins.First(), net.Id);
+
+            var retrieved = schematic.GetNetById(net.Id);
+            Assert.NotNull(retrieved);
+            Assert.Equal("VCC", retrieved.Name);
+        }
+
+        [Fact]
+        public void Net_Name_Change_UpdatesCorrectName()
+        {
+            var net = new Net("VCC");
+            net.Name = "VDD";
+            Assert.Equal("VDD", net.Name);
+        }
+
+        [Fact]
+        public void Net_Name_Change_ThrowsOnWhitespaceOrGround()
+        {
+            var net = new Net("VCC");
+            Assert.Throws<ArgumentException>(() => net.Name = "V D D");
+            
+            var gnd = new Net("0");
+            Assert.Throws<InvalidOperationException>(() => gnd.Name = "GND");
+        }
     }
-}
+}
+
+

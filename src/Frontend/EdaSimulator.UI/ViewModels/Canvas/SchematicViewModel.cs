@@ -56,6 +56,41 @@ namespace EdaSimulator.UI.ViewModels.Canvas
             }
         }
 
+        public event Action<string>? NetProbed;
+
+        public void OnNetProbed(string netName)
+        {
+            NetProbed?.Invoke(netName);
+        }
+
+        public void RenameNet(Guid netId, string newName)
+        {
+            var net = CoreSchematic.GetNetById(netId);
+            if (net == null) return;
+
+            // Rename engine net
+            net.Name = newName;
+
+            // Update all wires sharing this net ID
+            foreach (var w in Items.OfType<WireViewModel>().Where(w => w.TargetNetId == netId))
+            {
+                w.NetLabel = newName;
+            }
+
+            // Update all visual pins connected to this net
+            var connectedPinIds = net.ConnectedPinIds;
+            foreach (var comp in Items.OfType<ComponentNodeViewModel>())
+            {
+                foreach (var pin in comp.Pins)
+                {
+                    if (connectedPinIds.Contains(pin.Id))
+                    {
+                        pin.ConnectedNetName = newName;
+                    }
+                }
+            }
+        }
+
         public SchematicViewModel(Schematic coreSchematic)
         {
             CoreSchematic = coreSchematic ?? throw new ArgumentNullException(nameof(coreSchematic));

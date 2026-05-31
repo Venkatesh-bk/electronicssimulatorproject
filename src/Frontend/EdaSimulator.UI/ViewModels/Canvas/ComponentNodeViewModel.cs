@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using EdaSimulator.Engines.Models;
+using EdaSimulator.Engines.Models.Components;
 
 namespace EdaSimulator.UI.ViewModels.Canvas
 {
@@ -76,6 +77,26 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                     CoreComponent.Value = value;
                     OnPropertyChanged();
                 }
+            }
+        }
+
+        public bool IsGround => CoreComponent is GroundSymbol;
+        public bool IsPower => CoreComponent is PowerRail;
+        public bool IsPowerSymbol => IsGround || IsPower;
+
+        public string PowerLabel
+        {
+            get
+            {
+                if (CoreComponent is PowerRail)
+                {
+                    return Designator; 
+                }
+                if (CoreComponent is GroundSymbol)
+                {
+                    return "GND";
+                }
+                return string.Empty;
             }
         }
 

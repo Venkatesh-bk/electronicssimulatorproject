@@ -2,9 +2,12 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.Models.Components;
 using EdaSimulator.Engines.Simulation.Digital;
+using EdaSimulator.UI.Commands;
 using EdaSimulator.UI.ViewModels;
 
 namespace EdaSimulator.UI.Views
@@ -254,7 +257,9 @@ namespace EdaSimulator.UI.Views
                             gnd.Pins[0], CanvasViewModel.CoreSchematic.MasterGroundNet.Id);
                     }
 
-                    CanvasViewModel.AddComponentNode(vm);
+                    // Push to undo history so Ctrl+Z removes the placed component
+                    var cmd = new AddComponentCommand(CanvasViewModel, vm);
+                    CanvasViewModel.History.ExecuteCommand(cmd);
                 }
             }
         }
@@ -282,6 +287,24 @@ namespace EdaSimulator.UI.Views
             if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.WiringTool(CanvasViewModel);
         }
 
+        private void ProbeTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.ProbeTool(CanvasViewModel);
+        }
+
+        private void CurrentProbeTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.CurrentProbeTool(CanvasViewModel);
+        }
+
+        private void NetLabelTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (CanvasViewModel != null) CanvasViewModel.ActiveTool = new Tools.NetLabelTool(CanvasViewModel);
+        }
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => CanvasViewModel?.History.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => CanvasViewModel?.History.Redo();
+
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (CanvasViewModel == null) return;
@@ -292,13 +315,35 @@ namespace EdaSimulator.UI.Views
                 if (e.Key == Key.Z)
                 {
                     CanvasViewModel.History.Undo();
+                    e.Handled = true;
                     return;
                 }
                 if (e.Key == Key.Y)
                 {
                     CanvasViewModel.History.Redo();
+                    e.Handled = true;
                     return;
                 }
+                if (e.Key == Key.E && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                {
+                    ExportSchematicPng();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Delete / Backspace — remove selected canvas items via undoable command
+            if (e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                var toDelete = new System.Collections.Generic.List<ViewModels.Canvas.CanvasItemViewModel>();
+                foreach (var item in CanvasViewModel.Items)
+                    if (item.IsSelected) toDelete.Add(item);
+
+                foreach (var item in toDelete)
+                    CanvasViewModel.History.ExecuteCommand(new DeleteItemCommand(CanvasViewModel, item));
+
+                e.Handled = true;
+                return;
             }
 
             // Tool Toggles
@@ -310,6 +355,11 @@ namespace EdaSimulator.UI.Views
             if (e.Key == Key.I)
             {
                 CanvasViewModel.ActiveTool = new Tools.CurrentProbeTool(CanvasViewModel);
+                return;
+            }
+            if (e.Key == Key.L)
+            {
+                CanvasViewModel.ActiveTool = new Tools.NetLabelTool(CanvasViewModel);
                 return;
             }
             if (e.Key == Key.W)
@@ -403,7 +453,68 @@ namespace EdaSimulator.UI.Views
         {
             var settingsWindow = new SettingsWindow();
             settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
+            bool? result = settingsWindow.ShowDialog();
+            // After settings close, refresh FreeRouting availability in PCB VM
+            if (result == true && DataContext is MainViewModel mv)
+                mv.PcbVM.RefreshFreeRoutingAvailability();
+        }
+
+        private void MenuExportPng_Click(object sender, RoutedEventArgs e) => ExportSchematicPng();
+
+        private void ExportSchematicPng()
+        {
+            if (SchematicItemsControl == null) return;
+
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title      = "Export Schematic as PNG",
+                Filter     = "PNG Image (*.png)|*.png|All Files (*.*)|*.*",
+                DefaultExt = ".png",
+                FileName   = (CanvasViewModel?.CoreSchematic.Title ?? "Schematic") + ".png"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                // Measure/arrange the canvas at its full desired size
+                SchematicItemsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                SchematicItemsControl.Arrange(new Rect(SchematicItemsControl.DesiredSize));
+                SchematicItemsControl.UpdateLayout();
+
+                double dpi = 150;
+                double w   = Math.Max(SchematicItemsControl.ActualWidth,  200);
+                double h   = Math.Max(SchematicItemsControl.ActualHeight, 200);
+
+                var rtb = new RenderTargetBitmap(
+                    (int)(w * dpi / 96), (int)(h * dpi / 96),
+                    dpi, dpi, PixelFormats.Pbgra32);
+
+                var visual = new DrawingVisual();
+                using (var dc = visual.RenderOpen())
+                {
+                    // Dark background matching the canvas
+                    dc.DrawRectangle(
+                        new SolidColorBrush(Color.FromRgb(0x0D, 0x0D, 0x1A)),
+                        null,
+                        new Rect(0, 0, w, h));
+                    var vb = new VisualBrush(SchematicItemsControl);
+                    dc.DrawRectangle(vb, null, new Rect(0, 0, w, h));
+                }
+                rtb.Render(visual);
+
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(rtb));
+                using var stream = System.IO.File.Create(dlg.FileName);
+                encoder.Save(stream);
+
+                MessageBox.Show($"Schematic exported to:\n{dlg.FileName}",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"PNG export failed:\n{ex.Message}", "Export Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void MenuHelp_Click(object sender, RoutedEventArgs e)

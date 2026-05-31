@@ -188,6 +188,31 @@ namespace EdaSimulator.UI.ViewModels
             OnPropertyChanged(nameof(HasTraceData));
         }
 
+        /// <summary>
+        /// Highlights the series matching the given net name (by thickening it)
+        /// and resets others to normal thickness.
+        /// </summary>
+        public void HighlightTrace(string netName)
+        {
+            if (string.IsNullOrEmpty(netName)) return;
+
+            string normalizedNet = netName.Trim().ToUpper();
+
+            foreach (var series in SimPlotModel.Series.OfType<LineSeries>())
+            {
+                string title = series.Title?.ToUpper() ?? "";
+                if (title == normalizedNet || title == $"V({normalizedNet})" || title == $"I({normalizedNet})")
+                {
+                    series.StrokeThickness = 4.5;
+                }
+                else
+                {
+                    series.StrokeThickness = 1.5;
+                }
+            }
+            SimPlotModel.InvalidatePlot(true);
+        }
+
         /// <summary>Clears all traces and resets axes to time-domain defaults.</summary>
         public void ClearTraces()
         {

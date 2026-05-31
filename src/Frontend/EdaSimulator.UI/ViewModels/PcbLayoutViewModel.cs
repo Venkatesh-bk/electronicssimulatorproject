@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EdaSimulator.Engines.Models;
@@ -23,7 +24,13 @@ namespace EdaSimulator.UI.ViewModels
         public PcbLayoutViewModel()
         {
             _pcbDoc = new PcbDocument { Title = "Untitled PCB" };
+            RefreshFreeRoutingAvailability();
         }
+
+        /// <summary>Re-checks whether FreeRouting JAR can be found (call after settings change).</summary>
+        public void RefreshFreeRoutingAvailability()
+            => IsFreeRoutingAvailable = FreeRoutingService.IsFreeRoutingAvailable();
+
 
         // ── PCB Document Properties ──────────────────────────────────────────────────
 
@@ -46,6 +53,14 @@ namespace EdaSimulator.UI.ViewModels
         // ── Layer Selector ───────────────────────────────────────────────────────────
 
         [ObservableProperty] private string _activeLayer  = "F.Cu";
+
+        // ── FreeRouting Autorouter ───────────────────────────────────────────────────
+
+        [ObservableProperty] private bool   _isFreeRoutingAvailable = false;
+        [ObservableProperty] private bool   _isAutoRouting          = false;
+        [ObservableProperty] private string _autoRouteStatus        = "Idle";
+
+        private CancellationTokenSource? _routingCts;
 
         public List<string> AvailableLayers => new()
         {
@@ -349,6 +364,156 @@ namespace EdaSimulator.UI.ViewModels
 
             System.Windows.MessageBox.Show("PCB layout successfully auto-routed with dual-layer orthogonal tracks!", "Auto-Route Complete",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Professional autorouting via FreeRouting JAR (open-source autorouter).
+        /// Requires Java 11+ on PATH and FreeRouting JAR configured in Preferences.
+        /// </summary>
+        [RelayCommand]
+        private async System.Threading.Tasks.Task AutoRouteFreeRoutingAsync()
+        {
+            if (_pcbDoc == null || _pcbDoc.Footprints.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Please import a schematic first.", "No Design",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (IsAutoRouting) return;
+
+            IsAutoRouting   = true;
+            AutoRouteStatus = "Exporting DSN to FreeRouting…";
+
+            _routingCts = new CancellationTokenSource();
+
+            try
+            {
+                // Sync board outline dimensions from UI before exporting
+                _pcbDoc.Outline = new PcbBoardOutline { Width_mm = BoardWidth, Height_mm = BoardHeight };
+
+                AutoRouteStatus = "FreeRouting in progress… (may take 30–120 sec)";
+                var result = await FreeRoutingService.RouteAsync(_pcbDoc, _routingCts.Token);
+
+                if (result.Success)
+                {
+                    // Rebuild canvas trace/via collections from the newly populated PcbDocument
+                    CanvasTraces.Clear();
+                    CanvasVias.Clear();
+                    CanvasRatsnestLines.Clear();
+
+                    foreach (var trace in _pcbDoc.Traces)
+                        CanvasTraces.Add(new PcbTraceVM(trace));
+                    foreach (var via in _pcbDoc.Vias)
+                        CanvasVias.Add(new PcbViaVM(via));
+
+                    AutoRouteStatus = $"Complete — {result.RoutedSegments} segments routed";
+                    RunPcbDrc();
+
+                    System.Windows.MessageBox.Show(
+                        $"FreeRouting completed successfully!\n" +
+                        $"{result.RoutedSegments} route segments imported.\n\n" +
+                        $"DRC Errors: {DrcErrors}  |  Warnings: {DrcWarnings}",
+                        "FreeRouting Complete",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                }
+                else
+                {
+                    AutoRouteStatus = "Failed — see log";
+                    DrcOutput = $"[FreeRouting FAILED]\n{result.ErrorMessage}\n\n[Log]\n{result.Log}";
+                    System.Windows.MessageBox.Show(
+                        result.ErrorMessage, "FreeRouting Failed",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+            finally
+            {
+                IsAutoRouting = false;
+                _routingCts?.Dispose();
+                _routingCts = null;
+            }
+        }
+
+        [RelayCommand]
+        private void StopAutoRoute()
+        {
+            _routingCts?.Cancel();
+            AutoRouteStatus = "Cancelling…";
+        }
+
+        /// <summary>Exports the current PCB design as a Specctra .dsn file (for manual FreeRouting use).</summary>
+        [RelayCommand]
+        private void ExportDsn()
+        {
+            if (_pcbDoc == null || _pcbDoc.Footprints.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Please import a schematic first.", "No Design",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Title      = "Export Specctra DSN File",
+                Filter     = "Specctra Design (*.dsn)|*.dsn|All Files (*.*)|*.*",
+                DefaultExt = ".dsn",
+                FileName   = _pcbDoc.Title + ".dsn"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                _pcbDoc.Outline = new PcbBoardOutline { Width_mm = BoardWidth, Height_mm = BoardHeight };
+                string dsnContent = SpecctraDsnExporter.Export(_pcbDoc);
+                System.IO.File.WriteAllText(dlg.FileName, dsnContent);
+                DrcOutput = $"DSN exported to:\n{dlg.FileName}\n\n" +
+                            $"You can now run FreeRouting manually:\n" +
+                            $"  java -jar freerouting.jar -de \"{dlg.FileName}\" -do board.ses -mp 50";
+                System.Windows.MessageBox.Show($"Specctra DSN exported to:\n{dlg.FileName}",
+                    "Export Complete", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"DSN export failed:\n{ex.Message}", "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>Imports a previously generated FreeRouting .ses session file.</summary>
+        [RelayCommand]
+        private void ImportSes()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Import FreeRouting Session (.ses)",
+                Filter = "Specctra Session (*.ses)|*.ses|All Files (*.*)|*.*"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                int count = SpecctraSessionImporter.Import(dlg.FileName, _pcbDoc);
+
+                CanvasTraces.Clear();
+                CanvasVias.Clear();
+                CanvasRatsnestLines.Clear();
+
+                foreach (var trace in _pcbDoc.Traces)
+                    CanvasTraces.Add(new PcbTraceVM(trace));
+                foreach (var via in _pcbDoc.Vias)
+                    CanvasVias.Add(new PcbViaVM(via));
+
+                RunPcbDrc();
+                System.Windows.MessageBox.Show($"SES imported: {count} route segments loaded.\nDRC Errors: {DrcErrors}",
+                    "SES Import Complete", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"SES import failed:\n{ex.Message}", "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]

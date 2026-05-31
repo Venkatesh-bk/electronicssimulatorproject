@@ -20,6 +20,13 @@ namespace EdaSimulator.Engines.Settings
         public bool AutoRunDrcBeforeSimulation { get; set; } = true;
         public string DefaultSimulationType { get; set; } = "Transient";
 
+        // === PCB Autorouter ===
+        /// <summary>
+        /// Full path to the FreeRouting executable JAR.
+        /// Download from: https://github.com/freerouting/freerouting/releases
+        /// </summary>
+        public string FreeRoutingJarPath { get; set; } = string.Empty;
+
         // === File & Project ===
         public string LastProjectDirectory { get; set; } = string.Empty;
         public bool AutoSaveEnabled { get; set; } = true;

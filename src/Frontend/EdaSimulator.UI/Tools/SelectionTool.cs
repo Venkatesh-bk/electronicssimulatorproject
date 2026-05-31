@@ -153,7 +153,7 @@ namespace EdaSimulator.UI.Tools
                 // Ensure the dragged item is explicitly in the selection target lists so undo works
                 if (_draggedComponent != null) _draggedComponent.IsSelected = true;
 
-                var cmd = new EdaSimulator.UI.Commands.MoveItemsCommand(_schematic.Items, _totalDx, _totalDy);
+                var cmd = new EdaSimulator.UI.Commands.MoveItemsCommand(_schematic, _totalDx, _totalDy);
                 _schematic.History.PushInteractionCommand(cmd);
             }
 

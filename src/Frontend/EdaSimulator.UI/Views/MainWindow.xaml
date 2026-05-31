@@ -36,6 +36,7 @@
                 <MenuItem Header="Save Project _As..." Command="{Binding SaveProjectAsCommand}"/>
                 <Separator/>
                 <MenuItem Header="Export SPICE _Netlist (.cir)..." Command="{Binding ExportNetlistToFileCommand}"/>
+                <MenuItem Header="Export Schematic as _PNG..." Click="MenuExportPng_Click" InputGestureText="Ctrl+Shift+E"/>
                 <Separator/>
                 <MenuItem Header="E_xit" Click="MenuExit_Click"/>
             </MenuItem>
@@ -145,9 +146,29 @@
                 
                 <TextBlock Text="Toolbox" FontWeight="Bold" FontSize="16" Foreground="#FFCCCCCC" Margin="0,0,0,5"/>
                 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Top">
-                    <Button Content="Cursor (Esc)" Click="SelectTool_Click" Background="#FF3F3F46" Foreground="White" BorderThickness="0" Padding="5" Margin="0,0,5,0" />
-                    <Button Content="Wire (W)" Click="WireTool_Click" Background="#FF007ACC" Foreground="White" BorderThickness="0" Padding="5" />
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Top" FlowDirection="LeftToRight">
+                    <Button Content="↖ Cursor" Click="SelectTool_Click"
+                            Background="#FF3F3F46" Foreground="White" BorderThickness="0"
+                            Padding="6,4" Margin="0,0,3,0" ToolTip="Select tool (Esc)"/>
+                    <Button Content="〰 Wire" Click="WireTool_Click"
+                            Background="#FF007ACC" Foreground="White" BorderThickness="0"
+                            Padding="6,4" Margin="0,0,3,0" ToolTip="Wire tool (W)"/>
+                    <Button Content="⚡ Probe" Click="ProbeTool_Click"
+                            Background="#FF2ECC71" Foreground="Black" BorderThickness="0"
+                            Padding="6,4" Margin="0,0,3,0" ToolTip="Voltage Probe tool (P) — click a wire to capture its waveform"/>
+                    <Button Content="〜 I-Probe" Click="CurrentProbeTool_Click"
+                            Background="#FFE67E22" Foreground="White" BorderThickness="0"
+                            Padding="6,4" Margin="0,0,3,0" ToolTip="Current Probe tool (I)"/>
+                    <Button Content="🏷 Label" Click="NetLabelTool_Click"
+                            Background="#FF9B59B6" Foreground="White" BorderThickness="0"
+                            Padding="6,4" Margin="0,0,10,0" ToolTip="Net Label tool (L) — click a wire to assign a name"/>
+                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,6,0"/>
+                    <Button Content="↩ Undo" Click="Undo_Click"
+                            Background="#FF252526" Foreground="#FFAAAAAA" BorderBrush="#FF3F3F46" BorderThickness="1"
+                            Padding="6,4" Margin="0,0,3,0" ToolTip="Undo (Ctrl+Z)"/>
+                    <Button Content="↪ Redo" Click="Redo_Click"
+                            Background="#FF252526" Foreground="#FFAAAAAA" BorderBrush="#FF3F3F46" BorderThickness="1"
+                            Padding="6,4" ToolTip="Redo (Ctrl+Y)"/>
                 </StackPanel>
                 
                 <ListBox x:Name="ToolboxList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White" Margin="0,35,0,0"
@@ -305,7 +326,7 @@
                                 <!-- ② Symbol: fixed ViewBox so the PathData fills the bounds cleanly -->
                                 <Viewbox Stretch="Uniform" Margin="4">
                                     <Canvas Width="{Binding BoundsWidth}" Height="{Binding BoundsHeight}">
-                                        <Path Data="{Binding PathData}"
+                                        <Path x:Name="SymbolPath" Data="{Binding PathData}"
                                               Stroke="#FF4FC3F7" StrokeThickness="2"
                                               Fill="Transparent"
                                               Canvas.Left="{Binding BoundsWidth, Converter={x:Static canvasVm:HalfValueConverter.Instance}}"
@@ -318,23 +339,41 @@
                                 </Viewbox>
 
                                 <!-- ③ Designator label — above the symbol -->
-                                <TextBlock Text="{Binding Designator}"
+                                <TextBlock x:Name="DesignatorLabel" Text="{Binding Designator}"
                                            Foreground="#FFFFFFFF"
                                            FontFamily="Consolas" FontSize="10" FontWeight="Bold"
                                            HorizontalAlignment="Center" VerticalAlignment="Top"
                                            Margin="0,-16,0,0"/>
 
                                 <!-- ④ Value label — below the symbol -->
-                                <TextBlock Text="{Binding Value}"
+                                <TextBlock x:Name="ValueLabel" Text="{Binding Value}"
                                            Foreground="#FF90CAF9"
                                            FontFamily="Consolas" FontSize="9"
                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                            Margin="0,0,0,-15"/>
+
+                                <!-- ⑤ Power label — only visible for power rails -->
+                                <TextBlock x:Name="PowerLabelBlock" Text="{Binding PowerLabel}"
+                                           Foreground="#FFE74C3C" Visibility="Collapsed"
+                                           FontFamily="Consolas" FontSize="9" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Top"
+                                           Margin="0,-16,0,0"/>
                             </Grid>
 
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                     <Setter TargetName="SelectionHighlight" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsGround}" Value="True">
+                                    <Setter TargetName="SymbolPath" Property="Stroke" Value="#FF95A5A6" />
+                                    <Setter TargetName="DesignatorLabel" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="ValueLabel" Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsPower}" Value="True">
+                                    <Setter TargetName="SymbolPath" Property="Stroke" Value="#FFE74C3C" />
+                                    <Setter TargetName="DesignatorLabel" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="ValueLabel" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="PowerLabelBlock" Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
@@ -845,11 +884,91 @@
                                                 Background="#FF4EC9B0" Foreground="Black" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
 
-                                        <Button Content="Auto-Route Board"
+                                        <Button Content="Auto-Route Board (Built-in)"
                                                 Command="{Binding AutoRouteBoardCommand}"
                                                 Background="#FFFF8C00" Foreground="Black" FontWeight="Bold"
                                                 BorderThickness="0" Padding="8,6" Margin="0,0,0,4"
-                                                ToolTip="Automatically routes ratsnest connections using dual-layer orthogonal paths"/>
+                                                ToolTip="Automatically routes ratsnest connections using dual-layer orthogonal L-bend paths"/>
+
+                                        <!-- FreeRouting Professional Autorouter Section -->
+                                        <Separator Background="#FF3F3F46" Margin="0,4,0,8"/>
+                                        <TextBlock Text="PROFESSIONAL AUTOROUTER" FontWeight="Bold" Foreground="#FF9B59B6" Margin="0,0,0,4"/>
+                                        <TextBlock Text="FreeRouting (open-source, Java-based)" Foreground="#FF888888" FontSize="9" Margin="0,0,0,4"/>
+
+                                        <!-- FreeRouting availability indicator -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="#FF888888"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFreeRoutingAvailable}" Value="True">
+                                                                <Setter Property="Fill" Value="#FF2ECC71"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock VerticalAlignment="Center" FontSize="10">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="FreeRouting: Not Found"/>
+                                                        <Setter Property="Foreground" Value="#FF888888"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFreeRoutingAvailable}" Value="True">
+                                                                <Setter Property="Text" Value="FreeRouting: Ready"/>
+                                                                <Setter Property="Foreground" Value="#FF2ECC71"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- Auto-Route via FreeRouting -->
+                                        <Button Command="{Binding AutoRouteFreeRoutingCommand}"
+                                                Background="#FF9B59B6" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"
+                                                ToolTip="Professional autorouting via FreeRouting.&#10;Requires Java 11+ on PATH and FreeRouting JAR in Preferences.">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Content" Value="⚡ Auto-Route (FreeRouting)"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAutoRouting}" Value="True">
+                                                            <Setter Property="Content" Value="⏳ Routing in progress…"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                        <!-- Stop Routing (only visible while routing) -->
+                                        <Button Content="■ Stop Routing"
+                                                Command="{Binding StopAutoRouteCommand}"
+                                                Background="#FFCC3333" Foreground="White" FontWeight="Bold"
+                                                BorderThickness="0" Padding="8,4" Margin="0,0,0,4"
+                                                Visibility="{Binding IsAutoRouting, Converter={StaticResource BoolToVis}}"/>
+
+                                        <!-- Autoroute status -->
+                                        <TextBlock Text="{Binding AutoRouteStatus}" Foreground="#FF9B59B6"
+                                                   FontSize="9" Margin="0,0,0,6" TextWrapping="Wrap"/>
+
+                                        <!-- Manual DSN/SES workflow -->
+                                        <Button Content="Export Specctra DSN…"
+                                                Command="{Binding ExportDsnCommand}"
+                                                Background="#FF2C3E50" Foreground="#FF9B59B6"
+                                                BorderBrush="#FF9B59B6" BorderThickness="1"
+                                                Padding="6,4" Margin="0,0,0,2" FontSize="11"
+                                                ToolTip="Export board as Specctra .dsn for manual FreeRouting use"/>
+
+                                        <Button Content="Import FreeRouting SES…"
+                                                Command="{Binding ImportSesCommand}"
+                                                Background="#FF2C3E50" Foreground="#FF9B59B6"
+                                                BorderBrush="#FF9B59B6" BorderThickness="1"
+                                                Padding="6,4" Margin="0,0,0,8" FontSize="11"
+                                                ToolTip="Import the .ses session file output by FreeRouting"/>
+
+                                        <Separator Background="#FF3F3F46" Margin="0,0,0,8"/>
 
                                         <Button Content="Run DRC" Command="{Binding RunPcbDrcCommand}"
                                                 Background="#FFCC3333" Foreground="White" FontWeight="Bold"

@@ -21,6 +21,9 @@ namespace EdaSimulator.UI.Tools
                 var probe = new CurrentProbeItemViewModel(comp.CoreComponent.Designator, x, y);
                 _schematic.Items.Add(probe);
                 
+                // Raise the net probed notification using standard SPICE current syntax: I(Designator)
+                _schematic.OnNetProbed($"I({comp.CoreComponent.Designator})");
+                
                 // Return to selection arrow automatically
                 _schematic.ActiveTool = new SelectionTool(_schematic);
             }

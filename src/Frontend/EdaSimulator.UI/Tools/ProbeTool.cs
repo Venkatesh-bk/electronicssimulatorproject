@@ -14,29 +14,48 @@ namespace EdaSimulator.UI.Tools
 
         public void OnPointerDown(double x, double y, CanvasItemViewModel target)
         {
-            // Usually we'd raycast exactly against a WireItemViewModel to grab its exact Net string.
-            // For rapid parity, we drop a theoretical Probe tracker bounding the nearest Net.
-            
-            // To ensure compatibility and avoid complex geometric vector collisions:
-            // We just ask the user to click precisely on Pin nodes for Probes using the Gravity model.
-            
             string targetNet = "0"; // Default to ground
 
-            if (target is ComponentNodeViewModel comp)
+            if (target is WireViewModel wire)
             {
-                // Just map it loosely to the first net it finds for now.
-                var firstPin = comp.CoreComponent.Pins.FirstOrDefault();
-                if (firstPin != null && !firstPin.IsFloating)
+                var net = _schematic.CoreSchematic.GetNetById(wire.TargetNetId);
+                if (net != null)
                 {
-                    targetNet = firstPin.ConnectedNetId.ToString() ?? "0"; // SPICE node map
+                    targetNet = net.Name;
+                }
+            }
+            else if (target is PinNodeViewModel pin)
+            {
+                if (pin.IsConnected)
+                {
+                    targetNet = pin.ConnectedNetName;
+                }
+            }
+            else if (target is ComponentNodeViewModel comp)
+            {
+                var firstPin = comp.CoreComponent.Pins.FirstOrDefault();
+                if (firstPin != null)
+                {
+                    // Look up net by pin connected NetId
+                    if (firstPin.ConnectedNetId.HasValue)
+                    {
+                        var net = _schematic.CoreSchematic.GetNetById(firstPin.ConnectedNetId.Value);
+                        if (net != null)
+                        {
+                            targetNet = net.Name;
+                        }
+                    }
                 }
             }
             
-            // For now, allow dropping probes generally.
+            // Drop visual probe tracker at clicked location
             var probe = new VoltageProbeItemViewModel(targetNet, x, y);
             _schematic.Items.Add(probe);
             
-            // Optionally auto-deactivate back to selection arrow
+            // Raise the net probed notification to trigger oscilloscope highlighting
+            _schematic.OnNetProbed(targetNet);
+            
+            // Auto-deactivate back to selection arrow
             _schematic.ActiveTool = new SelectionTool(_schematic);
         }
 
