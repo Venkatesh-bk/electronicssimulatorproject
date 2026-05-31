@@ -461,6 +461,37 @@ namespace EdaSimulator.UI.Views
 
         private void MenuExportPng_Click(object sender, RoutedEventArgs e) => ExportSchematicPng();
 
+        private void MenuExportSvg_Click(object sender, RoutedEventArgs e) => ExportSchematicSvg();
+
+        private void ExportSchematicSvg()
+        {
+            var vm = CanvasViewModel;
+            if (vm == null) return;
+
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title      = "Export Schematic as SVG",
+                Filter     = "SVG Image (*.svg)|*.svg|All Files (*.*)|*.*",
+                DefaultExt = ".svg",
+                FileName   = (vm.CoreSchematic.Title ?? "Schematic") + ".svg"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var svg = EdaSimulator.UI.IO.SvgExporter.Export(vm);
+                System.IO.File.WriteAllText(dlg.FileName, svg);
+
+                MessageBox.Show($"Schematic exported to:\n{dlg.FileName}",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"SVG export failed:\n{ex.Message}", "Export Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ExportSchematicPng()
         {
             if (SchematicItemsControl == null) return;

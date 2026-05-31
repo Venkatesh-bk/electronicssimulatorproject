@@ -37,6 +37,7 @@
                 <Separator/>
                 <MenuItem Header="Export SPICE _Netlist (.cir)..." Command="{Binding ExportNetlistToFileCommand}"/>
                 <MenuItem Header="Export Schematic as _PNG..." Click="MenuExportPng_Click" InputGestureText="Ctrl+Shift+E"/>
+                <MenuItem Header="Export Schematic as _SVG..." Click="MenuExportSvg_Click" InputGestureText="Ctrl+Shift+V"/>
                 <Separator/>
                 <MenuItem Header="E_xit" Click="MenuExit_Click"/>
             </MenuItem>
