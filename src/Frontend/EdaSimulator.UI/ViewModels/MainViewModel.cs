@@ -808,6 +808,149 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             SpectraStatus = $"FFT Complete. Size: {fftSize} pts | Fs: {samplingFreq:F1} Hz | Res: {samplingFreq / fftSize:F2} Hz";
         }
 
+        [RelayCommand]
+        private void CalculateThd()
+        {
+            if (LastSimulationData == null)
+            {
+                SpectraStatus = "Error: No simulation data. Run a simulation first.";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SelectedSpectraNode))
+            {
+                SpectraStatus = "Error: Select a node first.";
+                return;
+            }
+
+            if (!LastSimulationData.DataPoints.ContainsKey("time"))
+            {
+                SpectraStatus = "Error: THD calculation requires transient (time-domain) simulation.";
+                return;
+            }
+
+            var timeList = LastSimulationData.DataPoints["time"];
+            if (!LastSimulationData.DataPoints.TryGetValue(SelectedSpectraNode, out var yList) || yList.Count < 4)
+            {
+                SpectraStatus = "Error: Selected node data is invalid or too short.";
+                return;
+            }
+
+            int n = yList.Count;
+            int fftSize = 1;
+            while (fftSize * 2 <= n) fftSize *= 2;
+
+            if (fftSize < 4)
+            {
+                SpectraStatus = "Error: Not enough data points.";
+                return;
+            }
+
+            double[] yArray = yList.Take(fftSize).ToArray();
+            ApplyWindow(yArray, SelectedFftWindow);
+
+            var complexData = new System.Numerics.Complex[fftSize];
+            for (int i = 0; i < fftSize; i++)
+            {
+                complexData[i] = new System.Numerics.Complex(yArray[i], 0);
+            }
+
+            FftHelper.Fft(complexData);
+
+            double totalTime = timeList[fftSize - 1] - timeList[0];
+            double dt = totalTime / (fftSize - 1);
+            if (dt <= 0)
+            {
+                SpectraStatus = "Error: Invalid time step dt.";
+                return;
+            }
+            double samplingFreq = 1.0 / dt;
+            double binWidth = samplingFreq / fftSize;
+
+            int halfSize = fftSize / 2;
+            double[] magnitudes = new double[halfSize];
+            for (int k = 0; k < halfSize; k++)
+            {
+                double mag = complexData[k].Magnitude / fftSize;
+                if (k > 0) mag *= 2.0;
+                magnitudes[k] = mag;
+            }
+
+            // Find fundamental peak index (k_fund >= 1)
+            int k_fund = 1;
+            double maxMag = magnitudes[1];
+            // Skip index 0 (DC)
+            for (int k = 2; k < halfSize; k++)
+            {
+                if (magnitudes[k] > maxMag)
+                {
+                    maxMag = magnitudes[k];
+                    k_fund = k;
+                }
+            }
+
+            double f_fund = k_fund * binWidth;
+            double V_fund = magnitudes[k_fund];
+
+            if (V_fund <= 1e-12)
+            {
+                System.Windows.MessageBox.Show("Fundamental component magnitude is too low to perform THD calculation.",
+                    "THD Calculation", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var harmonics = new System.Collections.Generic.List<(int Harmonic, double Frequency, double Magnitude, double Dbc)>();
+            double sumSqHarmonics = 0;
+
+            for (int h = 2; h <= 10; h++)
+            {
+                int k_expected = h * k_fund;
+                if (k_expected >= halfSize)
+                    break;
+
+                int startBin = System.Math.Max(1, k_expected - 2);
+                int endBin = System.Math.Min(halfSize - 1, k_expected + 2);
+
+                double maxHarmonicMag = 0;
+                for (int k = startBin; k <= endBin; k++)
+                {
+                    if (magnitudes[k] > maxHarmonicMag)
+                    {
+                        maxHarmonicMag = magnitudes[k];
+                    }
+                }
+
+                double V_h = maxHarmonicMag;
+                double dbc = 20.0 * System.Math.Log10(V_h / V_fund + 1e-15);
+                harmonics.Add((h, h * f_fund, V_h, dbc));
+
+                sumSqHarmonics += V_h * V_h;
+            }
+
+            double thd = (System.Math.Sqrt(sumSqHarmonics) / V_fund) * 100.0;
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Total Harmonic Distortion (THD) Report for {SelectedSpectraNode.ToUpper()}");
+            sb.AppendLine($"FFT Window: {SelectedFftWindow} | Resolution: {binWidth:F2} Hz");
+            sb.AppendLine("=================================================================");
+            sb.AppendLine($"Fundamental Frequency (f1): {f_fund:F2} Hz");
+            sb.AppendLine($"Fundamental Amplitude (V1): {V_fund:E6} V");
+            sb.AppendLine("=================================================================");
+            sb.AppendLine(string.Format("{0,-10} | {1,-18} | {2,-15} | {3,-10}", "Harmonic", "Frequency (Hz)", "Magnitude (V)", "dBc"));
+            sb.AppendLine("-----------------------------------------------------------------");
+            foreach (var h in harmonics)
+            {
+                sb.AppendLine(string.Format("{0,-10} | {1,-18:F2} | {2,-15:E6} | {3,-10:F2}", 
+                    $"{h.Harmonic} (f{h.Harmonic})", h.Frequency, h.Magnitude, h.Dbc));
+            }
+            sb.AppendLine("=================================================================");
+            sb.AppendLine($"Calculated THD: {thd:F4} %");
+            sb.AppendLine("=================================================================");
+
+            System.Windows.MessageBox.Show(sb.ToString(), "Total Harmonic Distortion (THD) Analysis", 
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+
         // ── Oscilloscope: persistent singleton window ────────────────────────────────
         private Views.OscilloscopeWindow? _scopeWindow;
         private Views.OscilloscopeWindow GetScopeWindow()
@@ -1027,6 +1170,13 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
             }
             
             NetlistOutput += $"\n\n--- SIMULATION SUCCESS ---\n{result.OutputLog}";
+
+            if (SimulationType == "Sensitivity")
+            {
+                ParseAndDisplaySensitivity(result.OutputLog);
+                StatusText = "Sensitivity Analysis Complete";
+                return;
+            }
 
             if (System.IO.File.Exists(result.RawFilePath))
             {
@@ -1432,8 +1582,89 @@ print('SUCCESS: Massive parallel EDA computation executed on NVIDIA GPU.')
                 "DC Sweep"  => $".dc {DcSweepComponent} {DcSweepStart} {DcSweepStop} {DcSweepStep}",
                 "Noise Analysis" => GetNoiseDirective(),
                 "Pole-Zero" => GetPoleZeroDirective(),
+                "Sensitivity" => GetSensitivityDirective(),
                 _           => $".tran {TransientStepTime} {TransientStopTime}"
             };
+        }
+
+        private string GetSensitivityDirective()
+        {
+            string outNode = "out";
+            if (ActiveSchematicViewModel != null)
+            {
+                var namedWire = ActiveSchematicViewModel.Items.OfType<WireViewModel>()
+                    .FirstOrDefault(w => !string.IsNullOrEmpty(w.NetLabel) && 
+                                         (w.NetLabel.Contains("out", StringComparison.OrdinalIgnoreCase) || 
+                                          w.NetLabel.Contains("output", StringComparison.OrdinalIgnoreCase)));
+                if (namedWire != null && !string.IsNullOrEmpty(namedWire.NetLabel))
+                {
+                    outNode = namedWire.NetLabel;
+                }
+                else
+                {
+                    var generalWire = ActiveSchematicViewModel.Items.OfType<WireViewModel>()
+                        .FirstOrDefault(w => !string.IsNullOrEmpty(w.NetLabel) && 
+                                             !w.NetLabel.Equals("GND", StringComparison.OrdinalIgnoreCase) && 
+                                             !w.NetLabel.Equals("0", StringComparison.OrdinalIgnoreCase) && 
+                                             !w.NetLabel.Equals("VCC", StringComparison.OrdinalIgnoreCase) && 
+                                             !w.NetLabel.Equals("VDD", StringComparison.OrdinalIgnoreCase));
+                    if (generalWire != null && !string.IsNullOrEmpty(generalWire.NetLabel))
+                    {
+                        outNode = generalWire.NetLabel;
+                    }
+                }
+            }
+            return $".sens V({outNode})";
+        }
+
+        private void ParseAndDisplaySensitivity(string outputLog)
+        {
+            var sensitivities = new System.Collections.Generic.List<(string Component, double Sensitivity)>();
+            
+            if (ActiveSchematicViewModel?.CoreSchematic?.Components == null) return;
+
+            var designators = ActiveSchematicViewModel.CoreSchematic.Components.Values
+                .Select(c => c.Designator.ToLower())
+                .ToHashSet();
+
+            var lines = outputLog.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+            var regex = new System.Text.RegularExpressions.Regex(@"^([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            foreach (var line in lines)
+            {
+                var match = regex.Match(line.Trim());
+                if (match.Success)
+                {
+                    string name = match.Groups[1].Value.ToLower();
+                    if (designators.Contains(name) && double.TryParse(match.Groups[2].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+                    {
+                        var origDesignator = ActiveSchematicViewModel.CoreSchematic.Components.Values
+                            .First(c => string.Equals(c.Designator, name, System.StringComparison.OrdinalIgnoreCase)).Designator;
+                        sensitivities.Add((origDesignator, value));
+                    }
+                }
+            }
+
+            if (sensitivities.Count == 0)
+            {
+                System.Windows.MessageBox.Show("Sensitivity Analysis ran successfully, but no component sensitivities could be parsed from the log.", 
+                    "Sensitivity Analysis", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Component DC Sensitivity Analysis Results:");
+            sb.AppendLine("============================================");
+            sb.AppendLine(string.Format("{0,-15} | {1,-20}", "Component", "Sensitivity (V/Unit)"));
+            sb.AppendLine("--------------------------------------------");
+            foreach (var s in sensitivities.OrderByDescending(x => System.Math.Abs(x.Sensitivity)))
+            {
+                sb.AppendLine(string.Format("{0,-15} | {1:E6}", s.Component, s.Sensitivity));
+            }
+            sb.AppendLine("============================================");
+            sb.AppendLine("Note: Higher absolute values indicate components that have the greatest impact on the target output voltage.");
+
+            System.Windows.MessageBox.Show(sb.ToString(), "Sensitivity Analysis Results", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         }
 
         private string GetPoleZeroDirective()

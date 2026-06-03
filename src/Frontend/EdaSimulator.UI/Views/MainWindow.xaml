@@ -676,6 +676,7 @@
                             <ComboBoxItem Content="DC Sweep"/>
                             <ComboBoxItem Content="Noise Analysis"/>
                             <ComboBoxItem Content="Pole-Zero"/>
+                            <ComboBoxItem Content="Sensitivity"/>
                         </ComboBox>
 
                         <!-- Transient params (shown only for Transient) -->
@@ -694,6 +695,9 @@
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SimulationType}" Value="Pole-Zero">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="Sensitivity">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -876,6 +880,7 @@
                                     </ComboBox>
 
                                     <Button Content="Analyze Spectrum ▶" Command="{Binding RunSpectraAnalysisCommand}" Margin="12,0,0,0" Padding="12,3" Background="#FFFF8C00" Foreground="Black" FontWeight="Bold" BorderThickness="0"/>
+                                    <Button Content="Calculate THD %" Command="{Binding CalculateThdCommand}" Margin="8,0,0,0" Padding="12,3" Background="#FF2EA3F2" Foreground="White" FontWeight="Bold" BorderThickness="0"/>
                                     
                                     <TextBlock Text="{Binding SpectraStatus}" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="15,0,0,0" FontSize="11" FontStyle="Italic"/>
                                 </StackPanel>
@@ -1864,6 +1869,7 @@
                     <ComboBoxItem Content="DC Sweep"/>
                     <ComboBoxItem Content="Noise Analysis"/>
                     <ComboBoxItem Content="Pole-Zero"/>
+                    <ComboBoxItem Content="Sensitivity"/>
                 </ComboBox>
 
                 <!-- Transient options -->

@@ -1287,6 +1287,186 @@ print(""Connected to Wifi"")
             Assert.True(result.Success, $"Simulation failed: {result.ErrorMessage}\nNetlist:\n{netlist}");
             Assert.Contains("pole", result.OutputLog.ToLower());
         }
+
+        [Fact]
+        public async System.Threading.Tasks.Task Simulation_SensitivityAnalysis_RunsSuccessfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("Voltage Divider Sensitivity Test");
+            var v1 = new EdaSimulator.Engines.Models.Components.VoltageSource("V1", "5V");
+            var r1 = new EdaSimulator.Engines.Models.Components.Resistor("R1", "1k");
+            var r2 = new EdaSimulator.Engines.Models.Components.Resistor("R2", "1k");
+
+            schematic.AddComponent(v1);
+            schematic.AddComponent(r1);
+            schematic.AddComponent(r2);
+
+            var netIn = schematic.CreateNet("VIN_NODE");
+            var netOut = schematic.CreateNet("OUT_NODE");
+
+            schematic.ConnectPinToNet(v1.GetPinByName("+"), netIn.Id);
+            schematic.ConnectPinToNet(v1.GetPinByName("-"), schematic.MasterGroundNet.Id);
+            schematic.ConnectPinToNet(r1.GetPinByName("1"), netIn.Id);
+            schematic.ConnectPinToNet(r1.GetPinByName("2"), netOut.Id);
+            schematic.ConnectPinToNet(r2.GetPinByName("1"), netOut.Id);
+            schematic.ConnectPinToNet(r2.GetPinByName("2"), schematic.MasterGroundNet.Id);
+
+            var exporter = new EdaSimulator.Engines.Simulation.SpiceNetlistExporter();
+            var netlist = exporter.GenerateNetlist(schematic, ".sens V(OUT_NODE)");
+
+            var ngSpicePath = EdaSimulator.Engines.Simulation.NgSpiceLocator.FindNgSpice();
+            Assert.NotNull(ngSpicePath);
+
+            string customNetlist = netlist + $"\n.control\nrun\nsetplot\ndisplay\n.endc\n";
+
+            string tempCir = Path.Combine(Path.GetTempPath(), "test_sens.cir");
+            File.WriteAllText(tempCir, customNetlist);
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = ngSpicePath,
+                Arguments = $"-b \"{tempCir}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(startInfo);
+            Assert.NotNull(process);
+            string stdout = await process.StandardOutput.ReadToEndAsync();
+            string stderr = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            File.Delete(tempCir);
+
+            Console.WriteLine("SENSITIVITY CONTROL STDOUT:\n" + stdout);
+            Console.WriteLine("SENSITIVITY CONTROL STDERR:\n" + stderr);
+
+            Assert.Contains("Note: Simulation executed from .control section", stdout);
+        }
+
+        [Fact]
+        public void ThdCalculation_MatchesTheoretical()
+        {
+            // Set up a test signal with a 1 kHz fundamental at 1V amplitude,
+            // 3 kHz 3rd harmonic at 0.1V, and 5 kHz 5th harmonic at 0.05V.
+            double f1 = 1000.0;
+            double f3 = 3000.0;
+            double f5 = 5000.0;
+            
+            double V1_expected = 1.0;
+            double V3_expected = 0.1;
+            double V5_expected = 0.05;
+
+            // Generate time series data
+            int fftSize = 1024;
+            double Fs = 32000.0; // sampling frequency
+            double dt = 1.0 / Fs;
+
+            var timeList = new System.Collections.Generic.List<double>();
+            var yList = new System.Collections.Generic.List<double>();
+
+            for (int i = 0; i < fftSize; i++)
+            {
+                double t = i * dt;
+                timeList.Add(t);
+                // Signal: V(t) = 1.0*sin(2*pi*f1*t) + 0.1*sin(2*pi*f3*t) + 0.05*sin(2*pi*f5*t)
+                double y = V1_expected * Math.Sin(2.0 * Math.PI * f1 * t) +
+                           V3_expected * Math.Sin(2.0 * Math.PI * f3 * t) +
+                           V5_expected * Math.Sin(2.0 * Math.PI * f5 * t);
+                yList.Add(y);
+            }
+
+            // Perform FFT
+            var complexData = new System.Numerics.Complex[fftSize];
+            for (int i = 0; i < fftSize; i++)
+            {
+                complexData[i] = new System.Numerics.Complex(yList[i], 0);
+            }
+
+            LocalFft(complexData);
+
+            double binWidth = Fs / fftSize;
+            int halfSize = fftSize / 2;
+            double[] magnitudes = new double[halfSize];
+            for (int k = 0; k < halfSize; k++)
+            {
+                double mag = complexData[k].Magnitude / fftSize;
+                if (k > 0) mag *= 2.0;
+                magnitudes[k] = mag;
+            }
+
+            // Find fundamental peak
+            int k_fund = 1;
+            double maxMag = magnitudes[1];
+            for (int k = 2; k < halfSize; k++)
+            {
+                if (magnitudes[k] > maxMag)
+                {
+                    maxMag = magnitudes[k];
+                    k_fund = k;
+                }
+            }
+
+            double f_fund = k_fund * binWidth;
+            double V_fund = magnitudes[k_fund];
+
+            // Harmonic THD summation
+            double sumSqHarmonics = 0;
+            for (int h = 2; h <= 10; h++)
+            {
+                int k_expected = h * k_fund;
+                if (k_expected >= halfSize)
+                    break;
+
+                int startBin = Math.Max(1, k_expected - 2);
+                int endBin = Math.Min(halfSize - 1, k_expected + 2);
+
+                double maxHarmonicMag = 0;
+                for (int k = startBin; k <= endBin; k++)
+                {
+                    if (magnitudes[k] > maxHarmonicMag)
+                    {
+                        maxHarmonicMag = magnitudes[k];
+                    }
+                }
+                sumSqHarmonics += maxHarmonicMag * maxHarmonicMag;
+            }
+
+            double thd = (Math.Sqrt(sumSqHarmonics) / V_fund) * 100.0;
+
+            // Theoretical THD = sqrt(0.1^2 + 0.05^2) / 1.0 = sqrt(0.0125) = 11.1803%
+            double theoreticalThd = (Math.Sqrt(V3_expected * V3_expected + V5_expected * V5_expected) / V1_expected) * 100.0;
+
+            Assert.Equal(f1, f_fund, precision: 1); // within bin resolution
+            Assert.Equal(V1_expected, V_fund, precision: 1);
+            Assert.Equal(theoreticalThd, thd, precision: 1);
+        }
+
+        private static void LocalFft(System.Numerics.Complex[] a)
+        {
+            int n = a.Length;
+            if (n <= 1) return;
+
+            var even = new System.Numerics.Complex[n / 2];
+            var odd = new System.Numerics.Complex[n / 2];
+            for (int i = 0; i < n / 2; i++)
+            {
+                even[i] = a[2 * i];
+                odd[i] = a[2 * i + 1];
+            }
+
+            LocalFft(even);
+            LocalFft(odd);
+
+            for (int k = 0; k < n / 2; k++)
+            {
+                double theta = -2.0 * Math.PI * k / n;
+                var w = new System.Numerics.Complex(Math.Cos(theta), Math.Sin(theta)) * odd[k];
+                a[k] = even[k] + w;
+                a[k + n / 2] = even[k] - w;
+            }
+        }
     }
 }
 

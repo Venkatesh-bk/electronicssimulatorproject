@@ -75,9 +75,15 @@ namespace EdaSimulator.Engines.Simulation
 
             try
             {
-                // Inject the batch execution save parameter into the netlist
-                // Ngspice uses control blocks to auto-export .raw binary vectors
-                var finalNetlist = netlistContent + $"\n.control\nset filetype=ascii\nrun\nwrite {rawFileName}\n.endc\n";
+                string finalNetlist;
+                if (netlistContent.Contains(".sens", StringComparison.OrdinalIgnoreCase))
+                {
+                    finalNetlist = netlistContent + $"\n.control\nset filetype=ascii\nrun\nprint all\n.endc\n";
+                }
+                else
+                {
+                    finalNetlist = netlistContent + $"\n.control\nset filetype=ascii\nrun\nwrite {rawFileName}\n.endc\n";
+                }
                 await File.WriteAllTextAsync(cirFileName, finalNetlist, cancellationToken);
 
                 var startInfo = new ProcessStartInfo
