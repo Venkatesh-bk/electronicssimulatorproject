@@ -188,6 +188,65 @@ namespace EdaSimulator.UI.ViewModels
             OnPropertyChanged(nameof(HasTraceData));
         }
 
+        /// <summary>Renders a Noise plot (V/sqrt(Hz) vs log-frequency) from Noise analysis.</summary>
+        public void RenderNoisePlot(string traceName, IList<double> freq, IList<double> noiseDensity)
+        {
+            // Switch to logarithmic X and Y axes
+            SimPlotModel.Axes.Clear();
+            SimPlotModel.Axes.Add(new LogarithmicAxis
+            {
+                Position            = AxisPosition.Bottom,
+                Title               = "Frequency (Hz)",
+                MajorGridlineStyle  = LineStyle.Dot,
+                MajorGridlineColor  = OxyColors.DarkGray,
+                TicklineColor       = OxyColors.Gray,
+                TextColor           = OxyColors.LightGray
+            });
+            SimPlotModel.Axes.Add(new LogarithmicAxis
+            {
+                Position            = AxisPosition.Left,
+                Title               = "Noise Density (V/√Hz)",
+                MajorGridlineStyle  = LineStyle.Dot,
+                MajorGridlineColor  = OxyColors.DarkGray,
+                TicklineColor       = OxyColors.Gray,
+                TextColor           = OxyColors.LightGray
+            });
+            SimPlotModel.Title = "Noise Spectrum — Noise Analysis";
+
+            var series = new LineSeries
+            {
+                Title            = traceName,
+                Color            = OxyColors.Orange,
+                StrokeThickness  = 2,
+                TrackerFormatString = "{0}\nFreq: {2:0.000E+00} Hz\nNoise: {4:0.000E-09} V/√Hz"
+            };
+
+            int count = Math.Min(freq.Count, noiseDensity.Count);
+            for (int i = 0; i < count; i++)
+            {
+                if (freq[i] > 0 && noiseDensity[i] > 0)
+                {
+                    series.Points.Add(new DataPoint(freq[i], noiseDensity[i]));
+                }
+            }
+
+            SimPlotModel.Series.Add(series);
+            SimPlotModel.InvalidatePlot(true);
+
+            var info = new TraceInfo
+            {
+                Name     = traceName,
+                ColorHex = "#FFA500", // Orange
+                Min      = noiseDensity.Count > 0 ? noiseDensity.Min() : 0,
+                Max      = noiseDensity.Count > 0 ? noiseDensity.Max() : 0,
+                Average  = noiseDensity.Count > 0 ? noiseDensity.Average() : 0,
+                X        = freq.Take(count).ToList(),
+                Y        = noiseDensity.Take(count).ToList()
+            };
+            TraceInfos.Add(info);
+            OnPropertyChanged(nameof(HasTraceData));
+        }
+
         /// <summary>
         /// Highlights the series matching the given net name (by thickening it)
         /// and resets others to normal thickness.

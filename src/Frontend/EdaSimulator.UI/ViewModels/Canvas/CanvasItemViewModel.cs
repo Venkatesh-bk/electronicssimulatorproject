@@ -25,5 +25,14 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         /// Unique visual ID (can map to backing core electrical ID).
         /// </summary>
         public Guid Id { get; protected set; } = Guid.NewGuid();
+
+        /// <summary>
+        /// Translates the canvas item's position.
+        /// </summary>
+        public virtual void MoveBy(double dx, double dy)
+        {
+            X += dx;
+            Y += dy;
+        }
     }
 }

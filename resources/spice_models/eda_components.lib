@@ -72,41 +72,40 @@
 
 * LM358 — Dual General Purpose Op-Amp (simplified behavioral)
 .SUBCKT LM358 IN+ IN- V+ V- OUT
-+ params: avol=100k rin=1Meg rout=100 voh=2 vol=0.02 isc=40m
++ params: avol=100k rin=1Meg rout=100 voh=2 vol=0.02
 Rin  IN+ IN- {rin}
-Ediff vdiff 0 IN+ IN- 1
-Aout out 0 vdiff 0 0 0 0 0 AOUT=-{avol} OUTH={v+-voh} OUTL={v-+vol}
-Rout vdiff out {rout}
+Egain out_int 0 value={ limit(V(IN+, IN-) * avol, V(V-)+vol, V(V+)-voh) }
+Rout out_int OUT {rout}
 .ENDS LM358
 
 * LM741 — Classic Op-Amp (simplified)
 .SUBCKT LM741 IN+ IN- V+ V- OUT
 Rin  IN+ IN- 2Meg
-Ediff VDIFF 0 IN+ IN- 100k
-Rout VDIFF OUT 75
+Egain out_int 0 value={ limit(V(IN+, IN-) * 100k, V(V-)+1.5, V(V+)-1.5) }
+Rout out_int OUT 75
 Cout OUT 0 30p
 .ENDS LM741
 
 * TL071 — JFET Input Op-Amp
 .SUBCKT TL071 IN+ IN- V+ V- OUT
 Rin  IN+ IN- 1T
-Ediff VDIFF 0 IN+ IN- 200k
-Rout VDIFF OUT 100
+Egain out_int 0 value={ limit(V(IN+, IN-) * 200k, V(V-)+1.5, V(V+)-1.5) }
+Rout out_int OUT 100
 Cout OUT 0 10p
 .ENDS TL071
 
 * LM324 — Quad Op-Amp (single section)
 .SUBCKT LM324 IN+ IN- V+ V- OUT
 Rin  IN+ IN- 1Meg
-Ediff VDIFF 0 IN+ IN- 100k
-Rout VDIFF OUT 50
+Egain out_int 0 value={ limit(V(IN+, IN-) * 100k, V(V-)+0.02, V(V+)-1.5) }
+Rout out_int OUT 50
 .ENDS LM324
 
 * NE5532 — Low Noise Op-Amp
 .SUBCKT NE5532 IN+ IN- V+ V- OUT
 Rin  IN+ IN- 300k
-Ediff VDIFF 0 IN+ IN- 100k
-Rout VDIFF OUT 0.3
+Egain out_int 0 value={ limit(V(IN+, IN-) * 100k, V(V-)+2.0, V(V+)-2.0) }
+Rout out_int OUT 0.3
 Cout OUT 0 5p
 .ENDS NE5532
 

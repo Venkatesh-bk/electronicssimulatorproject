@@ -68,6 +68,21 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private ObservableCollection<SpiceModelItem> _filteredSpiceModels = new();
 
+        // Create Custom Component fields
+        [ObservableProperty] private string _newCompId = string.Empty;
+        [ObservableProperty] private string _newCompName = string.Empty;
+        [ObservableProperty] private string _newCompManufacturer = string.Empty;
+        [ObservableProperty] private string _newCompCategory = "Other";
+        [ObservableProperty] private string _newCompDescription = string.Empty;
+        [ObservableProperty] private string _newCompPins = "2";
+        [ObservableProperty] private string _newCompPinMappings = string.Empty;
+        [ObservableProperty] private string _newCompSpiceModel = string.Empty;
+        [ObservableProperty] private string _newCompCadShape = "Box";
+        [ObservableProperty] private string _newCompCadWidth = "5.0";
+        [ObservableProperty] private string _newCompCadHeight = "5.0";
+        [ObservableProperty] private string _newCompCadDepth = "3.0";
+        [ObservableProperty] private string _newCompCadColor = "#1E3A5A";
+
         public ComponentHubViewModel()
         {
             _ = InitializeAsync();
@@ -242,6 +257,90 @@ namespace EdaSimulator.UI.ViewModels
                         System.Windows.MessageBoxImage.Error);
                 }
             }
+        }
+
+        public System.Action? RequestClose { get; set; }
+
+        [ObservableProperty]
+        private string _placedComponentId = string.Empty;
+
+        [RelayCommand]
+        private void PlaceComponent()
+        {
+            if (SelectedComponent == null) return;
+            PlacedComponentId = SelectedComponent.Id;
+            RequestClose?.Invoke();
+        }
+
+        [RelayCommand]
+        private void CreateCustomComponent()
+        {
+            if (string.IsNullOrWhiteSpace(NewCompId) || string.IsNullOrWhiteSpace(NewCompName))
+            {
+                System.Windows.MessageBox.Show("Please enter a valid Part ID and Display Name.", "Validation Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(NewCompSpiceModel))
+            {
+                System.Windows.MessageBox.Show("Please enter a valid SPICE model definition (e.g. .model or .subckt card).", "Validation Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!int.TryParse(NewCompPins, out int pinCount) || pinCount <= 0)
+            {
+                System.Windows.MessageBox.Show("Please enter a valid positive integer pin count.", "Validation Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            double.TryParse(NewCompCadWidth, out double cadW);
+            double.TryParse(NewCompCadHeight, out double cadH);
+            double.TryParse(NewCompCadDepth, out double cadD);
+
+            var customLibComp = new LibraryComponent
+            {
+                Id = NewCompId.Trim(),
+                Name = NewCompName.Trim(),
+                Manufacturer = string.IsNullOrWhiteSpace(NewCompManufacturer) ? "Generic" : NewCompManufacturer.Trim(),
+                Category = NewCompCategory ?? "Other",
+                Description = string.IsNullOrWhiteSpace(NewCompDescription) ? $"{NewCompName} custom component." : NewCompDescription.Trim(),
+                Pins = pinCount,
+                SpiceModel = NewCompSpiceModel.Trim(),
+                IsCustomIoT = false,
+                CadWidth = cadW <= 0 ? 5.0 : cadW,
+                CadHeight = cadH <= 0 ? 5.0 : cadH,
+                CadDepth = cadD <= 0 ? 3.0 : cadD,
+                CadColor = string.IsNullOrWhiteSpace(NewCompCadColor) ? "#1E3A5A" : NewCompCadColor.Trim(),
+                CadShape = NewCompCadShape ?? "Box",
+                PinMappings = NewCompPinMappings.Trim()
+            };
+
+            // 1. Add to SPICE Model Library in-memory and persistence
+            ModelLibraryService.Instance.ImportLibraryText(customLibComp.Name, customLibComp.SpiceModel);
+
+            // 2. Add to Master Component Database JSON
+            ComponentLibraryService.Instance.AddComponent(customLibComp);
+
+            // 3. Clear inputs
+            NewCompId = "";
+            NewCompName = "";
+            NewCompManufacturer = "";
+            NewCompDescription = "";
+            NewCompPinMappings = "";
+            NewCompSpiceModel = "";
+
+            System.Windows.MessageBox.Show(
+                $"Successfully created component '{customLibComp.Name}' and added it to the Master Database!",
+                "Component Created",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+
+            // Reload databases
+            _ = InitializeAsync();
+            LoadSpiceModels();
         }
     }
 }

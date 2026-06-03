@@ -157,7 +157,7 @@ namespace EdaSimulator.Engines.Simulation
                 sb.AppendLine();
 
                 sb.AppendLine(".SUBCKT BlockSourceStep OUT params: offset=0 stepval=1 steptime=1");
-                sb.AppendLine("Vsrc OUT 0 PWL(0 {offset} {steptime-1u} {offset} {steptime} {stepval})");
+                sb.AppendLine("Vsrc OUT 0 PWL(0 {offset} {steptime} {offset} {steptime + 1e-9} {stepval})");
                 sb.AppendLine(".ENDS BlockSourceStep");
                 sb.AppendLine();
             }

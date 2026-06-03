@@ -1,139 +1,103 @@
-# EDA Simulator Platform - Detailed Roadmap
+# EDA Simulator Platform - Redesigned Development Roadmap
 
-> **Target Level:** Proteus Professional + MATLAB/Simulink + ANSYS — a unified professional engineering simulation suite.
-
-This document outlines the strategic phases. Each phase is designed to deliver a working, testable milestone.
-
----
-
-## Phase 1: Foundation & Core Architecture (Months 1-3)
-
-**Goal:** Establish the .NET 8 solution, core data models, WPF shell, and the interop layer to native simulation engines.
-
-- **Solution Scaffold:** Create `EdaSimulator.sln` with `EdaSimulator.UI` (WPF), `EdaSimulator.Engines` (Class Library), and `EdaSimulator.Core` (shared models).
-- **Core Domain Models:** `Component`, `Pin`, `Net`, `Schematic`, `SimulationResult`.
-- **Native Engine Interop:** Establish P/Invoke/C++CLI bridge infrastructure.
-- **Basic WPF Shell:** Main window with docking panels — Toolbox, Canvas, Properties, Output Log.
-- **Project File I/O:** Save/load schematic projects as XML/JSON.
-- **CI/CD Pipeline:** GitHub Actions for automated `dotnet build` + test runs.
+> **Fixed-Base Objective:** To deliver a professional-grade, unified 2D/3D EDA (Electronic Design Automation) suite integrating schematic capture, high-fidelity mixed-signal SPICE simulation, real-time interactive logic tuning, virtual instrumentation, MCU firmware co-simulation, and 3D PCB visualization.
+> 
+> *This roadmap is aligned with industry standard tools (Altium Designer, Proteus VSM, Tinkercad Circuits, Wokwi) and has been pruned of unfeasible out-of-scope domains (such as full 3D electromagnetic FEM solvers) in favor of high-value simulation features.*
 
 ---
 
-## Phase 2: Schematic Capture Engine (Months 4-6)
+## 🗺️ Phase Roadmap Overview
 
-**Goal:** Fully featured 2D schematic editor on par with Proteus/KiCad schematic editors.
-
-- **High-Performance Canvas:** Zoom/pan, infinite grid, snapping — rendered via Direct2D.
-- **Component Placement:** Drag-and-drop from library, rotate, flip, mirror, align tools.
-- **Intelligent Wire Routing:** Auto-routing wires, junction detection, net labels, multi-bus support.
-- **Component Library:** Searchable, categorized library browser (discrete, analog ICs, digital ICs, connectors, power symbols). Thousands of built-in components.
-- **Symbol Editor:** Full editor for creating and editing component symbols.
-- **Netlist Generation:** Parse visual schematic into SPICE-compatible netlist for simulation.
-- **Design Rule Check (Schematic DRC):** Validate netlist for floating pins, short circuits, etc.
-
----
-
-## Phase 3: Analog Circuit Simulation — SPICE Engine (Months 7-9)
-
-**Goal:** Full SPICE simulation engine at the level of LTspice/Proteus analog simulation.
-
-- **ngspice Integration:** Embed ngspice via native bindings. Stream netlists and retrieve results.
-- **Analysis Types:** DC Operating Point, DC Sweep, AC Small-Signal, Transient, Noise, Fourier (FFT).
-- **Component SPICE Models:** Resistors, Capacitors, Inductors, Diodes, BJTs, MOSFETs, Op-Amps, Transformers, Transmission Lines.
-- **SPICE Model Import:** Load `.lib` and `.mod` files from manufacturer model packs (e.g., Texas Instruments, Analog Devices).
-- **Virtual Instruments:**
-  - Oscilloscope (multi-channel, trigger controls)
-  - Multimeter (V, I, Ω, frequency)
-  - Signal/Function Generator
-  - Spectrum Analyzer
-- **Interactive Probing:** Click any wire or node during/after simulation to visualize waveforms.
-- **Waveform Viewer:** OxyPlot/LiveCharts based viewer with zoom, cursors, math channels (e.g., V(A)-V(B)).
+```mermaid
+gantt
+    title EDA Platform Development Timeline
+    dateFormat  YYYY-MM-DD
+    section Completed Milestones
+    Phase 1: Core Framework Architecture  :done, des1, 2026-01-01, 2026-02-15
+    Phase 2: Schematic Capture & Multi-Sheet:done, des2, 2026-02-16, 2026-03-30
+    Phase 3: SPICE Simulation Engine       :done, des3, 2026-04-01, 2026-04-20
+    Phase 4: Digital Engine & Live Tuning   :done, des4, 2026-04-21, 2026-05-10
+    Phase 5: Virtual Instruments & FFT      :done, des5, 2026-05-11, 2026-05-25
+    Phase 6: Component Library & Custom Creator:done, des6, 2026-05-26, 2026-06-03
+    Phase 7: PCB Layout & Gerber Export     :done, des7, 2026-05-26, 2026-06-03
+    Phase 8: Realistic 3D Board Visuals     :done, des8, 2026-05-26, 2026-06-03
+    section Future Roadmap
+    Phase 9: AVR Firmware Co-Simulation    :active, des9, 2026-06-05, 45d
+    Phase 10: STEP 3D CAD Loader & Collision :des10, 2026-07-20, 30d
+    Phase 11: Production Installer & Release:des11, 2026-08-20, 30d
+```
 
 ---
 
-## Phase 4: Digital & Mixed-Signal Simulation (Months 10-12)
+## 📦 Phase 1: Core Framework Architecture [COMPLETED]
+**Goal:** Establish the WPF project structure, core model domain, and project workspace.
+*   **Solution Scaffold:** Set up Class Libraries (`EdaSimulator.Engines`) and WPF App (`EdaSimulator.UI`).
+*   **Core Domain Models:** Implement baseline `Component`, `Pin`, `Net`, and `Schematic` graph nodes.
+*   **Basic UI Shell:** Docking panels for canvas workspace, toolbox, properties, and simulation console.
+*   **Project File I/O:** Serialized project loading and saving via custom `.edaproj` JSON structure.
 
-**Goal:** Provide digital logic simulation and mixed-signal co-simulation at Proteus Professional level.
+## 📐 Phase 2: Schematic Capture & Multi-Sheet [COMPLETED]
+**Goal:** Implement a highly interactive 2D canvas with multi-sheet workspace synchronization.
+*   **Interactive Canvas:** Zoom/pan, mouse coordinate tracking, snapping grid, and multi-bus support.
+*   **Multi-Sheet Support:** Integrated tab control managing multiple schematic sheets with global netlist compilation and shared `Ground` reference.
+*   **Visual Routing:** Routing wire tool, automatic node junction detection, and net labels (`NetLabelDialog`).
+*   **Real-time DRC Engine:** Background validator checking for floating pins, stubs, duplicate designators, and missing ground references.
 
-- **Event-Driven Digital Engine:** Custom C++ simulator for high-speed digital event processing.
-- **Logic Component Library:** Gates, flip-flops, latches, counters, shift registers, encoders/decoders, multiplexers, memories (RAM/ROM).
-- **Mixed-Signal Bridge:** ADC/DAC models for coupling analog SPICE domains with digital logic domains.
-- **Logic Analyzer:** Multi-channel digital timing diagram viewer with protocol decoders (I2C, SPI, UART, CAN).
-- **Interactive Simulation:** Flip switches, press buttons, and rotate potentiometers in real-time while simulation runs.
-- **Microcontroller Simulation (Core):**
-  - ARM Cortex-M0/M3/M4 instruction set simulator
-  - AVR (ATmega) simulator
-  - PIC (PIC16/PIC18) simulator
-  - Load `.hex`/`.elf` firmware files and run them against the simulated circuit.
+## ⚗️ Phase 3: SPICE Simulation Engine [COMPLETED]
+**Goal:** Embed a native SPICE solver for analog simulation.
+*   **ngspice Integration:** Native solver bindings to feed netlists and stream simulation responses.
+*   **Analysis Types:** Added transient analysis, AC sweep frequency analysis, and DC sweep operating points.
+*   **Interactive Probing:** Real-time probing of voltage waveforms and current loops.
+*   **Waveform Viewer:** OxyPlot-based interactive charting with cursor tracking.
 
----
+## 🔌 Phase 4: Digital Engine & Live Tuning [COMPLETED]
+**Goal:** Add mixed-signal co-simulation and interactive controls.
+*   **Event-Driven Digital Engine:** Custom simulation processing logic components (AND, OR, NAND, XOR, D Flip-flops).
+*   **Interactive Controls:** Potentiometer knobs and toggle switches that update SPICE parameters in real-time during active simulation loop.
+*   **Simulink-Style Mathematical Blocks:** Parameterized gain blocks, integrators, sum blocks, and transfer functions co-simulated with the SPICE domain.
 
-## Phase 5: Mathematical Toolbox — MATLAB/Simulink Level (Months 13-16)
+## 📊 Phase 5: Virtual Instruments & FFT [COMPLETED]
+**Goal:** Integrate diagnostic virtual instruments mirroring hardware lab scopes.
+*   **Digital Multimeter (DMM):** Computes RMS values, average voltage levels, and DC currents across probes.
+*   **FFT Spectrum Analyzer:** Computes fast Fourier transforms of node waveforms, supporting windowing configurations (Hanning, Hamming, Blackman, Rectangular).
 
-**Goal:** Provide a MATLAB-like computing environment integrated with the simulation platform.
+## ➕ Phase 6: Component Library & Custom Creator [COMPLETED]
+**Goal:** Establish a searchable component database and dynamic SPICE import flow.
+*   **Database Browser:** Searchable component index categorized by family type.
+*   **Dynamic SPICE Model Parser:** Imports external `.model` and `.subckt` SPICE library card definitions.
+*   **Create Component Creator:** UI panel to create, save, and configure custom parts with exact CAD dimensions, shapes, colors, and pin mappings to `MasterComponentDatabase.json`.
+*   **Direct Placement:** Click `⚡ Place on Schematic` to immediately place custom parts on the canvas.
 
-- **Matrix Math Engine:** OpenBLAS/LAPACK native bindings for high-performance linear algebra.
-- **Script Editor:** Python-like scripting environment (embedded CPython) with syntax highlighting and autocomplete.
-- **Signal Processing Toolbox:**
-  - FFT, IFFT, STFT, power spectral density
-  - IIR/FIR filter design (Butterworth, Chebyshev, Bessel, Kaiser)
-  - Windowing functions, convolution, correlation
-- **Control Systems Toolbox:**
-  - Transfer function and state-space representation
-  - Bode plots, Nyquist plots, Root Locus
-  - PID controller tuning (Ziegler-Nichols, IMC)
-  - Step/impulse response analysis
-- **Simulink-Style Block Diagram Modeler:**
-  - Drag-and-drop block editor (integrators, gains, transfer functions, sources, sinks)
-  - Co-simulate block diagrams with SPICE circuits
-- **Data Import/Export:** `.mat`, `.csv`, `.xlsx` formats.
-- **2D/3D Plotting:** Publication-quality graphs with full customization.
+## 📰 Phase 7: PCB Layout & Gerber Export [COMPLETED]
+**Goal:** Translate schematic netlists into physical board layouts.
+*   **PCB Canvas:** Multi-layer visualizer for traces, copper layers, silk screens, and outline routing.
+*   **FreeRouting Autorouter:** Scripted integration with the FreeRouting Java CLI via `.dsn` Specctra files to auto-route traces.
+*   **Gerber RS-274X Export:** Generates industry-standard manufacturing Gerber files and drill logs.
 
----
-
-## Phase 6: FEA & Physics Simulation — ANSYS Level (Months 17-20)
-
-**Goal:** Finite Element Analysis for electromagnetic, thermal, and structural domains.
-
-- **FEM Mesh Generator:** Tetrahedral and hexahedral meshing for 2D/3D geometries.
-- **Electromagnetic FEM Solver:**
-  - Magnetostatic, electrostatic, eddy current analysis
-  - Inductance, capacitance extraction from geometry
-- **Thermal Analysis:**
-  - Steady-state and transient heat conduction
-  - Convection/radiation boundary conditions
-  - Junction temperature prediction for ICs and PCBs
-- **RF / Microwave Tools:**
-  - Transmission line calculator (microstrip, stripline, coax)
-  - S-parameter simulation and Smith chart display
-  - Antenna gain pattern visualization
-- **3D Visualization Engine:** OpenGL/Vulkan powered 3D renderer for field plots (E-field, H-field, heat maps, stress maps).
+## 🧊 Phase 8: Realistic 3D Board Visuals [COMPLETED]
+**Goal:** Provide full 3D hardware visual rendering of the designed board.
+*   **Helix Toolkit 3D Viewport:** Hardware-accelerated board visualizer with pan/zoom/rotate controls.
+*   **Parametric Component Shapes:** Renders cylinder shapes (resistors/capacitors), DIP packages (with pins), TO-220 regulators (with metal heatsinks and 3 leg pins), and custom box components.
+*   **Accurate Rotations:** Maps schematic orientation and rotation offsets directly onto the 3D board.
 
 ---
 
-## Phase 7: PCB Layout & Manufacturing Output (Months 21-24)
+## 🚀 Future Roadmap & Extensions
 
-**Goal:** Full PCB design tool integrated with the schematic and simulation environment.
+## 💻 Phase 9: AVR Firmware Co-Simulation [FUTURE WORK]
+**Goal:** Run actual microcontroller firmware synchronized with analog circuit simulations (matching Proteus VSM).
+*   **simavr Integration:** Wrap the open-source `simavr` C library using C# P/Invoke.
+*   **Cycle-Accurate Synchronization:** Synchronize AVR instruction clock execution with the ngspice solver time-step loop (100ns increments).
+*   **Firmware Loader:** UI file selector to load compiled `.hex` or `.elf` binaries into the simulated Arduino/ESP32 models.
+*   **GPIO Visual Feedback:** Interactive LEDs, segment displays, and LCD modules reflecting active MCU states.
 
-- **PCB Canvas:** Layer-aware design canvas with copper, silk screen, mask, drill layers.
-- **Netlist Import:** Automatically import netlist from schematic to drive PCB layout.
-- **Component Footprint Library:** Thousands of IPC-standard footprints (SMD and through-hole).
-- **Footprint Editor:** Create custom component footprints.
-- **Design Rule Check (DRC):** Clearance, trace width, annular ring, drill size validation.
-- **Auto-Router:** Basic topological auto-router with constraint control.
-- **3D PCB Viewer:** View the PCB with component 3D models before fabrication.
-- **Manufacturing Export:** Gerber RS-274X, Excellon drill files, BOM, Pick-and-Place CSV, STEP 3D model.
-- **KiCad & Altium Compatibility:** Import/export `.kicad_pcb` and limited Altium formats.
+## 📐 Phase 10: STEP 3D CAD Loader & Collision Detection [FUTURE WORK]
+**Goal:** Allow mechanical engineering CAD models to be imported directly onto the PCB (matching Altium).
+*   **STEP/IGES Model Loader:** Integrate an open-source CAD translation library to parse and display real physical STEP file meshes on components.
+*   **Mechanical Constraint Checker:** Detect layout clearance violations between component bodies and enclosure outline paths.
 
----
-
-## Phase 8: Polish, Performance & Release (Months 25-28)
-
-**Goal:** Production-grade quality, performance, and packaging.
-
-- **UI/UX Polish:** Professional dark-mode UI, customizable themes, undock/redock panels.
-- **Performance:** GPU-accelerated rendering, multi-threaded simulation, background simulation with live results streaming.
-- **Licensing & Activation:** License management system (free community + professional tier).
-- **Installer:** Professional Windows installer (WiX/NSIS) with silent install support.
-- **Documentation:** Full built-in help system, API reference, video tutorials.
-- **Community Component Hub:** Online repository for sharing custom components, symbols, footprints, and SPICE models.
+## 📦 Phase 11: Production Installer & Release [FUTURE WORK]
+**Goal:** Pack the application into a distribution format ready for commercial deployment.
+*   **WiX Toolset Installer:** Develop a WiX script to output a standard Windows `.msi` setup wizard, registering shortcuts and associating `.edaproj` files.
+*   **Auto-Update Pipeline:** Integrated lightweight client to poll GitHub releases and automatically download newer versions.
+*   **Public Licensing Server:** Connect license registration keys to a cloud-based validation endpoint.

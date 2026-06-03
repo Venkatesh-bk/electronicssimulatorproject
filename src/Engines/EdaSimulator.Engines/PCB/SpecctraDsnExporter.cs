@@ -200,7 +200,7 @@ namespace EdaSimulator.Engines.PCB
                 sb.AppendLine($"    (net {Sanitize(netName)}");
                 sb.AppendLine("      (pins");
                 foreach (var (des, pad) in pins)
-                    sb.AppendLine($"        {Sanitize(des)}-{Sanitize(pad)}");
+                    sb.AppendLine($"        {Sanitize(des + "-" + pad)}");
                 sb.AppendLine("      )");
                 sb.AppendLine("    )");
             }

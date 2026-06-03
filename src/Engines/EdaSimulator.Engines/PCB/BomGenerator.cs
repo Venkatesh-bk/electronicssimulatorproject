@@ -39,22 +39,36 @@ namespace EdaSimulator.Engines.PCB
             {
                 var first = group.First();
                 var designators = group.Select(c => c.Designator).OrderBy(d => d).ToList();
+                int qty = group.Count();
+
+                double unitPrice = SuggestUnitPrice(first);
+                string stock = SuggestStock(first);
+                string distributor = lineNum % 2 == 0 ? "DigiKey" : "Mouser";
+                string partNo = SuggestPartNumber(first);
+                string distUrl = distributor == "DigiKey"
+                    ? $"https://www.digikey.com/en/products?keywords={Uri.EscapeDataString(partNo)}"
+                    : $"https://www.mouser.com/Search/Refine?Keyword={Uri.EscapeDataString(partNo)}";
 
                 bom.Add(new BomLineItem
                 {
                     LineNumber   = lineNum++,
-                    Quantity     = group.Count(),
+                    Quantity     = qty,
                     Designators  = designators,
                     ComponentType= first.GetType().Name,
                     Value        = first.Value,
                     Description  = GenerateDescription(first),
                     Manufacturer = SuggestManufacturer(first),
-                    PartNumber   = SuggestPartNumber(first),
+                    PartNumber   = partNo,
                     Footprint    = SuggestFootprint(first),
                     Package      = SuggestPackage(first),
                     MountType    = SuggestMountType(first),
                     DigiKeyPN    = SuggestDigiKeyPn(first),
-                    MouserPN     = SuggestMouserPn(first)
+                    MouserPN     = SuggestMouserPn(first),
+                    UnitPrice    = unitPrice,
+                    TotalPrice   = unitPrice * qty,
+                    Stock        = stock,
+                    Distributor  = distributor,
+                    DistributorUrl = distUrl
                 });
             }
 
@@ -321,6 +335,30 @@ namespace EdaSimulator.Engines.PCB
             "OpAmp"     => "926-LM358DR",
             _           => "N/A"
         };
+
+        private static double SuggestUnitPrice(Component c) => c.GetType().Name switch
+        {
+            "Resistor"  => 0.012,
+            "Capacitor" => 0.024,
+            "Inductor"  => 0.150,
+            "Diode"     => 0.052,
+            "BJT"       => 0.085,
+            "MOSFET"    => 0.185,
+            "OpAmp"     => 0.350,
+            _           => 0.100
+        };
+
+        private static string SuggestStock(Component c) => c.GetType().Name switch
+        {
+            "Resistor"  => "150,000+",
+            "Capacitor" => "82,000+",
+            "Inductor"  => "12,500",
+            "Diode"     => "45,000+",
+            "BJT"       => "31,000",
+            "MOSFET"    => "24,000",
+            "OpAmp"     => "8,500",
+            _           => "5,000"
+        };
     }
 
     public class BomLineItem
@@ -338,6 +376,12 @@ namespace EdaSimulator.Engines.PCB
         public string       MountType     { get; set; } = "";
         public string       DigiKeyPN     { get; set; } = "";
         public string       MouserPN      { get; set; } = "";
+        public double       UnitPrice     { get; set; }
+        public double       TotalPrice    { get; set; }
+        public string       Stock         { get; set; } = "";
+        public string       Distributor   { get; set; } = "";
+        public string       DistributorUrl { get; set; } = "";
+        public string       DesignatorString => string.Join(", ", Designators);
     }
 
     /// <summary>

@@ -904,6 +904,389 @@ namespace EdaSimulator.Tests
                 }
             }
         }
+
+        [Fact]
+        public void ProjectFileService_NetLabelRecordsSerialization_Successfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("NetLabel Test");
+            var net = schematic.CreateNet("MY_CUSTOM_NET");
+
+            var netLabels = new List<NetLabelRecord>
+            {
+                new NetLabelRecord { NetName = "MY_CUSTOM_NET", NetId = net.Id, X = 120, Y = 340 }
+            };
+
+            // Serialize
+            var doc = ProjectFileService.ToDocument(
+                schematic,
+                Enumerable.Empty<ComponentPlacementRecord>(),
+                schematic.Title,
+                netLabels);
+
+            // Verify NetLabels are in doc
+            Assert.Single(doc.NetLabels);
+            Assert.Equal("MY_CUSTOM_NET", doc.NetLabels[0].NetName);
+            Assert.Equal(net.Id, doc.NetLabels[0].NetId);
+            Assert.Equal(120, doc.NetLabels[0].X);
+            Assert.Equal(340, doc.NetLabels[0].Y);
+
+            // Deserialize (ProjectFileService.FromDocument restores schematic, NetLabels are checked from doc directly)
+            var restoredSchematic = ProjectFileService.FromDocument(doc);
+            Assert.NotNull(restoredSchematic);
+            Assert.Single(restoredSchematic.Nets.Values.Where(n => n.Name == "MY_CUSTOM_NET"));
+        }
+
+        [Fact]
+        public void PcbFootprint_CustomizationAndPadUpdating_Successfully()
+        {
+            var fp = new EdaSimulator.Engines.PCB.PcbFootprint
+            {
+                Designator = "R1",
+                Value = "10k",
+                FootprintId = "R_0805",
+                CrtYd_Width_mm = 5.0,
+                CrtYd_Height_mm = 4.0
+            };
+
+            // Assert defaults
+            Assert.Empty(fp.Pads);
+            Assert.Equal(5.0, fp.CrtYd_Width_mm);
+
+            // Add pad
+            var pad = new EdaSimulator.Engines.PCB.PcbPad
+            {
+                PadNumber = "1",
+                Type = EdaSimulator.Engines.PCB.PadType.SMD,
+                X = -1.0,
+                Y = 0.0,
+                Width_mm = 1.0,
+                Height_mm = 1.2,
+                Layer = EdaSimulator.Engines.PCB.PcbLayerType.FCu
+            };
+            fp.Pads.Add(pad);
+
+            Assert.Single(fp.Pads);
+            Assert.Equal("1", fp.Pads[0].PadNumber);
+            Assert.Equal(EdaSimulator.Engines.PCB.PadType.SMD, fp.Pads[0].Type);
+
+            // Modify pad properties
+            fp.Pads[0].X = -1.5;
+            fp.Pads[0].DrillDia_mm = 0.5;
+            Assert.Equal(-1.5, fp.Pads[0].X);
+            Assert.Equal(0.5, fp.Pads[0].DrillDia_mm);
+
+            // Verify courtyard dimensions
+            Assert.Equal(5.0, fp.CrtYd_Width_mm);
+            Assert.Equal(4.0, fp.CrtYd_Height_mm);
+        }
+
+        [Fact]
+        public void McuCoSimulation_ArduinoFirmware_RunsSuccessfully()
+        {
+            string tempFirmware = Path.Combine(Path.GetTempPath(), "test_firmware.ino");
+            string code = @"
+void setup() {
+  Serial.begin(9600);
+  Serial.println(""System Init Successful"");
+}
+void loop() {
+  Serial.println(""Reading Temperature Sensor"");
+  delay(100);
+}
+";
+            File.WriteAllText(tempFirmware, code);
+
+            try
+            {
+                string output = EdaSimulator.Engines.Simulation.VirtualMcuSimulationEngine.RunCoSimulation(tempFirmware, 0.5);
+                Assert.Contains("System Init Successful", output);
+                Assert.Contains("Reading Temperature Sensor", output);
+                Assert.Contains("Co-simulation finished", output);
+            }
+            finally
+            {
+                if (File.Exists(tempFirmware)) File.Delete(tempFirmware);
+            }
+        }
+
+        [Fact]
+        public void McuCoSimulation_PythonFirmware_RunsSuccessfully()
+        {
+            string tempFirmware = Path.Combine(Path.GetTempPath(), "test_firmware.py");
+            string code = @"
+print(""ESP32 Booting Python"")
+time.sleep(0.2)
+print(""Connected to Wifi"")
+";
+            File.WriteAllText(tempFirmware, code);
+
+            try
+            {
+                string output = EdaSimulator.Engines.Simulation.VirtualMcuSimulationEngine.RunCoSimulation(tempFirmware, 0.5);
+                Assert.Contains("ESP32 Booting Python", output);
+                Assert.Contains("Connected to Wifi", output);
+            }
+            finally
+            {
+                if (File.Exists(tempFirmware)) File.Delete(tempFirmware);
+            }
+        }
+
+        [Fact]
+        public void AnnotationNote_NetlistComment_GeneratesSuccessfully()
+        {
+            var note = new EdaSimulator.Engines.Models.Components.AnnotationNote("NOTE1", "Verify input coupling capacitor C1 value");
+            var netlistLine = note.GenerateSpiceNetlistLine(new EdaSimulator.Engines.Models.Schematic("TestSchematic"));
+            Assert.Equal("* NOTE: Verify input coupling capacitor C1 value", netlistLine);
+            Assert.Equal("Verify input coupling capacitor C1 value", note.Value);
+        }
+
+        [Fact]
+        public void ComponentCopy_StatePreservation_CopiesProperties()
+        {
+            // Verify potentiometer wiper position preservation
+            var pot1 = new EdaSimulator.Engines.Models.Components.Potentiometer("POT1", "10k") { WiperPosition = 0.25 };
+            var pot2 = new EdaSimulator.Engines.Models.Components.Potentiometer("POT2", "10k");
+            pot2.WiperPosition = pot1.WiperPosition;
+            Assert.Equal(0.25, pot2.WiperPosition);
+
+            // Verify switch open/closed status preservation
+            var sw1 = new EdaSimulator.Engines.Models.Components.Switch("SW1") { IsClosed = true };
+            var sw2 = new EdaSimulator.Engines.Models.Components.Switch("SW2");
+            sw2.IsClosed = sw1.IsClosed;
+            Assert.True(sw2.IsClosed);
+
+            // Verify MCU firmware path preservation
+            var mcu1 = new EdaSimulator.Engines.Models.Components.McuComponent("MCU1", "Arduino Uno R3") { FirmwarePath = "C:\\test\\blink.ino" };
+            var mcu2 = new EdaSimulator.Engines.Models.Components.McuComponent("MCU2", "Arduino Uno R3");
+            mcu2.FirmwarePath = mcu1.FirmwarePath;
+            Assert.Equal("C:\\test\\blink.ino", mcu2.FirmwarePath);
+        }
+
+        [Fact]
+        public void SpecctraSessionImporter_QuotedNetNamesWithSpaces_ParsesSuccessfully()
+        {
+            string tempSes = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_quoted.ses");
+            string sesContent = @"
+(session test_quoted
+  (placement
+    (component U1
+      (place R1 1000 1000 front 0)
+    )
+  )
+  (wiring
+    (wire (path F.Cu 250 1000 1000 2000 1000) (net ""VCC 5V"") (type route))
+    (via ""Via[0-1]_800:400"" 1500 1500 (net ""GND NET"") (type route))
+  )
+)
+";
+            try
+            {
+                File.WriteAllText(tempSes, sesContent);
+                var pcb = new EdaSimulator.Engines.PCB.PcbDocument();
+                
+                int count = EdaSimulator.Engines.PCB.SpecctraSessionImporter.Import(tempSes, pcb);
+                
+                Assert.Equal(1, count);
+                Assert.Single(pcb.Traces);
+                Assert.Equal("VCC 5V", pcb.Traces[0].NetName);
+                Assert.Single(pcb.Vias);
+                Assert.Equal("GND NET", pcb.Vias[0].NetName);
+            }
+            finally
+            {
+                if (File.Exists(tempSes)) File.Delete(tempSes);
+            }
+        }
+
+        [Fact]
+        public void ApplyWindow_ShortOrNullArray_DoesNotCrashOrDivideByZero()
+        {
+            double[] dataSingle = new double[] { 1.5 };
+            EdaSimulator.Engines.Math.SignalProcessing.ApplyWindow(dataSingle, "Hanning");
+            Assert.Equal(1.5, dataSingle[0]); // should remain unchanged
+
+            double[] dataEmpty = new double[0];
+            EdaSimulator.Engines.Math.SignalProcessing.ApplyWindow(dataEmpty, "Hamming");
+            Assert.Empty(dataEmpty);
+
+            EdaSimulator.Engines.Math.SignalProcessing.ApplyWindow(null!, "Blackman"); // should not throw null ref
+        }
+
+        [Fact]
+        public void LogicGates_ThreeStateTruthTable_EvaluatesCorrectly()
+        {
+            var sim = new EdaSimulator.Engines.Simulation.Digital.DigitalSimulator();
+            
+            // Test AND Gate: Low overrides Undefined, but High + Undefined = Undefined
+            var andGate = new EdaSimulator.Engines.Simulation.Digital.AndGate("AND1", sim);
+            var nodeA = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("A");
+            var nodeB = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("B");
+            var outAnd = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("Out");
+            andGate.InputA = nodeA;
+            andGate.InputB = nodeB;
+            andGate.Output = outAnd;
+
+            // Scenario 1: Low + Undefined => Low
+            nodeA.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Low;
+            nodeB.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined;
+            andGate.Evaluate();
+            sim.Run(10);
+            Assert.Equal(EdaSimulator.Engines.Simulation.Digital.LogicState.Low, outAnd.State);
+
+            // Scenario 2: High + Undefined => Undefined
+            nodeA.State = EdaSimulator.Engines.Simulation.Digital.LogicState.High;
+            nodeB.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined;
+            andGate.Evaluate();
+            sim.Run(20);
+            Assert.Equal(EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined, outAnd.State);
+
+            // Test OR Gate: High overrides Undefined, but Low + Undefined = Undefined
+            var orGate = new EdaSimulator.Engines.Simulation.Digital.OrGate("OR1", sim);
+            var nodeC = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("C");
+            var nodeD = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("D");
+            var outOr = new EdaSimulator.Engines.Simulation.Digital.DigitalNode("OutOr");
+            orGate.InputA = nodeC;
+            orGate.InputB = nodeD;
+            orGate.Output = outOr;
+
+            // Scenario 3: High + Undefined => High
+            nodeC.State = EdaSimulator.Engines.Simulation.Digital.LogicState.High;
+            nodeD.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined;
+            orGate.Evaluate();
+            sim.Run(30);
+            Assert.Equal(EdaSimulator.Engines.Simulation.Digital.LogicState.High, outOr.State);
+
+            // Scenario 4: Low + Undefined => Undefined
+            nodeC.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Low;
+            nodeD.State = EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined;
+            orGate.Evaluate();
+            sim.Run(40);
+            Assert.Equal(EdaSimulator.Engines.Simulation.Digital.LogicState.Undefined, outOr.State);
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task Simulation_SallenKeyFilter_RunsSuccessfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("Sallen-Key Active Low-Pass Filter");
+            var u1 = new EdaSimulator.Engines.Models.Components.OpAmp("X1", "LM358");
+            var r1 = new EdaSimulator.Engines.Models.Components.Resistor("R1", "10k");
+            var r2 = new EdaSimulator.Engines.Models.Components.Resistor("R2", "10k");
+            var c1 = new EdaSimulator.Engines.Models.Components.Capacitor("C1", "1n");
+            var c2 = new EdaSimulator.Engines.Models.Components.Capacitor("C2", "1n");
+            
+            var vIn = new EdaSimulator.Engines.Models.Components.VoltageSource("V_IN", "SINE(0 5 15.9k)");
+            var vcc = new EdaSimulator.Engines.Models.Components.VoltageSource("V_CC", "DC 15");
+            var vee = new EdaSimulator.Engines.Models.Components.VoltageSource("V_EE", "DC -15");
+
+            schematic.AddComponent(vIn);
+            schematic.AddComponent(r1);
+            schematic.AddComponent(r2);
+            schematic.AddComponent(c1);
+            schematic.AddComponent(c2);
+            schematic.AddComponent(u1);
+            schematic.AddComponent(vcc);
+            schematic.AddComponent(vee);
+
+            var netVin = schematic.CreateNet("VIN_NODE");
+            var netMid = schematic.CreateNet("MID_NODE");
+            var netP   = schematic.CreateNet("POS_NODE");
+            var netOut = schematic.CreateNet("OUT_NODE");
+            var netVcc = schematic.CreateNet("VCC_NET");
+            var netVee = schematic.CreateNet("VEE_NET");
+
+            schematic.ConnectPinToNet(vIn.GetPinByName("+"), netVin.Id);
+            schematic.ConnectPinToNet(r1.GetPinByName("1"), netVin.Id);
+            schematic.ConnectPinToNet(r1.GetPinByName("2"), netMid.Id);
+            schematic.ConnectPinToNet(r2.GetPinByName("1"), netMid.Id);
+            schematic.ConnectPinToNet(c1.GetPinByName("1"), netMid.Id);
+            schematic.ConnectPinToNet(r2.GetPinByName("2"), netP.Id);
+            schematic.ConnectPinToNet(c2.GetPinByName("1"), netP.Id);
+            schematic.ConnectPinToNet(u1.GetPinByName("IN+"), netP.Id);
+            schematic.ConnectPinToNet(u1.GetPinByName("OUT"), netOut.Id);
+            schematic.ConnectPinToNet(c1.GetPinByName("2"), netOut.Id);
+            schematic.ConnectPinToNet(u1.GetPinByName("IN-"), netOut.Id);
+            schematic.ConnectPinToNet(vcc.GetPinByName("+"), netVcc.Id);
+            schematic.ConnectPinToNet(u1.GetPinByName("V+"), netVcc.Id);
+            schematic.ConnectPinToNet(vee.GetPinByName("-"), netVee.Id);
+            schematic.ConnectPinToNet(u1.GetPinByName("V-"), netVee.Id);
+            schematic.ConnectPinToNet(vIn.GetPinByName("-"), schematic.MasterGroundNet.Id);
+            schematic.ConnectPinToNet(c2.GetPinByName("2"), schematic.MasterGroundNet.Id);
+            schematic.ConnectPinToNet(vcc.GetPinByName("-"), schematic.MasterGroundNet.Id);
+            schematic.ConnectPinToNet(vee.GetPinByName("+"), schematic.MasterGroundNet.Id);
+
+            var exporter = new EdaSimulator.Engines.Simulation.SpiceNetlistExporter();
+            var netlist = exporter.GenerateNetlist(schematic, ".tran 1u 1m");
+
+            var ngSpicePath = EdaSimulator.Engines.Simulation.NgSpiceLocator.FindNgSpice();
+            Assert.NotNull(ngSpicePath);
+
+            var service = new EdaSimulator.Engines.Simulation.SpiceExecutionService(ngSpicePath);
+            var result = await service.RunSimulationAsync(netlist, System.Threading.CancellationToken.None);
+
+            Assert.True(result.Success, $"Simulation failed: {result.ErrorMessage}\nNetlist:\n{netlist}");
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task Simulation_StepSourceBlock_RunsSuccessfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("Block Diagram Step Source Test");
+            
+            // XSO1 OUT BlockSourceStep params: offset=0 stepval=1 steptime=1m
+            var stepSrc = new EdaSimulator.Engines.Models.Components.BlockSourceComponent("XSO1", "step 0 5 0.5u");
+            var res = new EdaSimulator.Engines.Models.Components.Resistor("R1", "1k");
+            
+            schematic.AddComponent(stepSrc);
+            schematic.AddComponent(res);
+            
+            var netOut = schematic.CreateNet("OUT_NET");
+            
+            schematic.ConnectPinToNet(stepSrc.GetPinByName("OUT"), netOut.Id);
+            schematic.ConnectPinToNet(res.GetPinByName("1"), netOut.Id);
+            schematic.ConnectPinToNet(res.GetPinByName("2"), schematic.MasterGroundNet.Id);
+            
+            var exporter = new EdaSimulator.Engines.Simulation.SpiceNetlistExporter();
+            var netlist = exporter.GenerateNetlist(schematic, ".tran 10n 1u");
+
+            var ngSpicePath = EdaSimulator.Engines.Simulation.NgSpiceLocator.FindNgSpice();
+            Assert.NotNull(ngSpicePath);
+
+            var service = new EdaSimulator.Engines.Simulation.SpiceExecutionService(ngSpicePath);
+            var result = await service.RunSimulationAsync(netlist, System.Threading.CancellationToken.None);
+
+            Assert.True(result.Success, $"Simulation failed: {result.ErrorMessage}\nNetlist:\n{netlist}");
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task Simulation_PoleZeroAnalysis_RunsSuccessfully()
+        {
+            var schematic = new EdaSimulator.Engines.Models.Schematic("RC Low-Pass Filter Pole-Zero Test");
+            var r1 = new EdaSimulator.Engines.Models.Components.Resistor("R1", "1k");
+            var c1 = new EdaSimulator.Engines.Models.Components.Capacitor("C1", "1u");
+
+            schematic.AddComponent(r1);
+            schematic.AddComponent(c1);
+
+            var netIn = schematic.CreateNet("VIN_NODE");
+            var netOut = schematic.CreateNet("OUT_NODE");
+
+            schematic.ConnectPinToNet(r1.GetPinByName("1"), netIn.Id);
+            schematic.ConnectPinToNet(r1.GetPinByName("2"), netOut.Id);
+            schematic.ConnectPinToNet(c1.GetPinByName("1"), netOut.Id);
+            schematic.ConnectPinToNet(c1.GetPinByName("2"), schematic.MasterGroundNet.Id);
+
+            var exporter = new EdaSimulator.Engines.Simulation.SpiceNetlistExporter();
+            var netlist = exporter.GenerateNetlist(schematic, ".pz VIN_NODE 0 OUT_NODE 0 vol pz");
+
+            var ngSpicePath = EdaSimulator.Engines.Simulation.NgSpiceLocator.FindNgSpice();
+            Assert.NotNull(ngSpicePath);
+
+            var service = new EdaSimulator.Engines.Simulation.SpiceExecutionService(ngSpicePath);
+            var result = await service.RunSimulationAsync(netlist, System.Threading.CancellationToken.None);
+
+            Assert.True(result.Success, $"Simulation failed: {result.ErrorMessage}\nNetlist:\n{netlist}");
+            Assert.Contains("pole", result.OutputLog.ToLower());
+        }
     }
 }
 

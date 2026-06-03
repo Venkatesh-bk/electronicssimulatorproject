@@ -44,6 +44,18 @@ namespace EdaSimulator.UI.ViewModels
         [ObservableProperty]
         private string _firmwarePath = "";
 
+        [ObservableProperty]
+        private bool _isSwitch = false;
+
+        [ObservableProperty]
+        private bool _isClosed = false;
+
+        [ObservableProperty]
+        private bool _isPotentiometer = false;
+
+        [ObservableProperty]
+        private double _wiperPercent = 50.0;
+
         [RelayCommand]
         private void BrowseFirmware()
         {
@@ -149,6 +161,26 @@ namespace EdaSimulator.UI.ViewModels
             }
         }
 
+        partial void OnIsClosedChanged(bool value)
+        {
+            if (_isPopulating || _activeItem == null) return;
+            if (_activeItem is ComponentNodeViewModel compNode && compNode.CoreComponent is Switch sw)
+            {
+                sw.IsClosed = value;
+                Value = sw.IsClosed ? "Closed" : "Open";
+                compNode.Value = Value;
+            }
+        }
+
+        partial void OnWiperPercentChanged(double value)
+        {
+            if (_isPopulating || _activeItem == null) return;
+            if (_activeItem is ComponentNodeViewModel compNode && compNode.CoreComponent is Potentiometer pot)
+            {
+                pot.WiperPosition = value / 100.0;
+            }
+        }
+
         public void Clear()
         {
             _activeItem    = null;
@@ -161,6 +193,10 @@ namespace EdaSimulator.UI.ViewModels
             IsMcu          = false;
             IsWire         = false;
             FirmwarePath   = "";
+            IsSwitch       = false;
+            IsClosed       = false;
+            IsPotentiometer = false;
+            WiperPercent   = 50.0;
             HasSelection   = false;
         }
 
@@ -190,6 +226,28 @@ namespace EdaSimulator.UI.ViewModels
                 {
                     IsMcu = false;
                     FirmwarePath = string.Empty;
+                }
+
+                if (component is Switch sw)
+                {
+                    IsSwitch = true;
+                    IsClosed = sw.IsClosed;
+                }
+                else
+                {
+                    IsSwitch = false;
+                    IsClosed = false;
+                }
+
+                if (component is Potentiometer pot)
+                {
+                    IsPotentiometer = true;
+                    WiperPercent = pot.WiperPosition * 100.0;
+                }
+                else
+                {
+                    IsPotentiometer = false;
+                    WiperPercent = 50.0;
                 }
 
                 HasSelection   = true;

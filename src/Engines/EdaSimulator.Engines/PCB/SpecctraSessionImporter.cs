@@ -36,7 +36,7 @@ namespace EdaSimulator.Engines.PCB
             // ── Parse wires ──────────────────────────────────────────────────────────
             // Pattern: (wire (path <layer> <width> <x1> <y1> <x2> <y2>) (net <name>) …)
             var wireRegex = new Regex(
-                @"\(wire\s+\(path\s+(\S+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\)\s+\(net\s+(\S+)\)",
+                @"\(wire\s+\(path\s+(\S+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+([\d.E+\-]+)\)\s+\(net\s+((?:""[^""]*"")|\S+)\)",
                 RegexOptions.IgnoreCase);
 
             foreach (Match m in wireRegex.Matches(content))
@@ -66,7 +66,7 @@ namespace EdaSimulator.Engines.PCB
             // ── Parse vias ───────────────────────────────────────────────────────────
             // Pattern: (via "<padstackName>" <x> <y> (net <name>) …)
             var viaRegex = new Regex(
-                @"\(via\s+""?[^""]*""?\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+\(net\s+(\S+)\)",
+                @"\(via\s+""?[^""]*""?\s+([\d.E+\-]+)\s+([\d.E+\-]+)\s+\(net\s+((?:""[^""]*"")|\S+)\)",
                 RegexOptions.IgnoreCase);
 
             foreach (Match m in viaRegex.Matches(content))

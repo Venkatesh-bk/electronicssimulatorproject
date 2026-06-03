@@ -67,5 +67,23 @@ namespace EdaSimulator.Tests
             Assert.True(Math.Abs(magnitudes[2] - 0.0) < 1e-6);
             Assert.True(Math.Abs(magnitudes[3] - 0.0) < 1e-6);
         }
+
+        [Fact]
+        public void SignalProcessing_CanApplyWindowing()
+        {
+            double[] signal = { 1.0, 1.0, 1.0, 1.0 };
+            
+            // Hanning window check
+            SignalProcessing.ApplyWindow(signal, "Hanning");
+            
+            // For N=4, i=0: 0.5 * (1 - cos(0)) = 0
+            // i=1: 0.5 * (1 - cos(2pi/3)) = 0.5 * (1 - (-0.5)) = 0.75
+            // i=2: 0.5 * (1 - cos(4pi/3)) = 0.5 * (1 - (-0.5)) = 0.75
+            // i=3: 0.5 * (1 - cos(2pi)) = 0
+            Assert.True(Math.Abs(signal[0] - 0.0) < 1e-6);
+            Assert.True(Math.Abs(signal[1] - 0.75) < 1e-6);
+            Assert.True(Math.Abs(signal[2] - 0.75) < 1e-6);
+            Assert.True(Math.Abs(signal[3] - 0.0) < 1e-6);
+        }
     }
 }

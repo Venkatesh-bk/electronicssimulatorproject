@@ -7,6 +7,13 @@ namespace EdaSimulator.UI.Views
         public ComponentHubWindow()
         {
             InitializeComponent();
+            Loaded += (s, e) =>
+            {
+                if (DataContext is ViewModels.ComponentHubViewModel vm)
+                {
+                    vm.RequestClose += () => this.Close();
+                }
+            };
         }
     }
 }

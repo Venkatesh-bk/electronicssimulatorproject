@@ -28,6 +28,8 @@ namespace EdaSimulator.UI.Views
         private MainViewModel? ViewModel => DataContext as MainViewModel;
         private ViewModels.Canvas.SchematicViewModel? CanvasViewModel => ViewModel?.ActiveSchematicViewModel;
 
+        private static readonly System.Collections.Generic.List<ViewModels.Canvas.ComponentNodeViewModel> _copiedComponents = new();
+
         // --- Viewport Physics and Routing Intercepts ---
         private const double GRID_SIZE = 10.0;
         private double Snap(double value) => Math.Round(value / GRID_SIZE) * GRID_SIZE;
@@ -207,6 +209,8 @@ namespace EdaSimulator.UI.Views
                     case "Inductor": coreComponent = new Inductor(GetNextDesignator("L"), "1m"); break;
                     case "VoltageSource": coreComponent = new VoltageSource(GetNextDesignator("V"), "DC 5"); break;
                     case "CurrentSource": coreComponent = new CurrentSource(GetNextDesignator("I"), "DC 1m"); break;
+                    case "Switch": coreComponent = new Switch(GetNextDesignator("SW")); break;
+                    case "Potentiometer": coreComponent = new Potentiometer(GetNextDesignator("POT"), "10k"); break;
                     
                     case "Diode": coreComponent = new Diode(GetNextDesignator("D"), "1N4148"); break;
                     case "BJT": coreComponent = new BJT(GetNextDesignator("Q"), "2N2222"); break;
@@ -240,6 +244,7 @@ namespace EdaSimulator.UI.Views
                     case "BlockSum": coreComponent = new BlockSumComponent(GetNextDesignator("XS"), "+-"); break;
                     case "BlockSource": coreComponent = new BlockSourceComponent(GetNextDesignator("XSO"), "Constant 1.0"); break;
                     case "BlockTransferFunction": coreComponent = new BlockTransferFunctionComponent(GetNextDesignator("XTF"), "1 / 1 1"); break;
+                    case "AnnotationNote": coreComponent = new AnnotationNote(GetNextDesignator("NOTE"), "Double-click to edit note text"); break;
                 }
 
                 if (coreComponent != null && CanvasViewModel != null)
@@ -330,6 +335,125 @@ namespace EdaSimulator.UI.Views
                     e.Handled = true;
                     return;
                 }
+                if (e.Key == Key.C)
+                {
+                    _copiedComponents.Clear();
+                    foreach (var item in CanvasViewModel.Items)
+                    {
+                        if (item.IsSelected && item is ViewModels.Canvas.ComponentNodeViewModel comp)
+                        {
+                            _copiedComponents.Add(comp);
+                        }
+                    }
+                    if (_copiedComponents.Count > 0)
+                    {
+                        if (ViewModel != null)
+                            ViewModel.StatusText = $"{_copiedComponents.Count} component(s) copied to clipboard.";
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                if (e.Key == Key.V)
+                {
+                    if (_copiedComponents.Count > 0)
+                    {
+                        var pastedList = new System.Collections.Generic.List<ViewModels.Canvas.ComponentNodeViewModel>();
+
+                        foreach (var copied in _copiedComponents)
+                        {
+                            var sourceCore = copied.CoreComponent;
+                            // Extract alphabetical prefix
+                            string prefix = "";
+                            foreach (char c in sourceCore.Designator)
+                            {
+                                if (char.IsLetter(c)) prefix += c;
+                                else break;
+                            }
+                            if (string.IsNullOrEmpty(prefix)) prefix = "U";
+                            string newDesignator = GetNextDesignator(prefix);
+
+                            Component? cloneCore = null;
+                            if (sourceCore is CustomComponent custom)
+                            {
+                                cloneCore = new CustomComponent(newDesignator, custom.Value, custom.LibraryModel);
+                            }
+                            else if (sourceCore is PowerRail rail)
+                            {
+                                cloneCore = new PowerRail(newDesignator, rail.Voltage);
+                            }
+                            else
+                            {
+                                var type = sourceCore.GetType();
+                                var constructors = type.GetConstructors();
+                                var ctor = System.Linq.Enumerable.FirstOrDefault(constructors, c => {
+                                    var pars = c.GetParameters();
+                                    return pars.Length == 2 && pars[0].ParameterType == typeof(string) && pars[1].ParameterType == typeof(string);
+                                });
+                                if (ctor != null)
+                                {
+                                    cloneCore = (Component)ctor.Invoke(new object[] { newDesignator, sourceCore.Value });
+                                }
+                                else
+                                {
+                                    ctor = System.Linq.Enumerable.FirstOrDefault(constructors, c => {
+                                        var pars = c.GetParameters();
+                                        return pars.Length == 1 && pars[0].ParameterType == typeof(string);
+                                    });
+                                    if (ctor != null)
+                                    {
+                                        cloneCore = (Component)ctor.Invoke(new object[] { newDesignator });
+                                    }
+                                }
+                            }
+
+                            if (cloneCore != null)
+                            {
+                                // Copy component-specific dynamic states
+                                if (sourceCore is Potentiometer srcPot && cloneCore is Potentiometer destPot)
+                                {
+                                    destPot.WiperPosition = srcPot.WiperPosition;
+                                }
+                                else if (sourceCore is Switch srcSw && cloneCore is Switch destSw)
+                                {
+                                    destSw.IsClosed = srcSw.IsClosed;
+                                }
+                                else if (sourceCore is McuComponent srcMcu && cloneCore is McuComponent destMcu)
+                                {
+                                    destMcu.FirmwarePath = srcMcu.FirmwarePath;
+                                }
+
+                                var cloneVm = new ViewModels.Canvas.ComponentNodeViewModel(cloneCore)
+                                {
+                                    X = Snap(copied.X + 40),
+                                    Y = Snap(copied.Y + 40),
+                                    RotationAngle = copied.RotationAngle,
+                                    IsMirroredX = copied.IsMirroredX,
+                                    IsMirroredY = copied.IsMirroredY
+                                };
+                                pastedList.Add(cloneVm);
+                            }
+                        }
+
+                        if (pastedList.Count > 0)
+                        {
+                            foreach (var item in CanvasViewModel.Items)
+                            {
+                                item.IsSelected = false;
+                            }
+
+                            foreach (var pasted in pastedList)
+                            {
+                                pasted.IsSelected = true;
+                                CanvasViewModel.History.ExecuteCommand(new AddComponentCommand(CanvasViewModel, pasted));
+                            }
+
+                            if (ViewModel != null)
+                                ViewModel.StatusText = $"{pastedList.Count} component(s) pasted.";
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                }
             }
 
             // Delete / Backspace — remove selected canvas items via undoable command
@@ -391,20 +515,82 @@ namespace EdaSimulator.UI.Views
                     }
                 }
             }
+                       // F2: Quick-Edit selected component value (industry standard)
+            if (e.Key == Key.F2)
+            {
+                var selectedComp = CanvasViewModel?.Items
+                    .OfType<ViewModels.Canvas.ComponentNodeViewModel>()
+                    .FirstOrDefault(c => c.IsSelected);
+                if (selectedComp != null)
+                {
+                    var dlg = new ComponentPropertyDialog(selectedComp);
+                    dlg.Owner = this;
+                    dlg.ShowDialog();
+                    e.Handled = true;
+                    return;
+                }
+            }
 
             // ── Phase 7: Global Keyboard Shortcuts ───────────────────────────────────
-            if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            if (Keyboard.Modifiers == ModifierKeys.Control)
             {
-                ViewModel?.SaveProjectCommand.Execute(null);
+                if (e.Key == Key.S)
+                {
+                    ViewModel?.SaveProjectCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.O)
+                {
+                    ViewModel?.LoadProjectCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.N)
+                {
+                    ViewModel?.NewProjectCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                // Ctrl+Shift+F: Zoom to Fit all components
+                if (e.Key == Key.F && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                {
+                    ZoomToFit();
+                    e.Handled = true;
+                    return;
+                }
             }
-            else if (e.Key == Key.O && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
-            {
-                ViewModel?.LoadProjectCommand.Execute(null);
-            }
-            else if (e.Key == Key.N && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
-            {
-                ViewModel?.NewProjectCommand.Execute(null);
-            }
+        }
+
+        private void ZoomToFit()
+        {
+            if (CanvasViewModel == null) return;
+            var components = CanvasViewModel.Items.OfType<ViewModels.Canvas.ComponentNodeViewModel>().ToList();
+            if (components.Count == 0) return;
+
+            double minX = components.Min(c => c.X);
+            double minY = components.Min(c => c.Y);
+            double maxX = components.Max(c => c.X + c.BoundsWidth);
+            double maxY = components.Max(c => c.Y + c.BoundsHeight);
+
+            double contentWidth  = maxX - minX + 100;
+            double contentHeight = maxY - minY + 100;
+
+            double viewWidth  = MainScrollViewer.ActualWidth  > 0 ? MainScrollViewer.ActualWidth  : 800;
+            double viewHeight = MainScrollViewer.ActualHeight > 0 ? MainScrollViewer.ActualHeight : 600;
+
+            double scaleX = viewWidth  / contentWidth;
+            double scaleY = viewHeight / contentHeight;
+            double zoom   = Math.Min(Math.Min(scaleX, scaleY), 2.0);
+            zoom          = Math.Max(zoom, 0.1);
+
+            CanvasViewModel.ZoomFactor = zoom;
+            CanvasViewModel.PanX = -(minX - 50) * zoom;
+            CanvasViewModel.PanY = -(minY - 50) * zoom;
+
+            ViewModel?.StatusText?.ToString(); // trigger status update
+            if (ViewModel != null)
+                ViewModel.StatusText = $"Zoom to fit: {zoom:P0}  |  Bounds: {contentWidth:F0}×{contentHeight:F0} px";
         }
 
         // ── Phase 7: Menu Click Handlers ─────────────────────────────────────────────
@@ -434,6 +620,21 @@ namespace EdaSimulator.UI.Views
                 CanvasViewModel.PanX = 0;
                 CanvasViewModel.PanY = 0;
             }
+        }
+
+        private void MenuZoomFit_Click(object sender, RoutedEventArgs e) => ZoomToFit();
+
+        private void MenuPcbDrc_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel?.PcbVM == null) return;
+            ViewModel.PcbVM.RunPcbDrcPublic();
+            // Switch to PCB tab to show results
+            MessageBox.Show(
+                $"PCB DRC complete.\nErrors: {ViewModel.PcbVM.DrcErrors}  Warnings: {ViewModel.PcbVM.DrcWarnings}\n\n" +
+                $"Details shown in the PCB Layout → DRC tab.",
+                "PCB DRC Results",
+                MessageBoxButton.OK,
+                ViewModel.PcbVM.DrcErrors == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
         private void MenuAbout_Click(object sender, RoutedEventArgs e)
@@ -567,6 +768,36 @@ namespace EdaSimulator.UI.Views
             var hubWindow = new ComponentHubWindow();
             hubWindow.Owner = this;
             hubWindow.ShowDialog();
+
+            if (hubWindow.DataContext is ViewModels.ComponentHubViewModel vm && !string.IsNullOrEmpty(vm.PlacedComponentId))
+            {
+                PlaceLibraryComponent(vm.PlacedComponentId);
+            }
+        }
+
+        private void PlaceLibraryComponent(string componentId)
+        {
+            var libComp = EdaSimulator.Engines.Library.ComponentLibraryService.Instance.GetComponentById(componentId);
+            if (libComp == null || CanvasViewModel == null || ViewModel == null) return;
+
+            string prefix = "U";
+            string cat = libComp.Category.ToLowerInvariant();
+            if (cat.Contains("diode")) prefix = "D";
+            else if (cat.Contains("npn") || cat.Contains("pnp") || cat.Contains("mosfet") || cat.Contains("transistor")) prefix = "Q";
+            else if (cat.Contains("op-amp") || cat.Contains("amplifier") || cat.Contains("ic")) prefix = "U";
+
+            string designator = GetNextDesignator(prefix);
+            var coreComp = new EdaSimulator.Engines.Models.Components.CustomComponent(designator, libComp.Name, libComp);
+
+            var vm = new ViewModels.Canvas.ComponentNodeViewModel(coreComp)
+            {
+                X = Snap(150),
+                Y = Snap(150)
+            };
+
+            var cmd = new AddComponentCommand(CanvasViewModel, vm);
+            CanvasViewModel.History.ExecuteCommand(cmd);
+            ViewModel.StatusText = $"Placed {libComp.Name} ({designator}) on schematic.";
         }
 
         private void MenuKnowledgeBase_Click(object sender, RoutedEventArgs e)
@@ -586,6 +817,12 @@ namespace EdaSimulator.UI.Views
 
         private void PcbFootprint_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ClickCount == 2)
+            {
+                PcbFootprint_MouseDoubleClick(sender, e);
+                return;
+            }
+
             if (sender is FrameworkElement fe && fe.DataContext is PcbFootprintVM fpVM)
             {
                 _isDraggingPcbFootprint = true;
@@ -643,6 +880,37 @@ namespace EdaSimulator.UI.Views
                 _draggedPcbFootprint = null;
                 e.Handled = true;
             }
+        }
+
+        private void PcbFootprint_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ViewModels.PcbFootprintVM fpVM)
+            {
+                if (DataContext is MainViewModel mainVM)
+                {
+                    var dlg = new FootprintEditorWindow(fpVM, mainVM.PcbVM);
+                    dlg.Owner = this;
+                    dlg.ShowDialog();
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void PcbTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // When the user switches to the 3D Board View tab, rebuild the 3D geometry
+            if (sender is TabControl tc && tc.SelectedItem is TabItem ti && ti.Header?.ToString() == "3D Board View")
+            {
+                if (DataContext is MainViewModel mv)
+                    mv.PcbVM.Rebuild3DGeometry(PcbViewport3D);
+            }
+        }
+
+        private void ResetCamera_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel mv)
+                mv.PcbVM.Rebuild3DGeometry(PcbViewport3D);
+            PcbViewport3D.ZoomExtents();
         }
     }
 }

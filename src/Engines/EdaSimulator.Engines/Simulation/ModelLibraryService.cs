@@ -96,6 +96,43 @@ namespace EdaSimulator.Engines.Simulation
             }
         }
 
+        public void ImportLibraryText(string modelName, string spiceModelText)
+        {
+            if (string.IsNullOrWhiteSpace(spiceModelText)) return;
+
+            var rawType = System.Text.RegularExpressions.Regex.IsMatch(spiceModelText, @"\.subckt\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                ? SpiceModelType.Subcircuit
+                : SpiceModelType.Model;
+
+            var model = new SpiceLibraryModel
+            {
+                Name = modelName,
+                Type = rawType,
+                RawDefinition = spiceModelText
+            };
+
+            var existing = _models.FirstOrDefault(m => string.Equals(m.Name, modelName, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                _models.Remove(existing);
+            }
+            _models.Add(model);
+
+            if (_libraryFilePath != null && File.Exists(_libraryFilePath))
+            {
+                try
+                {
+                    var textToAppend = $"\n\n* --- Custom model for {modelName} added on {DateTime.Now:yyyy-MM-dd HH:mm:ss} ---\n" +
+                                       spiceModelText;
+                    File.AppendAllText(_libraryFilePath, textToAppend);
+                }
+                catch
+                {
+                    // Degrade gracefully
+                }
+            }
+        }
+
         /// <summary>
         /// Returns all model names grouped by type for the UI library browser.
         /// Key = "Diodes" | "BJT NPN" | "BJT PNP" | "MOSFET N" | "MOSFET P" | "Op-Amps" | "Regulators" | "Other"

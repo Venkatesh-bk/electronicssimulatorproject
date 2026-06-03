@@ -106,7 +106,7 @@ namespace EdaSimulator.UI.ViewModels.Canvas
             Id = coreComponent.Id;
             ZIndex = 10; // Components draw above wires (z=0)
             
-            var symbol = SymbolRegistry.GetSymbol(coreComponent.GetType());
+            var symbol = SymbolRegistry.GetSymbol(coreComponent);
             BoundsWidth = symbol.Width;
             BoundsHeight = symbol.Height;
             PathData = symbol.PathData;
@@ -132,10 +132,9 @@ namespace EdaSimulator.UI.ViewModels.Canvas
         /// <summary>
         /// Translates the component by dx, dy and updates child absolute pin positions.
         /// </summary>
-        public void MoveBy(double dx, double dy)
+        public override void MoveBy(double dx, double dy)
         {
-            X += dx;
-            Y += dy;
+            base.MoveBy(dx, dy);
             UpdatePinAbsolutePositions();
         }
 

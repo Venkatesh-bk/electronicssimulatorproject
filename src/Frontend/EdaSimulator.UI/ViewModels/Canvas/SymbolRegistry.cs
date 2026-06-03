@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using EdaSimulator.Engines.Models;
 using EdaSimulator.Engines.Models.Components;
 using EdaSimulator.Engines.Simulation.Digital;
 
@@ -264,6 +265,39 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                     { 2, new Point(30, 0) }   // OUT
                 }
             };
+            // --- Interactive Switch (angled line when open, flat when closed handled dynamically or simple schematic template) ---
+            _registry[typeof(Switch)] = new ComponentSymbol
+            {
+                Width = 40, Height = 20,
+                PathData = "M -20,0 L -10,0 M -10,0 L 8,-10 M 10,0 L 20,0",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-20, 0) },
+                    { 2, new Point(20, 0) }
+                }
+            };
+
+            // --- Interactive Potentiometer (resistor with wiper pin) ---
+            _registry[typeof(Potentiometer)] = new ComponentSymbol
+            {
+                Width = 60, Height = 30,
+                PathData = "M -30,0 L -20,0 L -15,10 L -5,-10 L 5,10 L 15,-10 L 20,0 L 30,0 M 0,-15 L 0,-5 M -4,-9 L 0,-5 L 4,-9",
+                PinOffsets = new Dictionary<int, Point>
+                {
+                    { 1, new Point(-30, 0) },
+                    { 2, new Point(0, -15) },
+                    { 3, new Point(30, 0) }
+                }
+            };
+
+            // --- Annotation Note ---
+            _registry[typeof(AnnotationNote)] = new ComponentSymbol
+            {
+                Width = 80,
+                Height = 45,
+                PathData = "M -40,-20 L 30,-20 L 40,-10 L 40,20 L -40,20 Z M 30,-20 L 30,-10 L 40,-10",
+                PinOffsets = new Dictionary<int, Point>()
+            };
         }
 
         public static ComponentSymbol GetSymbol(Type componentType)
@@ -283,6 +317,55 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                     { 2, new Point(20, 0) }
                 }
             };
+        }
+
+        public static ComponentSymbol GetSymbol(Component component)
+        {
+            if (component is CustomComponent custom)
+            {
+                int numPins = custom.LibraryModel.Pins;
+                double width = 60;
+                // Height based on pin count (min height 40)
+                int rows = (int)Math.Ceiling(numPins / 2.0);
+                double height = Math.Max(40, rows * 20 + 10);
+
+                // Build IC body box
+                string path = $"M -{width/2},-{height/2} L {width/2},-{height/2} L {width/2},{height/2} L -{width/2},{height/2} Z";
+                
+                // Add a small semi-circle notch on top for DIP packages (gives it Altium/Proteus level details)
+                path += $" M -10,-{height/2} A 10,10 0 0,0 10,-{height/2}";
+
+                var offsets = new Dictionary<int, Point>();
+                for (int i = 1; i <= numPins; i++)
+                {
+                    if (i % 2 == 1) // Odd: Left side from top to bottom
+                    {
+                        int row = i / 2;
+                        double py = -height/2 + 15 + row * 20;
+                        offsets[i] = new Point(-width/2 - 10, py);
+                        // Pin lead line
+                        path += $" M -{width/2},{py} L -{width/2 + 10},{py}";
+                    }
+                    else // Even: Right side from bottom to top (Standard DIP layout)
+                    {
+                        int row = rows - (i / 2);
+                        double py = -height/2 + 15 + row * 20;
+                        offsets[i] = new Point(width/2 + 10, py);
+                        // Pin lead line
+                        path += $" M {width/2},{py} L {width/2 + 10},{py}";
+                    }
+                }
+
+                return new ComponentSymbol
+                {
+                    Width = width + 20,
+                    Height = height,
+                    PathData = path,
+                    PinOffsets = offsets
+                };
+            }
+
+            return GetSymbol(component.GetType());
         }
     }
 }

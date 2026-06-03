@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EdaSimulator.Engines.Models;
@@ -19,6 +21,7 @@ namespace EdaSimulator.UI.ViewModels
     public partial class PcbLayoutViewModel : ObservableObject
     {
         private readonly PcbDrcEngine _drcEngine = new();
+        private readonly List<ModelVisual3D> _pcb3DVisuals = new();
         private PcbDocument _pcbDoc;
 
         public PcbLayoutViewModel()
@@ -806,6 +809,258 @@ namespace EdaSimulator.UI.ViewModels
             sb.AppendLine(new string('─', 60));
             sb.AppendLine($"Total line items: {bom.Count} | Total components: {bom.Sum(b => b.Quantity)}");
             return sb.ToString();
+        }
+
+        public void RunPcbDrcPublic() => RunPcbDrc();
+
+        public void Rebuild3DGeometry(HelixToolkit.Wpf.HelixViewport3D viewport)
+        {
+            // Clear existing visuals
+            foreach (var vis in _pcb3DVisuals)
+            {
+                viewport.Children.Remove(vis);
+            }
+            _pcb3DVisuals.Clear();
+
+            double boardThickness = 1.6 * 0.01; // 1.6mm = 0.016
+            double wB = BoardWidth * 0.01;
+            double hB = BoardHeight * 0.01;
+
+            var boardMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x0A, 0x5C, 0x24))); // dark green FR4
+            var copperMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0xBB, 0x8A, 0x35))); // copper/gold
+            var bodyMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x11, 0x11, 0x11))); // black package body
+            var silverMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0xDD, 0xDD, 0xDD))); // silver leads
+
+            // ── Board Outline Box ───────────────────────────────────────────────────
+            var boardModel = new GeometryModel3D(
+                BuildBox(wB / 2, hB / 2, boardThickness / 2, wB, hB, boardThickness),
+                boardMaterial);
+            AddModel3D(viewport, boardModel);
+
+            // ── Copper Traces ───────────────────────────────────────────────────────
+            foreach (var tr in _pcbDoc.Traces)
+            {
+                double tx1 = tr.StartX * 0.01;
+                double ty1 = tr.StartY * 0.01;
+                double tx2 = tr.EndX * 0.01;
+                double ty2 = tr.EndY * 0.01;
+                double thickness = tr.Width_mm * 0.01;
+
+                // Simple trace line as thin box
+                double cx = (tx1 + tx2) / 2;
+                double cy = (ty1 + ty2) / 2;
+                double len = Math.Sqrt((tx2 - tx1) * (tx2 - tx1) + (ty2 - ty1) * (ty2 - ty1));
+                double rot = Math.Atan2(ty2 - ty1, tx2 - tx1) * 180 / Math.PI;
+
+                var traceModel = new GeometryModel3D(
+                    BuildBox(0, 0, boardThickness + 0.0001, len, thickness, 0.0001),
+                    copperMaterial);
+
+                var visual = new ModelVisual3D { Content = traceModel };
+                var transformGroup = new Transform3DGroup();
+                transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), rot)));
+                transformGroup.Children.Add(new TranslateTransform3D(cx, cy, 0));
+                visual.Transform = transformGroup;
+
+                _pcb3DVisuals.Add(visual);
+                viewport.Children.Add(visual);
+            }
+
+            // ── High-Fidelity 3D Component Models ──────────────────────────────────
+            foreach (var fp in _pcbDoc.Footprints)
+            {
+                double w = fp.CadWidth_mm * 0.01;
+                double h = fp.CadHeight_mm * 0.01;
+                double d = fp.CadDepth_mm * 0.01;
+                var color = ParseHexColor(fp.CadColor);
+                var customMaterial = new DiffuseMaterial(new SolidColorBrush(color));
+
+                double localX = fp.X * 0.01;
+                double localY = fp.Y * 0.01;
+                double rot = fp.Rotation;
+
+                var visual = new ModelVisual3D();
+                var modelGroup = new Model3DGroup();
+
+                if (fp.CadShape == "Cylinder")
+                {
+                    // Vertical cylinder (e.g. radial capacitor, diode, or resistor)
+                    modelGroup.Children.Add(new GeometryModel3D(
+                        BuildCylinder(0, 0, boardThickness + d / 2, w, d),
+                        customMaterial));
+                }
+                else if (fp.CadShape == "DIP")
+                {
+                    // Main IC body
+                    modelGroup.Children.Add(new GeometryModel3D(
+                        BuildBox(0, 0, boardThickness + d / 2, w, h, d),
+                        bodyMaterial));
+
+                    // Silver leg pins on the left and right sides
+                    int pads = fp.Pads.Count > 0 ? fp.Pads.Count : 8;
+                    int sideCount = pads / 2;
+                    double pitch = 2.54 * 0.01;
+
+                    for (int i = 0; i < sideCount; i++)
+                    {
+                        double legY = -h / 2 + 0.0127 + i * pitch;
+                        if (legY > h / 2) continue;
+
+                        // Left Leg
+                        modelGroup.Children.Add(new GeometryModel3D(
+                            BuildBox(-w / 2 - 0.003, legY, boardThickness / 2, 0.006, 0.004, d + boardThickness),
+                            silverMaterial));
+                        // Right Leg
+                        modelGroup.Children.Add(new GeometryModel3D(
+                            BuildBox(w / 2 + 0.003, legY, boardThickness / 2, 0.006, 0.004, d + boardThickness),
+                            silverMaterial));
+                    }
+                }
+                else if (fp.CadShape == "TO220")
+                {
+                    // Main black block
+                    modelGroup.Children.Add(new GeometryModel3D(
+                        BuildBox(0, 0, boardThickness + d / 2, w, h, d),
+                        bodyMaterial));
+
+                    // Metal heatsink tab at back
+                    modelGroup.Children.Add(new GeometryModel3D(
+                        BuildBox(0, h / 2 - 0.001, boardThickness + d + 0.005, w, 0.002, 0.01),
+                        silverMaterial));
+
+                    // 3 Lead pins sticking down
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        modelGroup.Children.Add(new GeometryModel3D(
+                            BuildBox(i * 0.012, -h / 2 + 0.001, boardThickness / 2, 0.002, 0.002, d + boardThickness),
+                            silverMaterial));
+                    }
+                }
+                else
+                {
+                    // Default SMD Box
+                    modelGroup.Children.Add(new GeometryModel3D(
+                        BuildBox(0, 0, boardThickness + d / 2, w, h, d),
+                        customMaterial));
+                }
+
+                visual.Content = modelGroup;
+
+                // Apply rotation & translation transform
+                var transformGroup = new Transform3DGroup();
+                transformGroup.Children.Add(new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), rot)));
+                transformGroup.Children.Add(new TranslateTransform3D(localX, localY, 0));
+                visual.Transform = transformGroup;
+
+                _pcb3DVisuals.Add(visual);
+                viewport.Children.Add(visual);
+            }
+
+            viewport.ZoomExtents(500);
+        }
+
+        private static Color ParseHexColor(string hex)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(hex)) return Color.FromRgb(0x1E, 0x3A, 0x5A);
+                hex = hex.Trim().TrimStart('#');
+                if (hex.Length == 6)
+                {
+                    byte r = Convert.ToByte(hex.Substring(0, 2), 16);
+                    byte g = Convert.ToByte(hex.Substring(2, 2), 16);
+                    byte b = Convert.ToByte(hex.Substring(4, 2), 16);
+                    return Color.FromRgb(r, g, b);
+                }
+            }
+            catch {}
+            return Color.FromRgb(0x1E, 0x3A, 0x5A);
+        }
+
+        private static MeshGeometry3D BuildCylinder(double cx, double cy, double cz, double diameter, double height)
+        {
+            var mesh = new MeshGeometry3D();
+            double r = diameter / 2;
+            int segments = 8;
+
+            // Bottom vertices (z = cz - height/2)
+            double zBot = cz - height / 2;
+            for (int i = 0; i < segments; i++)
+            {
+                double theta = i * 2 * Math.PI / segments;
+                mesh.Positions.Add(new Point3D(cx + r * Math.Cos(theta), cy + r * Math.Sin(theta), zBot));
+            }
+
+            // Top vertices (z = cz + height/2)
+            double zTop = cz + height / 2;
+            for (int i = 0; i < segments; i++)
+            {
+                double theta = i * 2 * Math.PI / segments;
+                mesh.Positions.Add(new Point3D(cx + r * Math.Cos(theta), cy + r * Math.Sin(theta), zTop));
+            }
+
+            // Side faces
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                mesh.TriangleIndices.Add(i);
+                mesh.TriangleIndices.Add(next);
+                mesh.TriangleIndices.Add(i + segments);
+
+                mesh.TriangleIndices.Add(next);
+                mesh.TriangleIndices.Add(next + segments);
+                mesh.TriangleIndices.Add(i + segments);
+            }
+
+            // Bottom cap
+            int cBotIdx = mesh.Positions.Count;
+            mesh.Positions.Add(new Point3D(cx, cy, zBot));
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                mesh.TriangleIndices.Add(cBotIdx);
+                mesh.TriangleIndices.Add(next);
+                mesh.TriangleIndices.Add(i);
+            }
+
+            // Top cap
+            int cTopIdx = mesh.Positions.Count;
+            mesh.Positions.Add(new Point3D(cx, cy, zTop));
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                mesh.TriangleIndices.Add(cTopIdx);
+                mesh.TriangleIndices.Add(i + segments);
+                mesh.TriangleIndices.Add(next + segments);
+            }
+
+            return mesh;
+        }
+
+        private static MeshGeometry3D BuildBox(double cx, double cy, double cz, double w, double h, double d)
+        {
+            double hx = w / 2, hy = h / 2, hz = d / 2;
+            var mesh = new MeshGeometry3D();
+
+            Point3D[] v =
+            {
+                new(cx - hx, cy - hy, cz - hz), new(cx + hx, cy - hy, cz - hz),
+                new(cx + hx, cy + hy, cz - hz), new(cx - hx, cy + hy, cz - hz),
+                new(cx - hx, cy - hy, cz + hz), new(cx + hx, cy - hy, cz + hz),
+                new(cx + hx, cy + hy, cz + hz), new(cx - hx, cy + hy, cz + hz),
+            };
+            foreach (var p in v) mesh.Positions.Add(p);
+
+            int[] idx = { 0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 2,3,7, 2,7,6, 1,2,6, 1,6,5, 0,4,7, 0,7,3 };
+            foreach (var i in idx) mesh.TriangleIndices.Add(i);
+            return mesh;
+        }
+
+        private void AddModel3D(HelixToolkit.Wpf.HelixViewport3D viewport, GeometryModel3D model)
+        {
+            var visual = new ModelVisual3D { Content = model };
+            _pcb3DVisuals.Add(visual);
+            viewport.Children.Add(visual);
         }
     }
 

@@ -10,7 +10,7 @@ namespace EdaSimulator.UI.Tools
         public string ToolName => "Selection Tool";
         
         private SchematicViewModel _schematic;
-        private ComponentNodeViewModel? _draggedComponent;
+        private CanvasItemViewModel? _draggedItem;
         private double _lastMouseX;
         private double _lastMouseY;
         private double _totalDx;
@@ -25,19 +25,23 @@ namespace EdaSimulator.UI.Tools
 
         public void OnPointerDown(double x, double y, CanvasItemViewModel target)
         {
-            if (target is ComponentNodeViewModel comp)
+            bool isDraggable = target is ComponentNodeViewModel || 
+                               target is NetLabelItemViewModel || 
+                               target is VoltageProbeItemViewModel || 
+                               target is CurrentProbeItemViewModel;
+
+            if (isDraggable)
             {
-                // If clicking an unselected component, clear others.
-                if (!comp.IsSelected)
+                if (!target.IsSelected)
                 {
                     foreach (var item in _schematic.Items)
                         item.IsSelected = false;
                     
-                    comp.IsSelected = true;
+                    target.IsSelected = true;
                 }
                 
-                _draggedComponent = comp;
-                _schematic.SelectedComponent = comp;
+                _draggedItem = target;
+                _schematic.SelectedComponent = target as ComponentNodeViewModel;
                 _schematic.SelectedWire = null;
                 _isDragging = true;
                 _lastMouseX = x;
@@ -78,7 +82,7 @@ namespace EdaSimulator.UI.Tools
 
         public void OnPointerMove(double x, double y)
         {
-            if (_isDragging && _draggedComponent != null)
+            if (_isDragging && _draggedItem != null)
             {
                 double dx = x - _lastMouseX;
                 double dy = y - _lastMouseY;
@@ -88,19 +92,19 @@ namespace EdaSimulator.UI.Tools
                 
                 // MULTI-SELECT MOVE BINDING
                 // If the dragged item is part of a multiple selection, drag them all!
-                if (_draggedComponent.IsSelected)
+                if (_draggedItem.IsSelected)
                 {
                     foreach (var item in _schematic.Items)
                     {
-                        if (item is ComponentNodeViewModel comp && comp.IsSelected)
+                        if (item.IsSelected && !(item is WireViewModel) && !(item is PinNodeViewModel))
                         {
-                            comp.MoveBy(dx, dy);
+                            item.MoveBy(dx, dy);
                         }
                     }
                 }
                 else
                 {
-                    _draggedComponent.MoveBy(dx, dy);
+                    _draggedItem.MoveBy(dx, dy);
                 }
 
                 // ── Wire drag-follow: update any wire endpoint that belongs to a moved pin ──
@@ -111,7 +115,7 @@ namespace EdaSimulator.UI.Tools
                         foreach (var canvasItem in _schematic.Items)
                         {
                             if (canvasItem is ComponentNodeViewModel comp && 
-                                (comp.IsSelected || comp == _draggedComponent))
+                                (comp.IsSelected || comp == _draggedItem))
                             {
                                 foreach (var pin in comp.Pins)
                                 {
@@ -134,13 +138,23 @@ namespace EdaSimulator.UI.Tools
 
                 _schematic.SelectionBounds = new System.Windows.Rect(left, top, width, height);
 
-                // Dynamically highlight components falling inside bounds
+                // Dynamically highlight components, net labels, and probes falling inside bounds
                 foreach (var item in _schematic.Items)
                 {
                     if (item is ComponentNodeViewModel comp)
                     {
                         var compRect = new System.Windows.Rect(comp.X, comp.Y, comp.BoundsWidth, comp.BoundsHeight);
                         comp.IsSelected = _schematic.SelectionBounds.IntersectsWith(compRect);
+                    }
+                    else if (item is NetLabelItemViewModel netLabel)
+                    {
+                        var labelRect = new System.Windows.Rect(netLabel.X, netLabel.Y, 50, 20);
+                        netLabel.IsSelected = _schematic.SelectionBounds.IntersectsWith(labelRect);
+                    }
+                    else if (item is VoltageProbeItemViewModel or CurrentProbeItemViewModel)
+                    {
+                        var probeRect = new System.Windows.Rect(item.X, item.Y, 20, 20);
+                        item.IsSelected = _schematic.SelectionBounds.IntersectsWith(probeRect);
                     }
                 }
             }
@@ -151,14 +165,14 @@ namespace EdaSimulator.UI.Tools
             if (_isDragging && (_totalDx != 0 || _totalDy != 0))
             {
                 // Ensure the dragged item is explicitly in the selection target lists so undo works
-                if (_draggedComponent != null) _draggedComponent.IsSelected = true;
+                if (_draggedItem != null) _draggedItem.IsSelected = true;
 
                 var cmd = new EdaSimulator.UI.Commands.MoveItemsCommand(_schematic, _totalDx, _totalDy);
                 _schematic.History.PushInteractionCommand(cmd);
             }
 
             _isDragging = false;
-            _draggedComponent = null;
+            _draggedItem = null;
             
             if (_isBoxSelecting)
             {
@@ -170,7 +184,7 @@ namespace EdaSimulator.UI.Tools
         public void Cancel()
         {
             _isDragging = false;
-            _draggedComponent = null;
+            _draggedItem = null;
         }
 
         public void OnDeactivated()

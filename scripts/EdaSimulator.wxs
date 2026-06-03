@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <!-- Professional Installer Configuration for EDA Simulator -->
+    <Product Id="*" Name="EDA Simulator Professional" Language="1033" Version="1.0.0.0" 
+             Manufacturer="Venkatesh-bk" UpgradeCode="a9f234c0-0f2c-473d-9d41-860f58cb28fb">
+        
+        <Package InstallerVersion="300" Compressed="yes" InstallScope="perMachine" Platform="x64"/>
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        
+        <!-- Cabinet Storage inside the MSI -->
+        <MediaTemplate EmbedCab="yes" />
+
+        <!-- User Interface Customizations -->
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+        <Feature Id="ProductFeature" Title="EDA Simulator Application" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentRef Id="ApplicationShortcut" />
+            <ComponentRef Id="ApplicationShortcutDesktop" />
+            <ComponentRef Id="FileAssociation" />
+        </Feature>
+    </Product>
+
+    <!-- Directory Structure -->
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="EDA Simulator" />
+            </Directory>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="EDA Simulator" />
+            </Directory>
+            <Directory Id="DesktopFolder" Name="Desktop" />
+        </Directory>
+    </Fragment>
+
+    <!-- Component Group for Main Files -->
+    <Fragment>
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <!-- Main Application Executable -->
+            <Component Id="MainExecutable" Guid="c37dfac1-62a2-4a0b-80a5-f09b532938cb" Win64="yes">
+                <File Id="EdaSimulatorExe" Source="SourceDir\EdaSimulator.UI.exe" KeyPath="yes" />
+            </Component>
+            
+            <!-- Component Database JSON -->
+            <Component Id="ComponentDatabase" Guid="72ac0651-789f-4b02-a1ef-227bb30985df" Win64="yes">
+                <File Id="MasterDatabaseJson" Source="SourceDir\MasterComponentDatabase.json" />
+            </Component>
+
+            <!-- Engines Library DLL -->
+            <Component Id="EnginesLibrary" Guid="98ad6a23-bc99-4d69-8a47-ef98ac2b56b9" Win64="yes">
+                <File Id="EdaSimulatorEnginesDll" Source="SourceDir\EdaSimulator.Engines.dll" />
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+
+    <!-- Start Menu & Desktop Shortcuts -->
+    <Fragment>
+        <DirectoryRef Id="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcut" Guid="b8f1725b-6cf2-4c28-9d22-26cb49f390ef">
+                <Shortcut Id="ApplicationStartMenuShortcut" 
+                          Name="EDA Simulator" 
+                          Description="Professional Mixed-Signal Circuit Simulator &amp; PCB Layout CAD" 
+                          Target="[INSTALLFOLDER]EdaSimulator.UI.exe" 
+                          WorkingDirectory="INSTALLFOLDER" />
+                <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+                <RegistryValue Root="HKCU" Key="Software\EDASimulator" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="DesktopFolder">
+            <Component Id="ApplicationShortcutDesktop" Guid="d8f1725b-6cf2-4c28-9d22-26cb49f390ef">
+                <Shortcut Id="ApplicationDesktopShortcut" 
+                          Name="EDA Simulator" 
+                          Description="Professional Mixed-Signal Circuit Simulator &amp; PCB Layout CAD" 
+                          Target="[INSTALLFOLDER]EdaSimulator.UI.exe" 
+                          WorkingDirectory="INSTALLFOLDER" />
+                <RegistryValue Root="HKCU" Key="Software\EDASimulator" Name="installedDesktop" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+    </Fragment>
+
+    <!-- File Association (.edaproj to EdaSimulator.UI.exe) -->
+    <Fragment>
+        <DirectoryRef Id="INSTALLFOLDER">
+            <Component Id="FileAssociation" Guid="fa5b66d4-8390-4822-ba3f-56ae8c3f71c4" Win64="yes">
+                <!-- Associate .edaproj files -->
+                <ProgId Id="EDASimulator.Project" Description="EDA Simulator Project File" Icon="EdaSimulatorExe">
+                    <Extension Id="edaproj" ContentType="application/xml">
+                        <Verb Id="open" Command="Open" TargetFile="EdaSimulatorExe" Argument="&quot;%1&quot;" />
+                    </Extension>
+                </ProgId>
+                <!-- Registry key to verify install -->
+                <RegistryValue Root="HKLM" Key="Software\Classes\.edaproj" Type="string" Value="EDASimulator.Project" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+    </Fragment>
+</Wix>

@@ -44,5 +44,39 @@ namespace EdaSimulator.Engines.Math
             }
             return magnitudes;
         }
+
+        /// <summary>
+        /// Applies a windowing function to a signal (Hanning, Hamming, Blackman, or Rectangular).
+        /// </summary>
+        public static void ApplyWindow(double[] data, string windowType)
+        {
+            if (data == null || data.Length <= 1)
+            {
+                return; // Windowing has no effect or is undefined for length <= 1
+            }
+
+            int n = data.Length;
+            if (string.Equals(windowType, "Hanning", StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    data[i] *= 0.5 * (1.0 - System.Math.Cos(2.0 * System.Math.PI * i / (n - 1)));
+                }
+            }
+            else if (string.Equals(windowType, "Hamming", StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    data[i] *= 0.54 - 0.46 * System.Math.Cos(2.0 * System.Math.PI * i / (n - 1));
+                }
+            }
+            else if (string.Equals(windowType, "Blackman", StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    data[i] *= 0.42 - 0.5 * System.Math.Cos(2.0 * System.Math.PI * i / (n - 1)) + 0.08 * System.Math.Cos(4.0 * System.Math.PI * i / (n - 1));
+                }
+            }
+        }
     }
 }

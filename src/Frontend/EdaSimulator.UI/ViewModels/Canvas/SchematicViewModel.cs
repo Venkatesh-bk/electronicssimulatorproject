@@ -13,6 +13,7 @@ namespace EdaSimulator.UI.ViewModels.Canvas
     public partial class SchematicViewModel : ObservableObject
     {
         public Schematic CoreSchematic { get; }
+        public string Title => CoreSchematic.Title;
         
         public EdaSimulator.UI.ViewModels.SimulationConfigViewModel SimConfig { get; }
 
@@ -77,6 +78,12 @@ namespace EdaSimulator.UI.ViewModels.Canvas
                 w.NetLabel = newName;
             }
 
+            // Update all visual net label badges sharing this net ID
+            foreach (var label in Items.OfType<NetLabelItemViewModel>().Where(l => l.AssociatedNetId == netId))
+            {
+                label.NetName = newName;
+            }
+
             // Update all visual pins connected to this net
             var connectedPinIds = net.ConnectedPinIds;
             foreach (var comp in Items.OfType<ComponentNodeViewModel>())
@@ -91,11 +98,73 @@ namespace EdaSimulator.UI.ViewModels.Canvas
             }
         }
 
+        public void ReconstructWiresFromNets()
+        {
+            // Remove existing visual wires first to avoid duplicates
+            var existingWires = System.Linq.Enumerable.ToList(System.Linq.Enumerable.OfType<WireViewModel>(Items));
+            foreach (var w in existingWires)
+            {
+                Items.Remove(w);
+            }
+
+            // Find all PinNodeViewModels on the canvas
+            var pinVms = System.Linq.Enumerable.ToList(System.Linq.Enumerable.OfType<PinNodeViewModel>(Items));
+
+            // Reconstruct wires for each net
+            foreach (var net in CoreSchematic.Nets.Values)
+            {
+                if (net.ConnectedPinIds.Count < 2) continue;
+
+                // Resolve PinNodeViewModels for this net
+                var netPins = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(pinVms, p => net.ConnectedPinIds.Contains(p.Id)));
+                if (netPins.Count < 2) continue;
+
+                // Daisy-chain wire creation between consecutive pins of this net
+                for (int i = 0; i < netPins.Count - 1; i++)
+                {
+                    var p1 = netPins[i];
+                    var p2 = netPins[i + 1];
+
+                    var wire = new WireViewModel(net.Id)
+                    {
+                        StartPinId = p1.Id,
+                        EndPinId = p2.Id,
+                        NetLabel = net.Name
+                    };
+
+                    // Draw orthogonal path between p1 and p2:
+                    // Pt1 (p1.X, p1.Y) -> Pt2 (p2.X, p1.Y) -> Pt3 (p2.X, p2.Y)
+                    wire.Points.Add(new System.Windows.Point(p1.X, p1.Y));
+                    wire.Points.Add(new System.Windows.Point(p2.X, p1.Y));
+                    wire.Points.Add(new System.Windows.Point(p2.X, p2.Y));
+
+                    // Set pin connected net names
+                    p1.ConnectedNetName = net.Name;
+                    p2.ConnectedNetName = net.Name;
+
+                    wire.UpdateLabelPosition();
+
+                    AddWire(wire);
+                }
+            }
+        }
+
         public SchematicViewModel(Schematic coreSchematic)
         {
             CoreSchematic = coreSchematic ?? throw new ArgumentNullException(nameof(coreSchematic));
             SimConfig = new EdaSimulator.UI.ViewModels.SimulationConfigViewModel(coreSchematic.SimConfig);
             ActiveTool = new SelectionTool(this); // Default to standard arrow pointer
+
+            // Populate visual components from core schematic
+            foreach (var comp in coreSchematic.Components.Values)
+            {
+                var compNode = new ComponentNodeViewModel(comp);
+                Items.Add(compNode);
+                foreach (var pin in compNode.Pins)
+                {
+                    Items.Add(pin);
+                }
+            }
         }
 
         public void AddComponentNode(ComponentNodeViewModel compNode)

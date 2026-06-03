@@ -95,6 +95,18 @@ namespace EdaSimulator.Engines.Simulation
                             double.TryParse(complexParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double imag))
                         {
                             traceVal = System.Math.Sqrt(real * real + imag * imag);
+                            
+                            // Extract phase (in degrees) and store in a parallel key suffix "_phase"
+                            double phaseVal = System.Math.Atan2(imag, real) * (180.0 / System.Math.PI);
+                            string targetVar = varNames[currentVarIndex];
+                            string phaseKey = targetVar + "_phase";
+                            if (!result.DataPoints.TryGetValue(phaseKey, out var phaseList))
+                            {
+                                phaseList = new List<double>();
+                                result.DataPoints[phaseKey] = phaseList;
+                            }
+                            phaseList.Add(phaseVal);
+
                             parsedSuccess = true;
                         }
                     }

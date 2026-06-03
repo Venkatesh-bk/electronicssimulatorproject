@@ -12,12 +12,22 @@ namespace EdaSimulator.Engines.Simulation.Digital
 
         public override void Evaluate()
         {
-            LogicState newState = (InputA?.State == LogicState.High && InputB?.State == LogicState.High) 
-                                    ? LogicState.High : LogicState.Low;
-            
-            // Handle Undefined states
-            if (InputA?.State == LogicState.Undefined || InputB?.State == LogicState.Undefined)
+            LogicState stateA = InputA?.State ?? LogicState.Undefined;
+            LogicState stateB = InputB?.State ?? LogicState.Undefined;
+
+            LogicState newState;
+            if (stateA == LogicState.Low || stateB == LogicState.Low)
+            {
+                newState = LogicState.Low;
+            }
+            else if (stateA == LogicState.High && stateB == LogicState.High)
+            {
+                newState = LogicState.High;
+            }
+            else
+            {
                 newState = LogicState.Undefined;
+            }
 
             Simulator.ScheduleEvent(PropagationDelay, () => {
                 if (Output != null) Output.State = newState;
@@ -35,11 +45,22 @@ namespace EdaSimulator.Engines.Simulation.Digital
 
         public override void Evaluate()
         {
-            LogicState newState = (InputA?.State == LogicState.High || InputB?.State == LogicState.High) 
-                                    ? LogicState.High : LogicState.Low;
-            
-            if (InputA?.State == LogicState.Undefined && InputB?.State == LogicState.Undefined)
+            LogicState stateA = InputA?.State ?? LogicState.Undefined;
+            LogicState stateB = InputB?.State ?? LogicState.Undefined;
+
+            LogicState newState;
+            if (stateA == LogicState.High || stateB == LogicState.High)
+            {
+                newState = LogicState.High;
+            }
+            else if (stateA == LogicState.Low && stateB == LogicState.Low)
+            {
+                newState = LogicState.Low;
+            }
+            else
+            {
                 newState = LogicState.Undefined;
+            }
 
             Simulator.ScheduleEvent(PropagationDelay, () => {
                 if (Output != null) Output.State = newState;

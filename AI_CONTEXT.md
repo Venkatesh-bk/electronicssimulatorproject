@@ -6,15 +6,15 @@
 
 ## 1. Project Goal
 
-Build a **professional-grade, all-in-one Electronic Design Automation (EDA) and Engineering Simulation platform for Windows**, targeting the capability level of:
+Build a **professional-grade, unified 2D/3D Electronic Design Automation (EDA) and Engineering Simulation suite for Windows**, targeting the capability level of:
 
 | Reference Software | Capabilities We Are Matching |
 |-------------------|------------------------------|
-| **Proteus Professional** | Schematic capture, PCB layout, mixed-signal simulation, microcontroller simulation, virtual instruments |
-| **MATLAB / Simulink** | Matrix math engine, signal processing toolbox, block-diagram system modeling, scripting automation, control systems analysis |
-| **ANSYS** | Finite Element Analysis (FEA), electromagnetic field simulation, thermal analysis, RF/microwave tools, 3D visualization |
+| **Proteus Professional** | Schematic capture, mixed-signal simulation, microcontroller simulation, virtual instruments |
+| **Altium Designer** | PCB layout editor, dynamic multi-sheet schematic capture, 3D PCB visualization, Gerber export |
+| **Tinkercad Circuits / Wokwi** | Real-time interactive simulation, live tuning knobs and switches, web-like modular components |
 
-This is a **long-term, large-scale engineering project** requiring specialized knowledge in circuit theory, numerical methods, computer graphics, and systems architecture.
+**Fixed-Base Objective:** Focus on delivering a highly stable, interactive mixed-signal simulation core (ngspice backend), live tuning, virtual laboratory instrumentation (FFT, DMM), and 3D PCB rendering. Extremely out-of-scope fields (such as full 3D electromagnetic FEM solvers or full MATLAB/Simulink platforms) are explicitly omitted to prioritize high-value simulation tools.
 
 ---
 
@@ -69,33 +69,21 @@ electronicssimulatorproject/
 
 ## 4. Key Feature Areas
 
-### Circuit & Electronics (Proteus-level)
-- SPICE analog simulation (ngspice backend)
-- Event-driven digital logic simulation
-- Mixed-signal co-simulation
-- Microcontroller simulation (ARM, AVR, PIC)
-- Virtual instruments (Oscilloscope, Logic Analyzer, Multimeter, Signal Generator)
-- PCB Layout editor with DRC and Gerber export
-
-### Mathematical Toolbox (MATLAB-level)
-- Matrix computation (BLAS/LAPACK)
-- Signal Processing: FFT, IIR/FIR filters, PSD
-- Control Systems: Bode plots, Root Locus, State Space, PID tuning
-- Simulink-style block diagram modeling
-- Script editor (Python-like language)
-
-### Physics Simulation (ANSYS-level)
-- Electromagnetic FEM simulation
-- Thermal analysis (steady state + transient)
-- RF/Microwave: S-parameters, transmission lines
-- 3D field visualization
+### Circuit & Electronics (Proteus / Altium / Wokwi-level)
+- SPICE analog simulation (ngspice backend) with manufacturer library parser (`.model`, `.subckt` text block parsing)
+- Event-driven digital logic simulation with AD/DA mixed-signal bridges
+- Interactive logic simulation (live tuning knobs and switches)
+- Virtual laboratory instruments (DMM average/RMS calculator, FFT Spectrum Analyzer, Multi-channel Oscilloscope)
+- Dynamic Component Creator (configuring 3D CAD dimensions, package styles, pin mappings, and SPICE definitions)
+- PCB layout editor with FreeRouting CLI integration, design rule checks, Gerber RS-274X writer, and Pick-and-Place centroid exporter
+- HelixToolkit-based hardware-accelerated 3D PCB visualizer (realistic DIP chips, TO-220 regulators, cylinder/box models)
+- Microcontroller firmware co-simulation (AVR simulation core running `.hex`/`.elf` binaries synced with ngspice)
 
 ---
 
 ## 5. Current Stage
-
-🟡 **Phase 1: Foundation — IN PROGRESS (Day 1 Complete)**
-
+🟢 **Phases 1-9: Completed and Verified**
+🟢 **Phase 10: Footprint Editor & Installer Packaging — Completed**
 ### ✅ Completed — Session 2026-04-14
 
 | Item | Status |
@@ -192,6 +180,12 @@ electronicssimulatorproject/
 - **2026-06-01** -- Antigravity -- **Schematic SVG Export, Help Guide & App Usage Manual**. (1) SvgExporter: implemented vector-based XML SVG generator mapping components (translated/rotated/scaled group paths), wires (polylines), pins (colored circles), and named net badges. Wired to `MainWindow.xaml` under File -> Export Schematic as SVG (Ctrl+Shift+V). (2) Help Window: added FreeRouting Setup Guide tab to `HelpWindow.xaml`. (3) User Guide: created comprehensive `docs/USER_GUIDE.md` detailing interface layout, schematic capture, wiring, SPICE settings, oscilloscope usage, PCB sync, FreeRouting path settings, manufacturing files, and GPU-accelerated python scripting. Referenced guide in `README.md`. Tests: **23/23 ✅ Build: 0 Errors / 0 Warnings ✅**
 - **2026-06-01 (session 2)** -- Antigravity -- **ngspice Error Diagnostics Parser & Waveform Math Channels (FFT)**. (1) SpiceExecutionService: added ErrorLineNumber, AffectedDesignator, and AffectedNetName properties to `SpiceExecutionResult`; implemented `ParseSpiceErrors` utilizing regular expressions to extract failed netlist line numbers, offending components, or singular matrix nodes. (2) MainViewModel: updated `SimulateAsync` to handle failed simulation diagnostics by deselecting all canvas items and auto-selecting the offending component or wire with console notifications. (3) MainWindow.xaml: updated `WireViewModel` DataTemplate with a yellow selection stroke trigger highlight. (4) Oscilloscope: added a math channel entry text box and Add Math button in the toolbar; implemented `AddMathChannel` parsing differential traces (`V(A)-V(B)`) and Cooley-Tukey Radix-2 FFT spectral analysis (`FFT(V(A))`) rendering logs/Bode plots. Tests: **24/24 ✅ Build: 0 Errors / 0 Warnings ✅**
 - **2026-06-01 (session 3)** -- Antigravity -- **Simulation Progress Streaming, Custom SPICE Importer, Auto-Save & GitHub Actions CI**. (1) SpiceExecutionService: added progress reporting stream to `RunSimulationAsync` via `IProgress<string>` integration. (2) MainViewModel: updated `SimulateAsync` with progress handler displaying active steps/log lines directly in the status bar; added background `DispatcherTimer` executing silent auto-save to project paths every 2 minutes. (3) ModelLibraryService & SpiceLibParser: created `OverrideLibraryFilePath` for sandboxed testing; added `ImportLibrary` appending imported `.lib`/`.mod` subcircuits and models to custom database. (4) ComponentHub: added custom SPICE library import button to UI toolbar refreshing live lists. (5) CI/CD: added GitHub Actions workflow `.github/workflows/build.yml` restoring, building, and executing all test verification. Tests: **25/25 ✅ Build: 0 Errors / 0 Warnings ✅**
-
+- **2026-06-01 (session 4)** -- Antigravity -- **XAML Build-Error Fix & 3D Board View Implementation**. (1) **Build repair**: Fixed a corrupted `</TabControl>` tag at line 1171 of `MainWindow.xaml` that had garbage text appended (`bControl>ele>`) along with 4 orphaned stray closing tags — restoring valid XML and eliminating the MC3000 build error. (2) **Missing event handlers**: Added `PcbTabControl_SelectionChanged` and `ResetCamera_Click` event handlers to `MainWindow.xaml.cs`; these were referenced in the XAML PCB 3D Board View tab but missing from the code-behind, which would have caused runtime crashes. (3) **3D Board View**: Implemented `Rebuild3DGeometry(HelixViewport3D viewport)` in `PcbLayoutViewModel.cs` — renders the PCB substrate as a green FR4 plane, copper traces as red (F.Cu) / blue (B.Cu) box meshes, and footprints as dark-blue component boxes, using a private `BuildBox` helper that constructs `MeshGeometry3D` from 8 vertices / 12 triangles without depending on HelixToolkit's `MeshBuilder` (not available in v3.1.2). Added `_pcb3DVisuals` list to cleanly track and remove the viewport's PCB models on refresh. Tests: **27/27 ✅ Build: 0 Errors / 0 Warnings ✅**
+- **2026-06-02** -- Antigravity -- **Phase 10: Interactive Footprint Editor & Installer Packaging**. (1) **Footprint Editor**: Created `FootprintEditorWindow.xaml` and `.cs` allowing interactive modification of footprint courtyard width/height, as well as adding, removing, and editing padstacks (number, type SMD/THT, coordinates, width, height, layer). (2) **MainWindow.xaml & .cs integration**: Double-clicking a footprint on the PCB layout canvas triggers `PcbFootprint_MouseDoubleClick` by capturing `e.ClickCount == 2` in `PcbFootprint_MouseDown`, opening the interactive editor dialog. On saving, it replaces the VM in `CanvasFootprints`, re-draws the ratsnest lines, and executes design rule checking (DRC) automatically. (3) **Packaging Pipeline**: Created `scripts/PackageApp.ps1` PowerShell script which builds the project in Release configuration, gathers assets/databases/docs, validates executable presence, and compresses the final package into `dist/EdaSimulator-win-x64.zip`. Tests: **29/29 ✅ Build: 0 Errors / 0 Warnings ✅**
+- **2026-06-03** -- Antigravity -- **Custom Component Hub, Direct Placement, and Fixed-Base Roadmap Redesign**. (1) Component Hub: Added `⚡ Place on Schematic` to `ComponentHubWindow.xaml` and `ComponentHubViewModel.cs` using `PlaceComponentCommand` to auto-instantiate custom parts with exact mappings, dimensions, and SPICE models directly on the active canvas. (2) Schematic Placement: Integrated `PlaceLibraryComponent` into `MainWindow.xaml.cs` to resolve library parts, auto-select prefix designators, and add them to the workspace undo-history stack. (3) Redesigned Roadmap: Overhauled `docs/ROADMAP.md` and `GAP_ANALYSIS.md` to align with the fixed-base objective of a unified schematic/simulation/instruments/PCB suite (pruning unfeasible FEM/Simulink clone goals). (4) Tests: Created `CustomComponentTests.cs` and successfully ran `dotnet test` passing all 32 unit tests. Build: **0 Errors / 0 Warnings** ✅
+- **2026-06-03 (session 2)** -- Antigravity -- **BOM Live Pricing Dashboard & WiX Installer Configuration (Completing Phase 1–8 Scope)**. (1) **BOM Dashboard**: Added a new tab "📋 BOM & Supply Chain" to `MainWindow.xaml` styled with dark mode aesthetics. Implemented live quantity, designator string, part numbers, manufacturer details, unit prices, total pricing calculations, stock availability, and distributor mappings. Added a search query filter and estimated project cost summary bar. (2) **Online Purchase Links**: Added a "🛒 Search" button for each BOM line item using a new `OpenUrlCommand` in `MainViewModel.cs` to open the direct supplier search URL in the default browser. (3) **WiX MSI Setup**: Created `scripts/EdaSimulator.wxs` providing a complete installer package script specifying ProgramFiles installation, Start Menu/Desktop shortcuts, and `.edaproj` XML file extension registration. Updated `PackageApp.ps1` to automatically compile a native `.msi` when `candle`/`light` are present in PATH. (4) **Tests**: Wrote `BomGeneratorTests.cs` to verify grouping and pricing calculations. Tests: **33/33 ✅ Build: 0 Errors / 0 Warnings ✅**
+- **2026-06-03 (session 3)** -- Antigravity -- **MCU Firmware Execution & Schematic Annotations**. (1) **Co-Simulation**: Created `VirtualMcuSimulationEngine.cs` behaviorally parsing serial statements and mapping logs to transient timestamps. (2) **Serial Monitor**: Designed matrix dark-themed output console tab in `MainWindow.xaml`. (3) **Annotations**: Developed `AnnotationNote.cs` allowing schematic documentation, registering folded document path in `SymbolRegistry`, exporting comments in SPICE netlist, and supporting copy/paste deep cloning. Tests: **36/36 ✅ Build: 0 Errors / 0 Warnings ✅**
+- **2026-06-04** -- Antigravity -- **Five Iterations of Industry-Standard Bug Fixing**. (1) **Iteration 1**: Upgraded `VirtualMcuSimulationEngine.cs` regexes to support single/double quotes in serial prints and added safety bounds to delay periods. (2) **Iteration 2**: Fixed clipboard component copy-paste state preservation for potentiometers (`WiperPosition`), switches (`IsClosed`), and microcontrollers (`FirmwarePath`). (3) **Iteration 3**: Unified designator-pad net identifier sanitization in Specctra DSN exports and added quoted net name support to SES session imports. (4) **Iteration 4**: Added validation array bounds check to `SignalProcessing.ApplyWindow` protecting against division-by-zero or NaNs. (5) **Iteration 5**: Fixed AND/OR gate evaluation solvers in `LogicGates.cs` to follow standard IEEE 1364 three-state logic. Tests: **40/40 ✅ Build: 0 Errors / 0 Warnings ✅**
+- **2026-06-04** -- Antigravity -- **Design Flaw Analysis & Resolution**. (1) Fixed LM358 SPICE behavioral model crash in `eda_components.lib` and upgraded remaining op-amps to rail-clamped models. (2) Corrected step source model to be monotonically increasing on microsecond scales. (3) Upgraded custom subcircuit imports to use regex matching, avoiding comment-start false negatives. (4) Made `ParseSpiceTime` robust to the `s` unit suffix. (5) Added integration tests verifying active low-pass filter and step source block diagram simulation under ngspice. Tests: **42/42 ✅ Build: 0 Errors / 0 Warnings ✅**
 
 

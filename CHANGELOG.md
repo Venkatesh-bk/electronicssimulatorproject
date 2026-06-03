@@ -2,6 +2,32 @@
 
 ---
 
+## [Design Flaw Analysis & Resolution] — 2026-06-04
+
+### Fixed Critical Simulation Flaws
+- **LM358 SPICE Behavioral Model**: Fixed a syntax crash in `eda_components.lib` caused by invalid curly-bracket node references (`{v+-voh}`) and a buggy `Aout` XSpice device declaration. Replaced it with a standard-compliant, rail-clamped Voltage-Controlled Voltage Source (VCVS) limiter using the standard ngspice `limit()` function.
+- **Op-Amp Rail Clamping**: Upgraded the remaining op-amp subcircuits (`LM741`, `TL071`, `LM324`, and `NE5532`) to utilize standard-compliant rail-clamping limiter stages, preventing physically unrealistic voltage swings.
+- **Microsecond Time Scale Step Sources**: Redesigned the mathematical step source model (`BlockSourceStep` in `SpiceNetlistExporter`) to utilize a strictly monotonically increasing rise time sequence (`steptime` to `steptime + 1e-9`), preventing ngspice non-monotonic PWL step failures at microsecond or smaller time scales.
+- **Robust Subcircuit/Model Detection**: Upgraded both `CustomComponent` and `ModelLibraryService` to use regular expressions (`\.subckt\s+`) rather than `StartsWith()` to check for subcircuits, making them robust to leading comments, empty lines, and copyright headers.
+- **Time Suffix Parsing**: Enhanced `ParseSpiceTime` to strip the `s` unit suffix (e.g., from `10ms`, `100us`, or `2.5s`) prior to parsing, avoiding scaling calculation fallbacks.
+- **Integration Tests**: Added comprehensive physical simulation test coverage for both active filter (Sallen-Key) and block step source simulations.
+
+## [Refinements & Bug Fix Audits] — 2026-06-04
+- **AVR / Python Firmware Co-Simulation**: Syncs Arduino `.ino` and Python `.py` logs with SPICE transient time steps.
+- **Matrix Dark Serial Monitor**: Neon green console displaying co-simulation outputs.
+- **Schematic Text Annotations**: Custom notes exported as SPICE netlist comments (`* NOTE: ...`) with Ctrl+C/Ctrl+V cloning.
+- **BOM Pricing Dashboard**: Automated part inventory, cost calculation, and live supplier search linking.
+- **WiX Installer Pipeline**: Automated `.msi` native installer creation.
+
+### Five Iterations of Bug Fixing
+- **Iteration 1 (VirtualMcuSimulationEngine)**: Enhanced regex patterns to support single/double quotes in serial print matching and protected time steps with a lower safety bound (`0.001s`).
+- **Iteration 2 (Clipboard Cloning)**: Added state-preservation logic during copy/paste operations (syncing `WiperPosition` for Potentiometers, `IsClosed` for Switches, and `FirmwarePath` for MCUs).
+- **Iteration 3 (Specctra DSN / SES Router)**: Consolidated designator-pad net tokens inside Specctra DSN exports to support spaces/brackets, and upgraded SES regex patterns to parse quoted net names from FreeRouting.
+- **Iteration 4 (Math & Signal Processing)**: Guarded the DSP windowing library (`ApplyWindow`) against division-by-zero / NaN when processing array sizes of 1 or less.
+- **Iteration 5 (Digital Logic Solver)**: Fixed AND/OR gate three-state logic solvers to evaluate standard IEEE 1364 truth tables correctly (e.g. low overrides undefined on AND gates; high overrides undefined on OR gates).
+
+---
+
 ## [Research & Planning Session] — 2026-04-25
 
 ### Gap Analysis vs Industry Tools

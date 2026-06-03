@@ -29,6 +29,12 @@ namespace EdaSimulator.Engines.Library
         public int Pins { get; set; }
         public string SpiceModel { get; set; } = string.Empty;
         public bool IsCustomIoT { get; set; }
+        public double CadWidth { get; set; } = 5.0; // in mm
+        public double CadHeight { get; set; } = 5.0; // in mm
+        public double CadDepth { get; set; } = 3.0; // in mm
+        public string CadColor { get; set; } = "#1E3A5A"; // hex color
+        public string CadShape { get; set; } = "Box"; // "Box", "Cylinder", "DIP", "TO220"
+        public string PinMappings { get; set; } = string.Empty; // e.g. "1,2,3" or "IN-,IN+,V+,V-"
     }
 
     /// <summary>
@@ -121,6 +127,52 @@ namespace EdaSimulator.Engines.Library
 
         public LibraryComponent? GetComponentById(string id)
             => GetAllComponents().FirstOrDefault(c => c.Id == id);
+
+        public void AddComponent(LibraryComponent component)
+        {
+            if (!_isLoaded) LoadDatabase();
+
+            lock (_loadLock)
+            {
+                var existing = _components.FirstOrDefault(c => string.Equals(c.Id, component.Id, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    _components.Remove(existing);
+                }
+                _components.Add(component);
+
+                string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MasterComponentDatabase.json");
+                if (!File.Exists(dbPath))
+                {
+                    string candidate = Path.GetFullPath(Path.Combine(
+                        AppDomain.CurrentDomain.BaseDirectory,
+                        "..", "..", "..", "..", "Engines",
+                        "EdaSimulator.Engines", "Library", "MasterComponentDatabase.json"));
+                    if (File.Exists(candidate)) dbPath = candidate;
+                }
+
+                try
+                {
+                    var db = new ComponentDatabase
+                    {
+                        Metadata = new DatabaseMetadata
+                        {
+                            Version = "1.1",
+                            TotalComponents = _components.Count,
+                            GeneratedAt = DateTime.UtcNow.ToString("o")
+                        },
+                        Components = _components
+                    };
+
+                    string json = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(dbPath, json);
+                }
+                catch (Exception)
+                {
+                    // Degrade gracefully if path is write-protected
+                }
+            }
+        }
 
         /// <summary>Resets the singleton for testing purposes.</summary>
         internal static void ResetForTesting()

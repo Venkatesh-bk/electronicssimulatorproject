@@ -106,6 +106,11 @@ namespace EdaSimulator.Engines.PCB
         public string            Value       { get; set; } = "";
         public double            CrtYd_Width_mm  { get; set; } = 5.0;
         public double            CrtYd_Height_mm { get; set; } = 5.0;
+        public double            CadWidth_mm { get; set; } = 5.0;
+        public double            CadHeight_mm { get; set; } = 5.0;
+        public double            CadDepth_mm { get; set; } = 3.0;
+        public string            CadColor    { get; set; } = "#1E3A5A";
+        public string            CadShape    { get; set; } = "Box"; // "Box", "Cylinder", "DIP", "TO220"
     }
 
     // ──────────────────────────────────────────────────────────────────────────────

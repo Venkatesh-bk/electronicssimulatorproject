@@ -190,6 +190,105 @@
                 </Grid>
             </TabItem>
 
+            <!-- ══ Tab 3: Create Custom Component ════════════════════════════════ -->
+            <TabItem Header="➕ Create Custom Component" Foreground="#FF10B981" Background="#FF1A1A30">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Identity Column (Left) -->
+                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                            <TextBlock Text="Part Name / ID (e.g. NE555):" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Display Name:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Manufacturer:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompManufacturer, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Category:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <ComboBox SelectedValue="{Binding NewCompCategory}" SelectedValuePath="Content" Margin="0,0,0,12">
+                                <ComboBoxItem Content="Op-Amps"/>
+                                <ComboBoxItem Content="Diodes"/>
+                                <ComboBoxItem Content="BJT NPN"/>
+                                <ComboBoxItem Content="BJT PNP"/>
+                                <ComboBoxItem Content="MOSFET-N"/>
+                                <ComboBoxItem Content="MOSFET-P"/>
+                                <ComboBoxItem Content="Regulators"/>
+                                <ComboBoxItem Content="Other"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Description:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompDescription, UpdateSourceTrigger=PropertyChanged}" Height="50" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                            
+                            <TextBlock Text="Pins (Count):" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompPins, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Pin Mappings (comma separated, e.g. 1:GND,2:IN-,3:IN+,4:V-,5:OUT,6:V+):" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompPinMappings, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+                        </StackPanel>
+
+                        <!-- SPICE and 3D CAD Column (Right) -->
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <!-- SPICE MODEL -->
+                            <TextBlock Text="SPICE Model Definition (Paste .model or .subckt):" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewCompSpiceModel, UpdateSourceTrigger=PropertyChanged}" Height="120" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Margin="0,0,0,12"/>
+
+                            <Border BorderThickness="1" BorderBrush="#FF2A2A42" Padding="8" Margin="0,0,0,12" Background="#FF1E1E30">
+                                <StackPanel>
+                                    <TextBlock Text="📐 3D CAD Package Configuration" FontWeight="Bold" Foreground="#FFFF8C00" Margin="0,0,0,8"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <TextBlock Text="Package Shape:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                                            <ComboBox SelectedValue="{Binding NewCompCadShape}" SelectedValuePath="Content" Margin="0,0,0,8">
+                                                <ComboBoxItem Content="Box"/>
+                                                <ComboBoxItem Content="Cylinder"/>
+                                                <ComboBoxItem Content="DIP"/>
+                                                <ComboBoxItem Content="TO220"/>
+                                            </ComboBox>
+
+                                            <TextBlock Text="Width (X) in mm:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                                            <TextBox Text="{Binding NewCompCadWidth, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+
+                                            <TextBlock Text="Height (Y) in mm:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                                            <TextBox Text="{Binding NewCompCadHeight, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                            <TextBlock Text="Depth (Z) in mm:" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                                            <TextBox Text="{Binding NewCompCadDepth, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+
+                                            <TextBlock Text="Hex Color (e.g. #FF0000):" Foreground="#FF888AAA" FontSize="11" Margin="0,0,0,4"/>
+                                            <TextBox Text="{Binding NewCompCadColor, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Button Content="💾 Create &amp; Add Component" Command="{Binding CreateCustomComponentCommand}"
+                                    Background="#FF10B981" Foreground="Black" Padding="14,8" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
         </TabControl>
 
         <!-- Footer -->
@@ -199,20 +298,36 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock Text="{Binding StatusMessage}" Foreground="#FF7A9EC8" VerticalAlignment="Center" FontSize="11"/>
-            <Button Grid.Column="1" Content="⬇ Install to Library" Command="{Binding InstallComponentCommand}"
-                    Background="#FF16A34A" Foreground="White" BorderThickness="0"
-                    Padding="16,7" FontWeight="Bold">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedComponent}" Value="{x:Null}">
-                                <Setter Property="IsEnabled" Value="False"/>
-                                <Setter Property="Opacity" Value="0.4"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="⚡ Place on Schematic" Command="{Binding PlaceComponentCommand}"
+                        Background="#FF007ACC" Foreground="White" BorderThickness="0"
+                        Padding="16,7" FontWeight="Bold" Margin="0,0,10,0">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedComponent}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.4"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="⬇ Install to Library" Command="{Binding InstallComponentCommand}"
+                        Background="#FF16A34A" Foreground="White" BorderThickness="0"
+                        Padding="16,7" FontWeight="Bold">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedComponent}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Opacity" Value="0.4"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

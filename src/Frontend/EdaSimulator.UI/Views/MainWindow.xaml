@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:EdaSimulator.UI.Views"
         xmlns:canvasVm="clr-namespace:EdaSimulator.UI.ViewModels.Canvas"
         xmlns:helix="http://helix-toolkit.org/wpf"
+        xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="800" Width="1280"
         Background="#FF1E1E1E" Foreground="White"
@@ -58,10 +59,15 @@
                 <MenuItem Header="Zoom In (+)" Click="MenuZoomIn_Click"/>
                 <MenuItem Header="Zoom Out (-)" Click="MenuZoomOut_Click"/>
                 <MenuItem Header="Reset Zoom" Click="MenuZoomReset_Click"/>
+                <MenuItem Header="Zoom to Fit" Click="MenuZoomFit_Click" InputGestureText="Ctrl+Shift+F"/>
+                <Separator/>
+                <MenuItem Header="Show DC Bias Voltages" IsCheckable="True" IsChecked="{Binding ShowDcBiasOverlay}"/>
             </MenuItem>
 
             <MenuItem Header="_Tools">
                 <MenuItem Header="⚡  _Component Hub..." Click="MenuComponentHub_Click" InputGestureText="Ctrl+Shift+H"/>
+                <Separator/>
+                <MenuItem Header="🔬  Run PCB DRC" Click="MenuPcbDrc_Click" InputGestureText="Ctrl+D"/>
                 <Separator/>
                 <MenuItem Header="⚙️  _Preferences..." Click="MenuSettings_Click" InputGestureText="Ctrl+,"/>
             </MenuItem>
@@ -181,6 +187,8 @@
                     <ListBoxItem Content="Inductor" Tag="Inductor" />
                     <ListBoxItem Content="Voltage Source" Tag="VoltageSource" />
                     <ListBoxItem Content="Current Source" Tag="CurrentSource" />
+                    <ListBoxItem Content="Interactive Switch" Tag="Switch" Foreground="#FFFF9800" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="Potentiometer" Tag="Potentiometer" Foreground="#FFFF9800" FontWeight="SemiBold"/>
                     
                     <!-- Phase 4 Analog Components -->
                     <ListBoxItem Content="Diode" Tag="Diode" Foreground="#FF569CD6" />
@@ -221,6 +229,7 @@
                     <ListBoxItem Content="∑ Sum Block" Tag="BlockSum" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
                     <ListBoxItem Content="📶 Signal Source Block" Tag="BlockSource" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
                     <ListBoxItem Content="➗ Transfer Function Block" Tag="BlockTransferFunction" Foreground="#FF00D2FF" FontWeight="SemiBold"/>
+                    <ListBoxItem Content="📝 Text Note/Annotation" Tag="AnnotationNote" Foreground="#FFFFEB3B" FontWeight="SemiBold"/>
                 </ListBox>
                 
                 <Button Grid.Row="2" Content="Build Complex Circuit" Command="{Binding AddMockComponentsCommand}" Padding="5" Margin="0,10,0,0" Background="#FF007ACC" Foreground="White" BorderThickness="0" />
@@ -232,12 +241,89 @@
         <!-- Center Panel: Canvas Workspace -->
         <Grid Grid.Column="2" Background="#FF1E1E1E">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="150" />
             </Grid.RowDefinitions>
+
+            <!-- Multi-sheet Schematic Tab Bar -->
+            <Border Grid.Row="0" Background="#FF1E1E24" BorderBrush="#FF2D2D30" BorderThickness="0,0,0,1" Height="32">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ListBox ItemsSource="{Binding SchematicSheets}" 
+                             SelectedItem="{Binding SelectedSchematicSheet}" 
+                             Background="Transparent" BorderThickness="0" 
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#FFAAAAAA"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="Padding" Value="12,0"/>
+                                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                                    Padding="{TemplateBinding Padding}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                    <Button Grid.Column="1" Content="✕" 
+                                                            Command="{Binding DataContext.RemoveSchematicSheetCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Background="Transparent" Foreground="#FF888888" BorderThickness="0" 
+                                                            Width="14" Height="14" Margin="6,0,0,0" FontSize="8" 
+                                                            Cursor="Hand" ToolTip="Remove Sheet"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#FF252526"/>
+                                        <Setter Property="Foreground" Value="#FF007ACC"/>
+                                        <Setter Property="BorderBrush" Value="#FF007ACC"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Button Grid.Column="1" Content="➕ Add Sheet" 
+                            Command="{Binding AddSchematicSheetCommand}" 
+                            Background="#FF2D2D30" Foreground="#FF007ACC" FontWeight="SemiBold" 
+                            BorderThickness="1" BorderBrush="#FF3F3F46" Padding="10,0" Margin="4" 
+                            Height="24" FontSize="10" Cursor="Hand"/>
+                </Grid>
+            </Border>
             
             <!-- Schematic Canvas Workspace -->
-            <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Background="#FF1E1E1E" Name="MainScrollViewer">
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Background="#FF1E1E1E" Name="MainScrollViewer">
                 <!-- Inner Grid bounded to actual physics bounds layer, sharing the transform context -->
                 <Grid Width="10000" Height="10000" Background="Transparent"
                       MouseDown="SchematicCanvas_MouseDown"
@@ -383,14 +469,23 @@
                         <DataTemplate DataType="{x:Type canvasVm:WireViewModel}">
                             <!-- Renders a multi-point sequence of wires orthogonally -->
                             <Canvas>
-                                <Polyline x:Name="WirePolyline" Points="{Binding Points}" Stroke="#FF00FF00" StrokeThickness="2" />
-                                <!-- Net name label at wire midpoint, subtle badge style -->
-                                <Border Canvas.Left="0" Canvas.Top="-10"
+                                <Polyline x:Name="WirePolyline" Points="{Binding Points}" Stroke="{Binding WireColor, FallbackValue=#FF00FF00}" StrokeThickness="2" />
+                                <!-- Net name label centered at wire midpoint -->
+                                <Border Canvas.Left="{Binding LabelX}" Canvas.Top="{Binding LabelY}" Margin="0,-12,0,0"
                                         Background="#AA1E1E1E" BorderBrush="#4400FF00" BorderThickness="1"
                                         CornerRadius="2" Padding="2,0"
                                         Visibility="{Binding NetLabel, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding NetLabel}" Foreground="#FF00BB00"
                                                FontFamily="Consolas" FontSize="9"/>
+                                </Border>
+
+                                <!-- Operating Point Annotation Badge -->
+                                <Border Canvas.Left="{Binding LabelX}" Canvas.Top="{Binding LabelY}" Margin="0,4,0,0"
+                                        Background="#CC111111" BorderBrush="#88FF8800" BorderThickness="1"
+                                        CornerRadius="3" Padding="3,1"
+                                        Visibility="{Binding ShowOpVoltage, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding OpVoltageText}" Foreground="#FFFF8800"
+                                               FontFamily="Consolas" FontSize="9.5" FontWeight="Bold"/>
                                 </Border>
                             </Canvas>
                             <DataTemplate.Triggers>
@@ -481,6 +576,27 @@
                                 </Border>
                             </Grid>
                         </DataTemplate>
+
+                        <!-- Net Label Visual Representation -->
+                        <DataTemplate DataType="{x:Type canvasVm:NetLabelItemViewModel}">
+                            <Grid Width="60" Height="22" Background="Transparent" Margin="-30,-11,0,0">
+                                <!-- Selection Highlight border -->
+                                <Rectangle x:Name="SelectionHighlight"
+                                           Stroke="#FFFFFF00" StrokeThickness="1.5"
+                                           StrokeDashArray="3,2" Fill="Transparent"
+                                           Visibility="Hidden" RadiusX="3" RadiusY="3" Margin="-2"/>
+
+                                <Border Background="#EE2A1E2D" BorderBrush="#FF9B59B6" BorderThickness="1.5" CornerRadius="3" Padding="4,2">
+                                    <TextBlock Text="{Binding NetName}" Foreground="#FFD7BDE2" FontSize="10" FontWeight="Bold"
+                                               FontFamily="Consolas" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="SelectionHighlight" Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
                     </ItemsControl.Resources>
                 </ItemsControl>
 
@@ -497,10 +613,10 @@
             </Grid>
         </ScrollViewer>
             
-            <GridSplitter Grid.Row="0" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Background="#FF3F3F46" />
+            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Background="#FF3F3F46" />
             
             <!-- Output Log / Netlist Panel -->
-            <Border Grid.Row="1" Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="0,1,0,0">
+            <Border Grid.Row="2" Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="0,1,0,0">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -553,11 +669,13 @@
                         <!-- ═══ Simulation Analysis Type Selector ═══ -->
                         <Separator Margin="12,0" Background="#FF3F3F46"/>
                         <TextBlock Text="Analysis:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
-                        <ComboBox SelectedItem="{Binding SimulationType}" Width="110" VerticalAlignment="Center"
+                        <ComboBox SelectedValue="{Binding SimulationType}" SelectedValuePath="Content" Width="110" VerticalAlignment="Center"
                                   Background="#FF3F3F46" Foreground="White" BorderBrush="#FF5F5F66">
                             <ComboBoxItem Content="Transient"/>
                             <ComboBoxItem Content="AC Sweep"/>
                             <ComboBoxItem Content="DC Sweep"/>
+                            <ComboBoxItem Content="Noise Analysis"/>
+                            <ComboBoxItem Content="Pole-Zero"/>
                         </ComboBox>
 
                         <!-- Transient params (shown only for Transient) -->
@@ -570,6 +688,12 @@
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SimulationType}" Value="DC Sweep">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="Noise Analysis">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="Pole-Zero">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -590,6 +714,9 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SimulationType}" Value="AC Sweep">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SimulationType}" Value="Noise Analysis">
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -637,6 +764,399 @@
                         <!-- ══ SPICE Netlist ══ -->
                         <TabItem Header="SPICE Netlist" Foreground="#FF007ACC" Background="#FF2D2D30">
                             <TextBox Text="{Binding NetlistOutput, Mode=OneWay}" IsReadOnly="True" Background="#FF1E1E1E" Foreground="#FF4EC9B0" FontFamily="Consolas" BorderThickness="1" BorderBrush="#FF3F3F46" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="5"/>
+                        </TabItem>
+
+                        <!-- ══ Multimeter Instrument ══ -->
+                        <TabItem Header="📟 Multimeter" Foreground="#FF2ECC71" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="DIGITAL MULTIMETER DASHBOARD" FontWeight="Bold" Foreground="#FF2ECC71" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text=" — capturing DC, Average, and RMS values from canvas probes" Foreground="#FF888888" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </StackPanel>
+
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <Grid>
+                                        <!-- Empty state when no probes exist -->
+                                        <TextBlock Text="No active probes on schematic. Use the '⚡ Probe' or '〜 I-Probe' tools to place probes on wires or components, then run a simulation."
+                                                   Foreground="#FF888888" FontSize="12" FontStyle="Italic" TextWrapping="Wrap" Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MultimeterReadings.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!-- Multi-column wrap panel of DMM displays -->
+                                        <ItemsControl ItemsSource="{Binding MultimeterReadings}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF1E1E24" BorderBrush="#FF3F3F46" BorderThickness="1.5" CornerRadius="5" Width="220" Margin="0,0,10,10" Padding="8">
+                                                        <StackPanel>
+                                                            <!-- Probe Header -->
+                                                            <Grid Margin="0,0,0,5">
+                                                                <TextBlock Text="{Binding Target}" FontWeight="Bold" Foreground="White" FontSize="12"/>
+                                                                <Border HorizontalAlignment="Right" Padding="4,2" CornerRadius="3" Background="#FF333337">
+                                                                    <TextBlock Text="{Binding Type}" FontSize="9" FontWeight="Bold">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Foreground" Value="#FF2ECC71"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Type}" Value="Current">
+                                                                                        <Setter Property="Foreground" Value="#FFE67E22"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </Grid>
+                                                            
+                                                            <!-- Digital Display -->
+                                                            <Border Background="#FF0C0C0D" BorderBrush="#FF2A2A2E" BorderThickness="1" CornerRadius="3" Padding="8,4" Height="48" Margin="0,0,0,5">
+                                                                <TextBlock Text="{Binding ValueText}" FontFamily="Consolas" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Foreground" Value="#FF00FFCC"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding Type}" Value="Current">
+                                                                                    <Setter Property="Foreground" Value="#FFFF9800"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </Border>
+
+                                                            <!-- Details Display -->
+                                                            <TextBlock Text="{Binding RmsText}" Foreground="#FFAAAAAA" FontSize="9" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- ══ Spectrum Analyzer ══ -->
+                        <TabItem Header="📊 Spectrum Analyzer" Foreground="#FFFF8C00" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Top Toolbar -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8" Grid.Row="0">
+                                    <TextBlock Text="Node:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <ComboBox ItemsSource="{Binding AvailableSpectraNodes}" SelectedItem="{Binding SelectedSpectraNode}" Width="100" VerticalAlignment="Center" Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66"/>
+
+                                    <TextBlock Text="Window:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="10,0,4,0"/>
+                                    <ComboBox SelectedValue="{Binding SelectedFftWindow}" SelectedValuePath="Content" Width="100" VerticalAlignment="Center" Background="#FF333337" Foreground="White" BorderBrush="#FF5F5F66">
+                                        <ComboBoxItem Content="Rectangular"/>
+                                        <ComboBoxItem Content="Hanning"/>
+                                        <ComboBoxItem Content="Hamming"/>
+                                        <ComboBoxItem Content="Blackman"/>
+                                    </ComboBox>
+
+                                    <Button Content="Analyze Spectrum ▶" Command="{Binding RunSpectraAnalysisCommand}" Margin="12,0,0,0" Padding="12,3" Background="#FFFF8C00" Foreground="Black" FontWeight="Bold" BorderThickness="0"/>
+                                    
+                                    <TextBlock Text="{Binding SpectraStatus}" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="15,0,0,0" FontSize="11" FontStyle="Italic"/>
+                                </StackPanel>
+
+                                <!-- Plot Area -->
+                                <Border Grid.Row="1" Background="#FF18181A" BorderBrush="#FF3F3F46" BorderThickness="1" CornerRadius="4">
+                                    <oxy:PlotView Model="{Binding SpectraPlotModel}"/>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- ══ Bill of Materials & Live Pricing ══ -->
+                        <TabItem Header="📋 BOM &amp; Supply Chain" Foreground="#FF2ECC71" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Top Toolbar -->
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Filter -->
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="🔍 Filter:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBox Text="{Binding BomSearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Width="180" Height="24" VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                                 Background="#FF1E1E24" Foreground="White" BorderBrush="#FF5F5F66" BorderThickness="1"/>
+                                    </StackPanel>
+
+                                    <!-- Actions -->
+                                    <StackPanel Orientation="Horizontal" Grid.Column="3" VerticalAlignment="Center">
+                                        <Button Content="🔄 Refresh BOM" Command="{Binding UpdateBomCommand}" Margin="0,0,8,0" Padding="12,4" Background="#FF2D2D30" Foreground="White" BorderBrush="#FF5F5F66" BorderThickness="1"/>
+                                        <Button Content="📊 Export CSV" Command="{Binding PcbVM.ExportBomCommand}" CommandParameter="{Binding ActiveSchematicViewModel.CoreSchematic}" Margin="0,0,8,0" Padding="12,4" Background="#FF2D2D30" Foreground="White" BorderBrush="#FF5F5F66" BorderThickness="1"/>
+                                        <Button Content="📄 Export PDF" Command="{Binding PcbVM.ExportBomPdfCommand}" CommandParameter="{Binding ActiveSchematicViewModel.CoreSchematic}" Padding="12,4" Background="#FF2ECC71" Foreground="Black" FontWeight="Bold" BorderThickness="0"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- ListView Grid -->
+                                <Border Grid.Row="1" Background="#FF1E1E24" BorderBrush="#FF3F3F46" BorderThickness="1" CornerRadius="4">
+                                    <ListView ItemsSource="{Binding BomItems}" Background="Transparent" BorderThickness="0" Foreground="White" AlternationCount="2">
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                                <Setter Property="BorderBrush" Value="#FF2D2D30"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                                        <Setter Property="Background" Value="#FF25252A"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#FF353540"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
+                                        <ListView.View>
+                                            <GridView>
+                                                <!-- Columns -->
+                                                <GridViewColumn Header="Line" DisplayMemberBinding="{Binding LineNumber}" Width="40"/>
+                                                <GridViewColumn Header="Qty" DisplayMemberBinding="{Binding Quantity}" Width="40"/>
+                                                <GridViewColumn Header="Designators" DisplayMemberBinding="{Binding DesignatorString}" Width="100"/>
+                                                <GridViewColumn Header="Component" DisplayMemberBinding="{Binding ComponentType}" Width="100"/>
+                                                <GridViewColumn Header="Value" DisplayMemberBinding="{Binding Value}" Width="80"/>
+                                                <GridViewColumn Header="Part Number" DisplayMemberBinding="{Binding PartNumber}" Width="150"/>
+                                                <GridViewColumn Header="Footprint" DisplayMemberBinding="{Binding Footprint}" Width="150"/>
+                                                <GridViewColumn Header="Unit Price" Width="80">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding UnitPrice, StringFormat=${0:F3}}" Foreground="#FF2ECC71"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Total Price" Width="80">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding TotalPrice, StringFormat=${0:F2}}" Foreground="#FF2ECC71" FontWeight="Bold"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Stock" DisplayMemberBinding="{Binding Stock}" Width="80"/>
+                                                <GridViewColumn Header="Supplier" DisplayMemberBinding="{Binding Distributor}" Width="80"/>
+                                                <GridViewColumn Header="Buy Link" Width="70">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="🛒 Search" 
+                                                                    Command="{Binding DataContext.OpenUrlCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding DistributorUrl}"
+                                                                    Padding="6,2" FontSize="9" Background="#FF3C3F41" Foreground="#FF5B6EFF" BorderThickness="0" Cursor="Hand"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+                                </Border>
+
+                                <!-- Bottom Cost Bar -->
+                                <Border Grid.Row="2" Background="#FF12121E" BorderBrush="#FF2A2A42" BorderThickness="1,0,1,1" CornerRadius="0,0,4,4" Padding="12,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Estimated BOM pricing based on Mouser &amp; DigiKey catalog API queries." Foreground="#FF888888" VerticalAlignment="Center" FontSize="11" FontStyle="Italic"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="Estimated Total Project Cost: " Foreground="White" FontWeight="Bold" FontSize="12"/>
+                                            <TextBlock Text="{Binding BomTotalCost, StringFormat=${0:F2}}" Foreground="#FF2ECC71" FontWeight="Bold" FontSize="14" Margin="5,0,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- ══ Function Generator (Virtual Instrument) ══ -->
+                        <TabItem Header="📻 Function Generator" Foreground="#FFFF5E99" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="📻 FUNCTION GENERATOR" FontWeight="Bold" Foreground="#FFFF5E99" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text=" — Injects configured waveforms into voltage sources on the schematic" Foreground="#FF888888" FontSize="11" VerticalAlignment="Center" Margin="5,0"/>
+                                </StackPanel>
+
+                                <!-- Controls -->
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Waveform selector -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Waveform" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <ComboBox ItemsSource="{Binding FgenWaveforms}" SelectedItem="{Binding FgenWaveform}"
+                                                  Width="90" Background="#FF1E1E24" Foreground="White" BorderBrush="#FF5F5F66"/>
+                                    </StackPanel>
+
+                                    <!-- Amplitude -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Amplitude (V)" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FgenAmplitude, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:F3}'}"
+                                                 Width="80" Background="#FF1E1E24" Foreground="#FF00FFCC" BorderBrush="#FF5F5F66" Padding="4,3" FontFamily="Consolas"/>
+                                    </StackPanel>
+
+                                    <!-- Frequency -->
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Text="Frequency (Hz)" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FgenFrequency, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:F1}'}"
+                                                 Width="90" Background="#FF1E1E24" Foreground="#FF00FFCC" BorderBrush="#FF5F5F66" Padding="4,3" FontFamily="Consolas"/>
+                                    </StackPanel>
+
+                                    <!-- DC Offset -->
+                                    <StackPanel Grid.Column="6">
+                                        <TextBlock Text="DC Offset (V)" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FgenDcOffset, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:F3}'}"
+                                                 Width="80" Background="#FF1E1E24" Foreground="#FF00FFCC" BorderBrush="#FF5F5F66" Padding="4,3" FontFamily="Consolas"/>
+                                    </StackPanel>
+
+                                    <!-- Duty Cycle (for square) -->
+                                    <StackPanel Grid.Column="8">
+                                        <TextBlock Text="Duty Cycle (%)" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FgenDutyCycle, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:F1}'}"
+                                                 Width="75" Background="#FF1E1E24" Foreground="#FF00FFCC" BorderBrush="#FF5F5F66" Padding="4,3" FontFamily="Consolas"/>
+                                    </StackPanel>
+
+                                    <!-- Target Source -->
+                                    <StackPanel Grid.Column="10">
+                                        <TextBlock Text="Target Source" Foreground="#FFAAAAAA" FontSize="10" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FgenTargetSource, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="60" Background="#FF1E1E24" Foreground="White" BorderBrush="#FF5F5F66" Padding="4,3"/>
+                                    </StackPanel>
+
+                                    <!-- Apply button -->
+                                    <Button Grid.Column="12" Content="⚡ Apply" Command="{Binding ApplyFunctionGeneratorCommand}"
+                                            Padding="16,6" Background="#FFFF5E99" Foreground="Black" FontWeight="Bold" BorderThickness="0"
+                                            VerticalAlignment="Bottom"/>
+                                </Grid>
+
+                                <!-- Status -->
+                                <TextBlock Grid.Row="2" Text="{Binding FgenStatus}" Foreground="#FFAAAAAA"
+                                           FontSize="11" FontStyle="Italic" VerticalAlignment="Top" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- ══ Bode Plot ══ -->
+                        <TabItem Header="📈 Bode Plot" Foreground="#FF00D2FF" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Toolbar -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="Input:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBox Text="{Binding BodeInputNode, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="80" VerticalAlignment="Center"
+                                             Background="#FF1E1E24" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,2"/>
+
+                                    <TextBlock Text="Output:" Foreground="#FFAAAAAA" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                                    <TextBox Text="{Binding BodeOutputNode, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="90" VerticalAlignment="Center"
+                                             Background="#FF1E1E24" Foreground="White" BorderBrush="#FF5F5F66" Padding="3,2"/>
+
+                                    <Button Content="📈 Plot Bode" Command="{Binding PlotBodeCommand}"
+                                            Margin="12,0,0,0" Padding="14,4" Background="#FF00D2FF" Foreground="Black" FontWeight="Bold" BorderThickness="0"/>
+
+                                    <TextBlock Text="{Binding BodeStatus}" Foreground="#FFAAAAAA"
+                                               VerticalAlignment="Center" Margin="14,0,0,0" FontSize="11" FontStyle="Italic"/>
+                                </StackPanel>
+
+                                <!-- Plot area -->
+                                <Border Grid.Row="1" Background="#FF18181A" BorderBrush="#FF3F3F46" BorderThickness="1" CornerRadius="4">
+                                    <oxy:PlotView Model="{Binding BodePlotModel}"/>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- ══ Serial Monitor (MCU Co-Simulation) ══ -->
+                        <TabItem Header="📟 Serial Monitor" Foreground="#FF00FF66" Background="#FF2D2D30">
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Grid Grid.Row="0" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="VIRTUAL UART SERIAL MONITOR" FontWeight="Bold" Foreground="#FF00FF66" FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock Text=" — real-time logging from loaded micro-controller firmware" Foreground="#FF888888" FontSize="11" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Clear Console" Command="{Binding ClearSerialMonitorCommand}" Padding="12,4" Background="#FF2D2D30" Foreground="White" BorderBrush="#FF5F5F66" BorderThickness="1"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Grid.Row="1" Background="#FF0C0C0D" BorderBrush="#FF2A2A2E" BorderThickness="1.5" CornerRadius="4">
+                                    <TextBox Text="{Binding SerialMonitorOutput, Mode=OneWay}" 
+                                             IsReadOnly="True" 
+                                             AcceptsReturn="True" 
+                                             FontFamily="Consolas" 
+                                             FontSize="13" 
+                                             Background="Transparent" 
+                                             Foreground="#FF00FF66" 
+                                             BorderThickness="0" 
+                                             Padding="10" 
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                                </Border>
+                            </Grid>
                         </TabItem>
 
                         <!-- ══ Python Console ══ -->
@@ -1101,7 +1621,7 @@
                                                         <Border Width="{Binding Width}" Height="{Binding Height}"
                                                                 Background="#FF1E3A5A" BorderBrush="{Binding LayerColor}"
                                                                 BorderThickness="1" CornerRadius="2"
-                                                                Cursor="Hand" ToolTip="Drag to place footprint"
+                                                                Cursor="Hand" ToolTip="Double-click to edit; Drag to move"
                                                                 MouseDown="PcbFootprint_MouseDown"
                                                                 MouseMove="PcbFootprint_MouseMove"
                                                                 MouseUp="PcbFootprint_MouseUp">
@@ -1168,11 +1688,7 @@
                                                     Click="ResetCamera_Click"/>
                                         </Grid>
                                     </TabItem>
-                                </TabControl>bControl>le>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-                                </Border>
+                                </TabControl>
 
                                 <!-- DRC / BOM Output -->
                                 <ScrollViewer Grid.Column="2" Background="#FF252526">
@@ -1314,6 +1830,24 @@
                                         Background="#FF3F3F46" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
                             </Grid>
                         </StackPanel>
+
+                        <!-- Switch toggle -->
+                        <StackPanel Visibility="{Binding IsSwitch, Converter={StaticResource BoolToVis}}">
+                            <CheckBox Content="Switch Closed" IsChecked="{Binding IsClosed}" Foreground="White" Margin="0,0,0,8"/>
+                        </StackPanel>
+
+                        <!-- Potentiometer slider -->
+                        <StackPanel Visibility="{Binding IsPotentiometer, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Wiper Position:" Foreground="#FFAAAAAA" Margin="0,0,0,2"/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="0" Maximum="100" Value="{Binding WiperPercent}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding WiperPercent, StringFormat={}{0:F0}%}" Foreground="#FF9DCBF5" Margin="10,0,0,0" Width="35" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
@@ -1328,6 +1862,8 @@
                     <ComboBoxItem Content="Transient"/>
                     <ComboBoxItem Content="AC Sweep"/>
                     <ComboBoxItem Content="DC Sweep"/>
+                    <ComboBoxItem Content="Noise Analysis"/>
+                    <ComboBoxItem Content="Pole-Zero"/>
                 </ComboBox>
 
                 <!-- Transient options -->
@@ -1348,13 +1884,16 @@
                     <TextBox Text="{Binding TransientStopTime, UpdateSourceTrigger=PropertyChanged}" Background="#FF333337" Foreground="White" BorderBrush="#FF3F3F46" Padding="4" Margin="0,0,0,6"/>
                 </StackPanel>
 
-                <!-- AC Sweep options -->
+                <!-- AC Sweep / Noise options -->
                 <StackPanel Margin="0,0,0,0">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SimulationType}" Value="AC Sweep">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SimulationType}" Value="Noise Analysis">
                                     <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>

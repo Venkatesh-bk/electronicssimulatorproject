@@ -77,6 +77,10 @@ namespace EdaSimulator.UI.Tools
                     try
                     {
                         _schematic.RenameNet(netId, dlg.NetName);
+                        
+                        // Place the visual Net Label badge directly on the canvas
+                        var labelItem = new NetLabelItemViewModel(dlg.NetName, x, y, netId);
+                        _schematic.Items.Add(labelItem);
                     }
                     catch (System.Exception ex)
                     {

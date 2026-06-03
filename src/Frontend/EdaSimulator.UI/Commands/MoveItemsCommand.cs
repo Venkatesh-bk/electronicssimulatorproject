@@ -10,20 +10,20 @@ namespace EdaSimulator.UI.Commands
     public class MoveItemsCommand : IUndoableCommand
     {
         private readonly SchematicViewModel _schematic;
-        private readonly List<ComponentNodeViewModel> _targets;
+        private readonly List<CanvasItemViewModel> _targets;
         private readonly double _dx;
         private readonly double _dy;
 
         public MoveItemsCommand(SchematicViewModel schematic, double dx, double dy)
         {
             _schematic = schematic;
-            _targets = new List<ComponentNodeViewModel>();
+            _targets = new List<CanvasItemViewModel>();
             
             foreach (var item in schematic.Items)
             {
-                if (item is ComponentNodeViewModel comp && comp.IsSelected)
+                if (item.IsSelected && !(item is WireViewModel) && !(item is PinNodeViewModel))
                 {
-                    _targets.Add(comp);
+                    _targets.Add(item);
                 }
             }
             
@@ -57,9 +57,12 @@ namespace EdaSimulator.UI.Commands
                 {
                     foreach (var t in _targets)
                     {
-                        foreach (var pin in t.Pins)
+                        if (t is ComponentNodeViewModel comp)
                         {
-                            wire.UpdateEndpoint(pin.CorePin.Id, pin.X, pin.Y);
+                            foreach (var pin in comp.Pins)
+                            {
+                                wire.UpdateEndpoint(pin.CorePin.Id, pin.X, pin.Y);
+                            }
                         }
                     }
                 }

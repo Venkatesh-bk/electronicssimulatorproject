@@ -1,0 +1,170 @@
+<Window x:Class="EdaSimulator.UI.Views.FootprintEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PCB Footprint &amp; Pad Editor"
+        Width="700" Height="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#1E1E2E"
+        Foreground="White"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#2D2D3F"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#5A5A8A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="Cyan"/>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="#AAAACC"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="0,4,0,2"/>
+        </Style>
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#5B6EFF"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#7B8EFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SecBtn" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}">
+            <Setter Property="Background" Value="#3D3D55"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#5D5D75"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WarnBtn" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}">
+            <Setter Property="Background" Value="#E74C3C"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#C0392B"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" BorderBrush="#FF3F3F46" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
+            <Grid>
+                <TextBlock Text="Edit Footprint &amp; Padstack" FontSize="16" FontWeight="SemiBold" Foreground="#FF4EC9B0"/>
+                <TextBlock x:Name="DesignatorTitle" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                           Foreground="#FFFF8C00" FontSize="14" FontWeight="Bold"/>
+            </Grid>
+        </Border>
+
+        <!-- Main Body split into 2 columns -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Column 1: General Parameters -->
+            <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                <TextBlock Text="GENERAL METRICS" FontWeight="Bold" Foreground="#FFAAAAAA" FontSize="11" Margin="0,0,0,8"/>
+
+                <Label Content="Designator"/>
+                <TextBox x:Name="DesignatorBox" IsReadOnly="True" Opacity="0.7" Margin="0,0,0,8"/>
+
+                <Label Content="Value"/>
+                <TextBox x:Name="ValueBox" IsReadOnly="True" Opacity="0.7" Margin="0,0,0,8"/>
+
+                <Label Content="Courtyard Width (mm)"/>
+                <TextBox x:Name="CrtWidthBox" Margin="0,0,0,8"/>
+
+                <Label Content="Courtyard Height (mm)"/>
+                <TextBox x:Name="CrtHeightBox" Margin="0,0,0,12"/>
+
+                <Label Content="Footprint Identifier"/>
+                <TextBox x:Name="FpIdBox" IsReadOnly="True" Opacity="0.7"/>
+            </StackPanel>
+
+            <!-- Column 2: DataGrid for Pads -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="PAD STACKS (dimensions in mm)" FontWeight="Bold" Foreground="#FFAAAAAA" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- DataGrid for editing pads -->
+                <DataGrid Grid.Row="1" x:Name="PadsGrid" AutoGenerateColumns="False" 
+                          CanUserAddRows="False" CanUserDeleteRows="False"
+                          Background="#FF1E1E1E" Foreground="White" BorderBrush="#FF3F3F46" RowBackground="#FF252526"
+                          AlternatingRowBackground="#FF2D2D30" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          HorizontalGridLinesBrush="#FF3F3F46" VerticalGridLinesBrush="Transparent">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#FF2D2D30"/>
+                            <Setter Property="Foreground" Value="#FFAAAAAA"/>
+                            <Setter Property="Padding" Value="6,4"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="BorderBrush" Value="#FF3F3F46"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="4"/>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Num" Binding="{Binding PadNumber}" Width="45"/>
+                        <DataGridComboBoxColumn Header="Type" x:Name="PadTypeCol" SelectedItemBinding="{Binding Type}" Width="65"/>
+                        <DataGridTextColumn Header="X Offset" Binding="{Binding X}" Width="65"/>
+                        <DataGridTextColumn Header="Y Offset" Binding="{Binding Y}" Width="65"/>
+                        <DataGridTextColumn Header="Width" Binding="{Binding Width_mm}" Width="65"/>
+                        <DataGridTextColumn Header="Height" Binding="{Binding Height_mm}" Width="65"/>
+                        <DataGridTextColumn Header="Drill" Binding="{Binding DrillDia_mm}" Width="55"/>
+                        <DataGridComboBoxColumn Header="Layer" x:Name="PadLayerCol" SelectedItemBinding="{Binding Layer}" Width="65"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Pad actions -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Content="+ Add Pad" Style="{StaticResource PrimaryBtn}" Margin="0,0,10,0" Click="AddPad_Click"/>
+                    <Button Content="- Remove Selected" Style="{StaticResource WarnBtn}" Click="RemovePad_Click"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Window Actions Footer -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="Cancel" Style="{StaticResource SecBtn}" Margin="0,0,10,0" Click="Cancel_Click"/>
+            <Button Content="Apply Changes" Style="{StaticResource PrimaryBtn}" IsDefault="True" Click="Apply_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

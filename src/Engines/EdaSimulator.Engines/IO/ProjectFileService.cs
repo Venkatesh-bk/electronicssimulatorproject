@@ -59,7 +59,8 @@ namespace EdaSimulator.Engines.IO
         public static ProjectDocument ToDocument(
             Schematic schematic,
             IEnumerable<ComponentPlacementRecord> placements,
-            string schematicTitle)
+            string schematicTitle,
+            IEnumerable<NetLabelRecord>? netLabels = null)
         {
             var components = schematic.Components.Values.Select(c => new ComponentRecord
             {
@@ -106,6 +107,7 @@ namespace EdaSimulator.Engines.IO
                 Components  = components,
                 Nets        = nets,
                 Placements  = placements.ToList(),
+                NetLabels   = (netLabels ?? Enumerable.Empty<NetLabelRecord>()).ToList()
             };
         }
 
@@ -195,6 +197,15 @@ namespace EdaSimulator.Engines.IO
         public List<ComponentRecord> Components { get; set; } = new();
         public List<NetRecord> Nets { get; set; } = new();
         public List<ComponentPlacementRecord> Placements { get; set; } = new();
+        public List<NetLabelRecord> NetLabels { get; set; } = new();
+    }
+
+    public class NetLabelRecord
+    {
+        public string NetName { get; set; } = "";
+        public Guid NetId { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
     }
 
     public class ComponentRecord
