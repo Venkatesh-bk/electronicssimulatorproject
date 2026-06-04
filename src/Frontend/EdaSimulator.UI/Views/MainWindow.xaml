@@ -1534,7 +1534,14 @@
                                         <Button Content="Export Pick &amp; Place (CSV)"
                                                 Command="{Binding ExportPickAndPlaceCommand}"
                                                 Background="#FF8E2D" Foreground="White" FontWeight="Bold"
-                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,8"/>
+                                                BorderThickness="0" Padding="8,6" Margin="0,0,0,4"/>
+
+                                        <Button Content="⬇ Export 3D MCAD Assembly (STEP)"
+                                                Command="{Binding ExportStepMcadCommand}"
+                                                Background="#FF7D5A00" Foreground="#FFFFE066" FontWeight="Bold"
+                                                BorderThickness="1" BorderBrush="#FFFFE066"
+                                                Padding="8,6" Margin="0,0,0,8"
+                                                ToolTip="Export the full 3D board assembly as an ISO 10303-21 STEP file. Import into SolidWorks, Fusion 360, or Altium 3D."/>
 
                                         <Separator Background="#FF3F3F46" Margin="0,0,0,8"/>
                                         <TextBlock Text="DESIGN RULES" FontWeight="Bold" Foreground="#FF4EC9B0" Margin="0,0,0,4"/>

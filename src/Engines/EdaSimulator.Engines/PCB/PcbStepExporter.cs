@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SMath = System.Math;
 
 namespace EdaSimulator.Engines.PCB
 {
@@ -109,11 +110,10 @@ namespace EdaSimulator.Engines.PCB
 
         private static int GenerateStepCuboid(ref int idCounter, StringBuilder sb, double Xc, double Yc, double Zc, double L, double W, double H, double thetaDegrees, string label)
         {
-            double theta = thetaDegrees * Math.PI / 100.0; // Wait! Rotations in schematic are normally degree-based, but let's do theta = thetaDegrees * Math.PI / 180.0
-            theta = thetaDegrees * Math.PI / 180.0;
+            double theta = thetaDegrees * SMath.PI / 180.0;
 
-            double cos = Math.Cos(theta);
-            double sin = Math.Sin(theta);
+            double cos = SMath.Cos(theta);
+            double sin = SMath.Sin(theta);
 
             // Local coordinates offset
             double halfL = L / 2.0;

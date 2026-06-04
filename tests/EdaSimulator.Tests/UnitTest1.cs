@@ -1470,4 +1470,109 @@ print(""Connected to Wifi"")
     }
 }
 
+namespace EdaSimulator.Tests.PcbStepExporterTests
+{
+    using EdaSimulator.Engines.PCB;
+    using Xunit;
+
+    public class PcbStepExporterTests
+    {
+        [Fact]
+        public void PcbStepExporter_ExportsValidStep_ContainsRequiredEntities()
+        {
+            // Build a minimal PCB document with one footprint
+            var pcb = new PcbDocument
+            {
+                Title   = "Test_Board",
+                Outline = new PcbBoardOutline { Width_mm = 100, Height_mm = 80 }
+            };
+
+            var fp = new PcbFootprint
+            {
+                Designator  = "R1",
+                Value       = "10k",
+                FootprintId = "R_0805",
+                X           = 20.0,
+                Y           = 30.0,
+                Rotation    = 45.0,
+                CadWidth_mm  = 3.0,
+                CadHeight_mm = 2.0,
+                CadDepth_mm  = 1.5
+            };
+            pcb.Footprints.Add(fp);
+
+            string step = PcbStepExporter.ExportToStep(pcb);
+
+            // 1. Must start with ISO STEP header
+            Assert.StartsWith("ISO-10303-21;", step);
+            Assert.Contains("HEADER;", step);
+            Assert.Contains("FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));", step);
+            Assert.Contains("ENDSEC;", step);
+
+            // 2. Must have DATA section with core geometry entities
+            Assert.Contains("DATA;", step);
+            Assert.Contains("CARTESIAN_POINT", step);
+            Assert.Contains("DIRECTION", step);
+            Assert.Contains("CLOSED_SHELL", step);
+
+            // 3. Must produce exactly 2 MANIFOLD_SOLID_BREP entities: board + 1 component
+            int solidCount = System.Text.RegularExpressions.Regex.Matches(step, "MANIFOLD_SOLID_BREP").Count;
+            Assert.Equal(2, solidCount);
+
+            // 4. Board substrate dimensions must appear in the substrate solid label
+            Assert.Contains("PCB_Substrate", step);
+            Assert.Contains("R1_10k", step);
+
+            // 5. Must end properly
+            Assert.Contains("END-ISO-10303-21;", step);
+        }
+
+        [Fact]
+        public void PcbStepExporter_EmptyBoard_ExportsSubstrateOnly()
+        {
+            var pcb = new PcbDocument
+            {
+                Title   = "EmptyBoard",
+                Outline = new PcbBoardOutline { Width_mm = 50, Height_mm = 40 }
+            };
+
+            string step = PcbStepExporter.ExportToStep(pcb);
+
+            // Only one MANIFOLD_SOLID_BREP (the board substrate itself)
+            int solidCount = System.Text.RegularExpressions.Regex.Matches(step, "MANIFOLD_SOLID_BREP").Count;
+            Assert.Equal(1, solidCount);
+            Assert.Contains("PCB_Substrate", step);
+        }
+
+        [Fact]
+        public void PcbStepExporter_RotatedComponent_HasValidTrigValues()
+        {
+            var pcb = new PcbDocument
+            {
+                Title   = "RotationTest",
+                Outline = new PcbBoardOutline { Width_mm = 50, Height_mm = 40 }
+            };
+
+            pcb.Footprints.Add(new PcbFootprint
+            {
+                Designator   = "U1",
+                Value        = "OpAmp",
+                FootprintId  = "SOIC-8",
+                X            = 25.0,
+                Y            = 20.0,
+                Rotation     = 90.0,   // cos=0, sin=1
+                CadWidth_mm  = 5.0,
+                CadHeight_mm = 5.0,
+                CadDepth_mm  = 2.0
+            });
+
+            string step = PcbStepExporter.ExportToStep(pcb);
+
+            // For 90 degrees: cos(90°) ≈ 0.0, sin(90°) ≈ 1.0
+            // A DIRECTION with (0.000000, 1.000000, 0.0) must appear
+            Assert.Contains("0.000000, 1.000000, 0.0", step);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(step, "MANIFOLD_SOLID_BREP").Count);
+        }
+    }
+}
 

@@ -751,6 +751,59 @@ namespace EdaSimulator.UI.ViewModels
             }
         }
 
+        /// <summary>
+        /// Exports the fully-assembled 3D PCB board as an ISO 10303-21 STEP file for
+        /// import into any mechanical CAD application (CATIA, SolidWorks, Fusion 360).
+        /// </summary>
+        [RelayCommand]
+        private void ExportStepMcad()
+        {
+            if (_pcbDoc == null || _pcbDoc.Footprints.Count == 0)
+            {
+                System.Windows.MessageBox.Show(
+                    "Please import a schematic and run Auto-Route before exporting a 3D MCAD model.",
+                    "No PCB Design", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Title      = "Export 3D MCAD Assembly (STEP)",
+                Filter     = "STEP CAD File (*.step)|*.step|STEP CAD File (*.stp)|*.stp|All Files (*.*)|*.*",
+                DefaultExt = ".step",
+                FileName   = (_pcbDoc.Title + "_Assembly").Replace(" ", "_")
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                // Sync latest board outline dimensions from the UI
+                _pcbDoc.Outline = new PcbBoardOutline { Width_mm = BoardWidth, Height_mm = BoardHeight };
+
+                string stepContent = EdaSimulator.Engines.PCB.PcbStepExporter.ExportToStep(_pcbDoc);
+                System.IO.File.WriteAllText(dlg.FileName, stepContent);
+
+                DrcOutput = $"3D MCAD Assembly exported to STEP (ISO 10303-21):\n{dlg.FileName}\n\n" +
+                            $"Board: {BoardWidth}×{BoardHeight} mm × 1.6 mm substrate\n" +
+                            $"Components exported: {_pcbDoc.Footprints.Count}\n\n" +
+                            "Import into SolidWorks, Fusion 360, CATIA, or any MCAD suite.";
+
+                System.Windows.MessageBox.Show(
+                    $"3D MCAD Assembly exported successfully!\n\n" +
+                    $"File: {dlg.FileName}\n" +
+                    $"Components: {_pcbDoc.Footprints.Count} solid B-rep bodies\n\n" +
+                    "You can now import this file into SolidWorks, Fusion 360, or Altium 3D.",
+                    "STEP Export Complete", System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"STEP export failed:\n{ex.Message}", "Export Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
         // ── Helpers ──────────────────────────────────────────────────────────────────
 
         private string SuggestFootprintId(Component comp) => comp.GetType().Name switch
